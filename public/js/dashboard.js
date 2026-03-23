@@ -18,15 +18,22 @@ document.addEventListener("DOMContentLoaded", () => {
     let stopMarkers = [];
     let lastAlertTime = {};
     const token = localStorage.getItem("token")
-
+    const BASE_URL = "https://trackia-backend.onrender.com";
 
     if (!token) {
         alert("Please login first")
         window.location.href = "login.html"
     }
 
-    const payload = JSON.parse(atob(token.split(".")[1]))
+let payload = null;
 
+try {
+    payload = JSON.parse(atob(token.split(".")[1]));
+} catch (e) {
+    alert("Session expired. Please login again.");
+    localStorage.removeItem("token");
+    window.location.href = "login.html";
+}
     if (payload.role !== "admin") {
         document.getElementById("adminPanel").style.display = "none"
     }
@@ -103,9 +110,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const geojson = layer.toGeoJSON()
 
-        await fetch("/api/geofence", {
+        await fetch("https://trackia-backend.onrender.com/api/geofence", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + token
+            },
             body: JSON.stringify(geojson),
             name: "Zone 1"
         })
@@ -114,79 +124,79 @@ document.addEventListener("DOMContentLoaded", () => {
 
     })
 
-    const socket = io()
+    const socket = io("https://trackia-backend.onrender.com")
 
-   socket.on("positions", (positions) => {
+    socket.on("positions", (positions) => {
 
-    positions.forEach((pos) => {
+        positions.forEach((pos) => {
 
-        const id = pos.deviceId;
-        const lat = pos.latitude;
-        const lng = pos.longitude;
-        const course = pos.course || 0;
+            const id = pos.deviceId;
+            const lat = pos.latitude;
+            const lng = pos.longitude;
+            const course = pos.course || 0;
 
-        const lastUpdate = new Date(pos.deviceTime);
-        const now = new Date();
-        const diffMinutes = (now - lastUpdate) / 60000;
+            const lastUpdate = new Date(pos.deviceTime);
+            const now = new Date();
+            const diffMinutes = (now - lastUpdate) / 60000;
 
-        const isOnline = diffMinutes <= 5;
-        const icon = isOnline ? onlineIcon : offlineIcon;
+            const isOnline = diffMinutes <= 5;
+            const icon = isOnline ? onlineIcon : offlineIcon;
 
-        if (markers[id]) {
+            if (markers[id]) {
 
-            const current = markers[id].getLatLng();
+                const current = markers[id].getLatLng();
 
-            // Smooth animation
-            const steps = 20;
-            let i = 0;
+                // Smooth animation
+                const steps = 20;
+                let i = 0;
 
-            const deltaLat = (lat - current.lat) / steps;
-            const deltaLng = (lng - current.lng) / steps;
+                const deltaLat = (lat - current.lat) / steps;
+                const deltaLng = (lng - current.lng) / steps;
 
-            const deltaAngle =
-                ((course - (markers[id].options.rotationAngle || 0) + 540) % 360) - 180;
+                const deltaAngle =
+                    ((course - (markers[id].options.rotationAngle || 0) + 540) % 360) - 180;
 
-            const stepAngle = deltaAngle / steps;
+                const stepAngle = deltaAngle / steps;
 
-            const move = setInterval(() => {
-                i++;
+                const move = setInterval(() => {
+                    i++;
 
-                markers[id].setLatLng([
-                    current.lat + deltaLat * i,
-                    current.lng + deltaLng * i
-                ]);
+                    markers[id].setLatLng([
+                        current.lat + deltaLat * i,
+                        current.lng + deltaLng * i
+                    ]);
 
-                markers[id].setRotationAngle(
-                    (markers[id].options.rotationAngle || 0) + stepAngle * i
-                );
+                    markers[id].setRotationAngle(
+                        (markers[id].options.rotationAngle || 0) + stepAngle * i
+                    );
 
-                markers[id].setIcon(icon);
+                    markers[id].setIcon(icon);
 
-                if (i >= steps) clearInterval(move);
+                    if (i >= steps) clearInterval(move);
 
-            }, 100);
+                }, 100);
 
-        } else {
+            } else {
 
-            markers[id] = L.marker([lat, lng], {
-                icon: icon,
-                rotationAngle: course,
-                rotationOrigin: 'center center'
-            })
-            .addTo(map)
-            .bindPopup(
-                "Vehicle " + id +
-                "<br>Speed: " + Math.round(pos.speed * 1.852) + " km/h"
-            );
-        }
+                markers[id] = L.marker([lat, lng], {
+                    icon: icon,
+                    rotationAngle: course,
+                    rotationOrigin: 'center center'
+                })
+                    .addTo(map)
+                    .bindPopup(
+                        "Vehicle " + id +
+                        "<br>Speed: " + Math.round(pos.speed * 1.852) + " km/h"
+                    );
+            }
 
-        if (selectedVehicleId === id) {
-            renderVehicleDetails(pos);
-        }
+            if (selectedVehicleId === id) {
+                renderVehicleDetails(pos);
+            }
+
+        });
 
     });
-
-});
     function enableFollow() {
         autoFollow = true;
     }
@@ -196,9 +206,12 @@ document.addEventListener("DOMContentLoaded", () => {
         const name = document.getElementById("vehicleName").value
         const imei = document.getElementById("vehicleUniqueId").value
 
-        await fetch("/api/traccar/devices", {
+        await fetch("https://trackia-backend.onrender.com/api/traccar/devices", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: "Bearer " + token
+            },
             body: JSON.stringify({ name: name, uniqueId: imei })
         })
 
@@ -210,7 +223,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // LOAD VEHICLES SIDEBAR
     async function loadVehicles() {
 
-        const res = await fetch("/api/traccar/positions", {
+        const res = await fetch("https://trackia-backend.onrender.com/api/traccar/positions", {
             headers: { Authorization: "Bearer " + token }
         })
 
@@ -269,7 +282,7 @@ Battery: ${p.attributes.batteryLevel || "N/A"}%
     // LOAD POSITIONS
     async function loadPositions() {
 
-        const response = await fetch("/api/traccar/positions", {
+        const response = await fetch("https://trackia-backend.onrender.com/api/traccar/positions", {
             headers: { Authorization: "Bearer " + token }
         })
 
@@ -331,9 +344,12 @@ Battery: ${p.attributes.batteryLevel || "N/A"}%
         from = new Date(from).toISOString();
         to = new Date(to).toISOString();
 
-        const url = `/api/traccar/route?deviceId=${deviceId}&from=${from}&to=${to}`;
-
-        const res = await fetch(url);
+const url = `${BASE_URL}/api/traccar/route?deviceId=${deviceId}&from=${from}&to=${to}`;
+        const res = await fetch(url, {
+            headers: {
+                Authorization: "Bearer " + token
+            }
+        });
         const data = await res.json();
 
         console.log("Route Data:", data); // ✅ DEBUG
@@ -371,7 +387,11 @@ Battery: ${p.attributes.batteryLevel || "N/A"}%
     // LOAD GEOFENCES
     async function loadGeofences() {
 
-        const res = await fetch("/api/geofence")
+        const res = await fetch("https://trackia-backend.onrender.com/api/geofence", {
+            headers: {
+                Authorization: "Bearer " + token
+            }
+        })
         const fences = await res.json()
 
         geofences = fences
@@ -618,10 +638,13 @@ Battery: ${p.attributes.batteryLevel || "N/A"}%
         const from = date + "T00:00:00Z";
         const to = date + "T23:59:59Z";
 
-        const url = `/api/traccar/route?deviceId=${deviceId}&from=${from}&to=${to}`;
-
+const url = `${BASE_URL}/api/traccar/route?deviceId=${deviceId}&from=${from}&to=${to}`;
         // ✅ 3. Fetch data
-        const res = await fetch(url);
+        const res = await fetch(url, {
+            headers: {
+                Authorization: "Bearer " + token
+            }
+        });
         const data = await res.json();
 
         if (!data || data.length < 2) {
@@ -937,7 +960,7 @@ Battery: ${p.attributes.batteryLevel || "N/A"}%
     loadVehicles()
     loadGeofences()
 
-    setInterval(loadPositions, 5000)
+    
     setInterval(loadVehicles, 5000)
     window.showRoute = showRoute;
     window.addDevice = addDevice;
