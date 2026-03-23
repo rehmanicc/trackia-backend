@@ -37,27 +37,52 @@ exports.getDevices = async (req, res) => {
 };
 
 //Get positions API
-for (const pos of positions) {
+//Get positions API
+exports.getPositions = async (req, res) => {
+  console.log("API HIT: getPositions called");
 
-  await Position.updateOne(
-    {
-      deviceId: pos.deviceId,
-      deviceTime: new Date(pos.deviceTime) // ✅ FIX
-    },
-    {
-      $set: {
-        latitude: pos.latitude,
-        longitude: pos.longitude,
-        speed: pos.speed,
-        deviceTime: new Date(pos.deviceTime) // ✅ FIX
-      }
-    },
-    { upsert: true }
-  );
+  try {
 
-}
+    const response = await traccarAPI.get("/positions");
+    const positions = response.data;
+
+    // SAVE POSITIONS (NO DUPLICATES)
+    for (const pos of positions) {
+
+      await Position.updateOne(
+        {
+          deviceId: pos.deviceId,
+          deviceTime: new Date(pos.deviceTime) // ✅ FIX
+        },
+        {
+          $set: {
+            latitude: pos.latitude,
+            longitude: pos.longitude,
+            speed: pos.speed,
+            deviceTime: new Date(pos.deviceTime) // ✅ FIX
+          }
+        },
+        { upsert: true }
+      );
+
+    }
 
     res.json(positions);
+
+  } catch (error) {
+
+    console.log("POSITION ERROR:", error.message);
+
+    if (error.response) {
+      console.log(error.response.data);
+    }
+
+    res.status(500).json({
+      error: error.message
+    });
+
+  }
+};
 //add device
 exports.addDevice = async (req, res) => {
   try {
