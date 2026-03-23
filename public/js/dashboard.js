@@ -18,22 +18,22 @@ document.addEventListener("DOMContentLoaded", () => {
     let stopMarkers = [];
     let lastAlertTime = {};
     const token = localStorage.getItem("token")
-    const BASE_URL = "https://trackia-backend.onrender.com";
+    
 
     if (!token) {
         alert("Please login first")
         window.location.href = "login.html"
     }
 
-let payload = null;
+    let payload = null;
 
-try {
-    payload = JSON.parse(atob(token.split(".")[1]));
-} catch (e) {
-    alert("Session expired. Please login again.");
-    localStorage.removeItem("token");
-    window.location.href = "login.html";
-}
+    try {
+        payload = JSON.parse(atob(token.split(".")[1]));
+    } catch (e) {
+        alert("Session expired. Please login again.");
+        localStorage.removeItem("token");
+        window.location.href = "login.html";
+    }
     if (payload.role !== "admin") {
         document.getElementById("adminPanel").style.display = "none"
     }
@@ -110,14 +110,9 @@ try {
 
         const geojson = layer.toGeoJSON()
 
-        await fetch("https://trackia-backend.onrender.com/api/geofence", {
+        await apiFetch("/api/geofence", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: "Bearer " + token
-            },
-            body: JSON.stringify(geojson),
-            name: "Zone 1"
+            body: JSON.stringify(geojson)
         })
 
         alert("Geofence Saved")
@@ -206,13 +201,9 @@ try {
         const name = document.getElementById("vehicleName").value
         const imei = document.getElementById("vehicleUniqueId").value
 
-        await fetch("https://trackia-backend.onrender.com/api/traccar/devices", {
+        await apiFetch("/api/traccar/devices", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: "Bearer " + token
-            },
-            body: JSON.stringify({ name: name, uniqueId: imei })
+            body: JSON.stringify({ name, uniqueId: imei })
         })
 
         alert("Vehicle Added")
@@ -223,10 +214,8 @@ try {
     // LOAD VEHICLES SIDEBAR
     async function loadVehicles() {
 
-        const res = await fetch("https://trackia-backend.onrender.com/api/traccar/positions", {
-            headers: { Authorization: "Bearer " + token }
-        })
-
+        const res = await apiFetch("/api/traccar/positions")
+if (!res) return;
         const positions = await res.json()
 
         const list = document.getElementById("vehicleList")
@@ -282,10 +271,8 @@ Battery: ${p.attributes.batteryLevel || "N/A"}%
     // LOAD POSITIONS
     async function loadPositions() {
 
-        const response = await fetch("https://trackia-backend.onrender.com/api/traccar/positions", {
-            headers: { Authorization: "Bearer " + token }
-        })
-
+        const response = await apiFetch("/api/traccar/positions")
+if (!res) return;
         const positions = await response.json()
 
         positions.forEach(pos => {
@@ -344,12 +331,8 @@ Battery: ${p.attributes.batteryLevel || "N/A"}%
         from = new Date(from).toISOString();
         to = new Date(to).toISOString();
 
-const url = `${BASE_URL}/api/traccar/route?deviceId=${deviceId}&from=${from}&to=${to}`;
-        const res = await fetch(url, {
-            headers: {
-                Authorization: "Bearer " + token
-            }
-        });
+        const res = await apiFetch(`/api/traccar/route?deviceId=${deviceId}&from=${from}&to=${to}`)
+        if (!res) return;
         const data = await res.json();
 
         console.log("Route Data:", data); // ✅ DEBUG
@@ -387,11 +370,8 @@ const url = `${BASE_URL}/api/traccar/route?deviceId=${deviceId}&from=${from}&to=
     // LOAD GEOFENCES
     async function loadGeofences() {
 
-        const res = await fetch("https://trackia-backend.onrender.com/api/geofence", {
-            headers: {
-                Authorization: "Bearer " + token
-            }
-        })
+        const res = await apiFetch("/api/geofence")
+        if (!res) return;
         const fences = await res.json()
 
         geofences = fences
@@ -638,13 +618,10 @@ const url = `${BASE_URL}/api/traccar/route?deviceId=${deviceId}&from=${from}&to=
         const from = date + "T00:00:00Z";
         const to = date + "T23:59:59Z";
 
-const url = `${BASE_URL}/api/traccar/route?deviceId=${deviceId}&from=${from}&to=${to}`;
+        const url = `${BASE_URL}/api/traccar/route?deviceId=${deviceId}&from=${from}&to=${to}`;
         // ✅ 3. Fetch data
-        const res = await fetch(url, {
-            headers: {
-                Authorization: "Bearer " + token
-            }
-        });
+        const res = await apiFetch(`/api/traccar/route?deviceId=${deviceId}&from=${from}&to=${to}`)
+        if (!res) return;
         const data = await res.json();
 
         if (!data || data.length < 2) {
@@ -960,7 +937,7 @@ const url = `${BASE_URL}/api/traccar/route?deviceId=${deviceId}&from=${from}&to=
     loadVehicles()
     loadGeofences()
 
-    
+
     setInterval(loadVehicles, 5000)
     window.showRoute = showRoute;
     window.addDevice = addDevice;
