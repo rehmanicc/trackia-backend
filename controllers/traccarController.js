@@ -37,34 +37,25 @@ exports.getDevices = async (req, res) => {
 };
 
 //Get positions API
-exports.getPositions = async (req, res) => {
-  console.log("API HIT: getPositions called");
+for (const pos of positions) {
 
-  try {
+  await Position.updateOne(
+    {
+      deviceId: pos.deviceId,
+      deviceTime: new Date(pos.deviceTime) // ✅ FIX
+    },
+    {
+      $set: {
+        latitude: pos.latitude,
+        longitude: pos.longitude,
+        speed: pos.speed,
+        deviceTime: new Date(pos.deviceTime) // ✅ FIX
+      }
+    },
+    { upsert: true }
+  );
 
-    const response = await traccarAPI.get("/positions");
-
-    const positions = response.data;
-
-    // SAVE POSITIONS (NO DUPLICATES)
-    for (const pos of positions) {
-
-      await Position.updateOne(
-        {
-          deviceId: pos.deviceId,
-          deviceTime: pos.deviceTime
-        },
-        {
-          $set: {
-            latitude: pos.latitude,
-            longitude: pos.longitude,
-            speed: pos.speed
-          }
-        },
-        { upsert: true }
-      );
-
-    }
+}
 
     res.json(positions);
 
