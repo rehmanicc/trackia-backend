@@ -1,50 +1,50 @@
-const Position = require("../models/Position")
-const Trip = require("../models/Trip")
+const Position = require("../models/Position");
+const Trip = require("../models/Trip");
 
-exports.detectTrips = async (deviceId)=>{
+exports.detectTrips = async (deviceId) => {
 
-const positions = await Position.find({ deviceId })
-.sort({ timestamp:1 })
+  const positions = await Position.find({ deviceId })
+    .sort({ timestamp: 1 });
 
-let tripStart = null
+  let tripStart = null;
 
-for(let pos of positions){
+  for (let pos of positions) {
 
-const speed = pos.speed * 1.852 // convert knots → km/h
+    const speed = (pos.speed || 0) * 1.852; // knots → km/h
 
-if(speed > 5 && !tripStart){
+    // START TRIP
+    if (speed > 5 && !tripStart) {
+      tripStart = pos;
+    }
 
-tripStart = pos
+    // END TRIP (use threshold instead of exact 0)
+    if (speed < 3 && tripStart) {
 
-}
+      const tripEnd = pos;
 
-if(speed === 0 && tripStart){
+      const duration = (tripEnd.timestamp - tripStart.timestamp) / 1000;
 
-const tripEnd = pos
+      // Avoid very short false trips
+      if (duration > 60) { // > 1 minute
 
-const duration = (tripEnd.timestamp - tripStart.timestamp)/1000
+        await Trip.create({
+          deviceId: deviceId,
 
-await Trip.create({
+          startTime: tripStart.timestamp,
+          endTime: tripEnd.timestamp,
 
-deviceId: deviceId,
+          startLat: tripStart.latitude,
+          startLng: tripStart.longitude,
 
-startTime: tripStart.timestamp,
-endTime: tripEnd.timestamp,
+          endLat: tripEnd.latitude,
+          endLng: tripEnd.longitude,
 
-startLat: tripStart.latitude,
-startLng: tripStart.longitude,
+          duration: duration
+        });
 
-endLat: tripEnd.latitude,
-endLng: tripEnd.longitude,
+      }
 
-duration: duration
-
-})
-
-tripStart = null
-
-}
-
-}
-
-}
+      tripStart = null;
+    }
+  }
+};
