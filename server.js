@@ -1,22 +1,21 @@
-require("dotenv").config()
-console.log("MONGO_URI:", process.env.MONGO_URI)
-const express = require("express")
-const cors = require("cors")
-const mongoose = require("mongoose")
-const http = require("http")
-const { Server } = require("socket.io")
+require("dotenv").config();
+console.log("MONGO_URI:", process.env.MONGO_URI);
 
-const app = express()
-const server = http.createServer(app)
+const express = require("express");
+const cors = require("cors");
+const mongoose = require("mongoose");
+const http = require("http");
 
-// SOCKET.IO
-const io = new Server(server, {
-  cors: {
-    origin: "*"
-  }
-})
+const app = express();
+const server = http.createServer(app);
 
-// MONGODB (use ENV instead of local)
+// ✅ SOCKET INIT
+const socket = require("./socket");
+const io = socket.init(server);
+
+// ======================
+// MONGODB CONNECTION
+// ======================
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log("MongoDB Connected");
@@ -24,28 +23,39 @@ mongoose.connect(process.env.MONGO_URI)
   })
   .catch(err => console.log(err));
 
+// ======================
 // MIDDLEWARE
+// ======================
 app.use(cors({
-  origin: "*", // later we can restrict to Netlify domain
+  origin: "*"
 }));
-app.use(express.json())
-app.use(express.static("public"))
 
-// TEST ROUTE (IMPORTANT)
+app.use(express.json());
+app.use(express.static("public"));
+
+// ======================
+// TEST ROUTE
+// ======================
 app.get("/", (req, res) => {
-  res.send("Trackia Backend Running")
-})
+  res.send("Trackia Backend Running");
+});
 
+// ======================
 // ROUTES
-const authRoutes = require("./routes/auth")
-const traccarRoutes = require("./routes/traccar")
-const geofenceRoutes = require("./routes/geofence")
-const tripRoutes = require("./routes/trips")
+// ======================
+const authRoutes = require("./routes/auth");
+const traccarRoutes = require("./routes/traccar");
+const geofenceRoutes = require("./routes/geofence");
+const tripRoutes = require("./routes/trips");
 
-app.use("/api/auth", authRoutes)
-app.use("/api/traccar", traccarRoutes)
-app.use("/api/geofence", geofenceRoutes)
-app.use("/api/trips", tripRoutes)
+app.use("/api/auth", authRoutes);
+app.use("/api/traccar", traccarRoutes);
+app.use("/api/geofence", geofenceRoutes);
+app.use("/api/trips", tripRoutes);
+
+// ======================
+// DB CHECK ROUTE
+// ======================
 app.get("/check-db", async (req, res) => {
   try {
     const collections = await mongoose.connection.db.listCollections().toArray();
@@ -66,18 +76,23 @@ app.get("/check-db", async (req, res) => {
     res.json({ error: err.message });
   }
 });
+
+// ======================
 // SOCKET CONNECTION
+// ======================
 io.on("connection", (socket) => {
-  console.log("Client connected:", socket.id)
+  console.log("Client connected:", socket.id);
 
   socket.on("disconnect", () => {
-    console.log("Client disconnected")
-  })
-})
+    console.log("Client disconnected");
+  });
+});
 
+// ======================
 // SERVER START
-const PORT = process.env.PORT || 5000
+// ======================
+const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`)
-})
+  console.log(`Server running on port ${PORT}`);
+});
