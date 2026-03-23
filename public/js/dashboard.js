@@ -116,11 +116,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const socket = io()
 
-    socket.on("positionUpdate", (pos) => {
+   socket.on("positions", (positions) => {
+
+    positions.forEach((pos) => {
+
         const id = pos.deviceId;
         const lat = pos.latitude;
         const lng = pos.longitude;
-        const course = pos.course || 0; // rotation in degrees
+        const course = pos.course || 0;
 
         const lastUpdate = new Date(pos.deviceTime);
         const now = new Date();
@@ -130,44 +133,60 @@ document.addEventListener("DOMContentLoaded", () => {
         const icon = isOnline ? onlineIcon : offlineIcon;
 
         if (markers[id]) {
+
             const current = markers[id].getLatLng();
 
-            // Smooth movement & rotation
+            // Smooth animation
             const steps = 20;
             let i = 0;
+
             const deltaLat = (lat - current.lat) / steps;
             const deltaLng = (lng - current.lng) / steps;
-            const deltaAngle = ((course - (markers[id].options.rotationAngle || 0) + 540) % 360) - 180; // shortest rotation
+
+            const deltaAngle =
+                ((course - (markers[id].options.rotationAngle || 0) + 540) % 360) - 180;
+
             const stepAngle = deltaAngle / steps;
 
             const move = setInterval(() => {
                 i++;
+
                 markers[id].setLatLng([
                     current.lat + deltaLat * i,
                     current.lng + deltaLng * i
                 ]);
-                markers[id].setRotationAngle((markers[id].options.rotationAngle || 0) + stepAngle * i);
-                markers[id].setIcon(icon); // update icon dynamically
+
+                markers[id].setRotationAngle(
+                    (markers[id].options.rotationAngle || 0) + stepAngle * i
+                );
+
+                markers[id].setIcon(icon);
 
                 if (i >= steps) clearInterval(move);
+
             }, 100);
 
         } else {
-            // First-time marker creation
+
             markers[id] = L.marker([lat, lng], {
                 icon: icon,
                 rotationAngle: course,
                 rotationOrigin: 'center center'
             })
-                .addTo(map)
-                .bindPopup(
-                    "Vehicle " + id + "<br>Speed: " + Math.round(pos.speed * 1.852) + " km/h"
-                );
+            .addTo(map)
+            .bindPopup(
+                "Vehicle " + id +
+                "<br>Speed: " + Math.round(pos.speed * 1.852) + " km/h"
+            );
         }
+
         if (selectedVehicleId === id) {
             renderVehicleDetails(pos);
         }
+
     });
+
+});
     function enableFollow() {
         autoFollow = true;
     }
