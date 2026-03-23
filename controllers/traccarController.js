@@ -4,45 +4,17 @@ const TRACCAR_URL = process.env.TRACCAR_URL;
 const EMAIL = process.env.TRACCAR_EMAIL;
 const PASSWORD = process.env.TRACCAR_PASSWORD;
 
-let sessionCookie = "";
-
-// LOGIN FUNCTION
-async function loginTraccar() {
-
-  const params = new URLSearchParams();
-  params.append("email", EMAIL);
-  params.append("password", PASSWORD);
-
-  const response = await axios.post(
-    `${TRACCAR_URL}/session`,
-    params,
-    {
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-      }, withCredentials: true
-    }
-  );
-
-  sessionCookie = response.headers["set-cookie"][0].split(";")[0];
-
-  console.log("✅ Logged into Traccar");
-}
-
 // GET DEVICES
 exports.getDevices = async (req, res) => {
-
   try {
-
-    if (!sessionCookie) {
-      await loginTraccar();
-    }
 
     const response = await axios.get(
       `${TRACCAR_URL}/devices`,
       {
-        headers: {
-          Cookie: sessionCookie
-        }, withCredentials: true
+        auth: {
+          username: EMAIL,
+          password: PASSWORD
+        }
       }
     );
 
@@ -50,8 +22,7 @@ exports.getDevices = async (req, res) => {
 
   } catch (error) {
 
-    console.log("TRACCAR ERROR:");
-    console.log(error.message);
+    console.log("TRACCAR ERROR:", error.message);
 
     if (error.response) {
       console.log(error.response.data);
@@ -62,85 +33,65 @@ exports.getDevices = async (req, res) => {
     });
 
   }
-
 };
 
-// get positions
+//Get positions API
 exports.getPositions = async (req, res) => {
   console.log("API HIT: getPositions called");
-  try {
 
-    if (!sessionCookie) {
-      await loginTraccar();
-    }
+  try {
 
     const response = await axios.get(
       `${TRACCAR_URL}/positions`,
       {
-        headers: {
-          Cookie: sessionCookie
-        }, withCredentials: true
+        auth: {
+          username: EMAIL,
+          password: PASSWORD
+        }
       }
     );
 
     const positions = response.data;
 
-    // SAVE POSITIONS TO DATABASE
+    // SAVE POSITIONS (NO DUPLICATES)
     for (const pos of positions) {
 
-      console.log("Saving:", pos.deviceId, pos.latitude, pos.longitude);
+      await Position.updateOne(
+        {
+          deviceId: pos.deviceId,
+          deviceTime: pos.deviceTime
+        },
+        {
+          $set: {
+            latitude: pos.latitude,
+            longitude: pos.longitude,
+            speed: pos.speed
+          }
+        },
+        { upsert: true }
+      );
 
-      const saved = await Position.create({
-        deviceId: pos.deviceId,
-        latitude: pos.latitude,
-        longitude: pos.longitude,
-        speed: pos.speed,
-        deviceTime: pos.deviceTime
-      });
-
-      console.log("Saved ID:", saved._id);
     }
 
     res.json(positions);
 
   } catch (error) {
 
-    if (error.response && error.response.status === 401) {
-
-      console.log("Session expired. Logging in again...");
-
-      await loginTraccar();
-
-      const retry = await axios.get(
-        `${TRACCAR_URL}/positions`,
-        {
-          headers: {
-            Cookie: sessionCookie
-          }, withCredentials: true
-        }
-      );
-
-      return res.json(retry.data);
-
-    }
-
     console.log("POSITION ERROR:", error.message);
+
+    if (error.response) {
+      console.log(error.response.data);
+    }
 
     res.status(500).json({
       error: error.message
     });
 
   }
-
 };
 //add device
 exports.addDevice = async (req, res) => {
-
   try {
-
-    if (!sessionCookie) {
-      await loginTraccar();
-    }
 
     const { name, uniqueId } = req.body;
 
@@ -151,9 +102,10 @@ exports.addDevice = async (req, res) => {
         uniqueId: uniqueId
       },
       {
-        headers: {
-          Cookie: sessionCookie
-        }, withCredentials: true
+        auth: {
+          username: EMAIL,
+          password: PASSWORD
+        }
       }
     );
 
@@ -163,23 +115,21 @@ exports.addDevice = async (req, res) => {
 
     console.log("ADD DEVICE ERROR:", error.message);
 
+    if (error.response) {
+      console.log(error.response.data);
+    }
+
     res.status(500).json({
       error: error.message
     });
 
   }
-
 };
 //get routs
 exports.getRoute = async (req, res) => {
-
   try {
 
     const { deviceId, from, to } = req.query;
-
-    if (!sessionCookie) {
-      await loginTraccar();
-    }
 
     const response = await axios.get(
       `${TRACCAR_URL}/reports/route`,
@@ -189,9 +139,10 @@ exports.getRoute = async (req, res) => {
           from,
           to
         },
-        headers: {
-          Cookie: sessionCookie
-        }, withCredentials: true
+        auth: {
+          username: EMAIL,
+          password: PASSWORD
+        }
       }
     );
 
@@ -201,23 +152,21 @@ exports.getRoute = async (req, res) => {
 
     console.log("ROUTE ERROR:", error.message);
 
+    if (error.response) {
+      console.log(error.response.data);
+    }
+
     res.status(500).json({
       error: error.message
     });
 
   }
-
 };
 //Get Trips
 exports.getTrips = async (req, res) => {
-
   try {
 
-    const { deviceId, from, to } = req.query
-
-    if (!sessionCookie) {
-      await loginTraccar()
-    }
+    const { deviceId, from, to } = req.query;
 
     const response = await axios.get(
       `${TRACCAR_URL}/reports/trips`,
@@ -227,22 +176,26 @@ exports.getTrips = async (req, res) => {
           from,
           to
         },
-        headers: {
-          Cookie: sessionCookie
-        }, withCredentials: true
+        auth: {
+          username: EMAIL,
+          password: PASSWORD
+        }
       }
-    )
+    );
 
-    res.json(response.data)
+    res.json(response.data);
 
   } catch (error) {
 
-    console.log("TRIPS ERROR:", error.message)
+    console.log("TRIPS ERROR:", error.message);
+
+    if (error.response) {
+      console.log(error.response.data);
+    }
 
     res.status(500).json({
       error: error.message
-    })
+    });
 
   }
-
-}
+};
