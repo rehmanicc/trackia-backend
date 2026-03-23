@@ -14,7 +14,7 @@ async function loginTraccar() {
   params.append("password", PASSWORD);
 
   const response = await axios.post(
-    `${TRACCAR_URL}/api/session`,
+    `${TRACCAR_URL}/session`,
     params,
     {
       headers: {
@@ -38,7 +38,7 @@ exports.getDevices = async (req, res) => {
     }
 
     const response = await axios.get(
-      `${TRACCAR_URL}/api/devices`,
+      `${TRACCAR_URL}/devices`,
       {
         headers: {
           Cookie: sessionCookie
@@ -75,7 +75,7 @@ exports.getPositions = async (req, res) => {
     }
 
     const response = await axios.get(
-      `${TRACCAR_URL}/api/positions`,
+      `${TRACCAR_URL}/positions`,
       {
         headers: {
           Cookie: sessionCookie
@@ -112,7 +112,7 @@ exports.getPositions = async (req, res) => {
       await loginTraccar();
 
       const retry = await axios.get(
-        `${TRACCAR_URL}/api/positions`,
+        `${TRACCAR_URL}/positions`,
         {
           headers: {
             Cookie: sessionCookie
@@ -145,7 +145,7 @@ exports.addDevice = async (req, res) => {
     const { name, uniqueId } = req.body;
 
     const response = await axios.post(
-      `${TRACCAR_URL}/api/devices`,
+      `${TRACCAR_URL}/devices`,
       {
         name: name,
         uniqueId: uniqueId
@@ -182,7 +182,7 @@ exports.getRoute = async (req, res) => {
     }
 
     const response = await axios.get(
-      `${TRACCAR_URL}/api/reports/route`,
+      `${TRACCAR_URL}/reports/route`,
       {
         params: {
           deviceId,
@@ -220,7 +220,7 @@ exports.getTrips = async (req, res) => {
     }
 
     const response = await axios.get(
-      `${TRACCAR_URL}/api/reports/trips`,
+      `${TRACCAR_URL}/reports/trips`,
       {
         params: {
           deviceId,
