@@ -58,21 +58,6 @@ for (const pos of positions) {
 }
 
     res.json(positions);
-
-  } catch (error) {
-
-    console.log("POSITION ERROR:", error.message);
-
-    if (error.response) {
-      console.log(error.response.data);
-    }
-
-    res.status(500).json({
-      error: error.message
-    });
-
-  }
-};
 //add device
 exports.addDevice = async (req, res) => {
   try {
