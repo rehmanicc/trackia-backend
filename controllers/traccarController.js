@@ -4,7 +4,7 @@ const TRACCAR_URL = process.env.TRACCAR_URL;
 const EMAIL = process.env.TRACCAR_EMAIL;
 const PASSWORD = process.env.TRACCAR_PASSWORD;
 const traccarAPI = require("../services/traccarAPI");
-
+const socket = require("../socket");
 // GET DEVICES
 exports.getDevices = async (req, res) => {
   try {
@@ -37,7 +37,6 @@ exports.getDevices = async (req, res) => {
 };
 
 //Get positions API
-//Get positions API
 exports.getPositions = async (req, res) => {
   console.log("API HIT: getPositions called");
 
@@ -66,7 +65,9 @@ exports.getPositions = async (req, res) => {
       );
 
     }
-
+    if (positions.length > 0) {
+      socket.getIO().emit("positions", positions);
+    }
     res.json(positions);
 
   } catch (error) {
@@ -82,7 +83,7 @@ exports.getPositions = async (req, res) => {
     });
 
   }
-};
+  };
 //add device
 exports.addDevice = async (req, res) => {
   try {
