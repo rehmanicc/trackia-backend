@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let stopMarkers = [];
     let lastAlertTime = {};
     const token = localStorage.getItem("token")
-    
+
 
     if (!token) {
         alert("Please login first")
@@ -215,7 +215,7 @@ document.addEventListener("DOMContentLoaded", () => {
     async function loadVehicles() {
 
         const res = await apiFetch("/api/traccar/positions")
-if (!res) return;
+        if (!res) return;
         const positions = await res.json()
 
         const list = document.getElementById("vehicleList")
@@ -272,7 +272,7 @@ Battery: ${p.attributes.batteryLevel || "N/A"}%
     async function loadPositions() {
 
         const response = await apiFetch("/api/traccar/positions")
-if (!res) return;
+        if (!response) return;
         const positions = await response.json()
 
         positions.forEach(pos => {
@@ -745,16 +745,31 @@ if (!res) return;
 
         const container = document.getElementById("vehicleDetails");
 
-        container.innerHTML = `
-        <div style="border:1px solid #ccc;padding:10px;background:#fff;">
-            <h4>Vehicle ${p.deviceId}</h4>
-            <p><b>Speed:</b> ${Math.round(p.speed * 1.852)} km/h</p>
-            <p><b>Latitude:</b> ${p.latitude}</p>
-            <p><b>Longitude:</b> ${p.longitude}</p>
-            <p><b>Battery:</b> ${p.attributes.batteryLevel || "N/A"}%</p>
-            <p><b>Last Update:</b> ${new Date(p.deviceTime).toLocaleString()}</p>
+       container.innerHTML = `
+    <div style="border:1px solid #ccc;padding:10px;background:#fff;">
+        <h4>Vehicle ${p.deviceId}</h4>
+
+        <p><b>Speed:</b> ${Math.round(p.speed * 1.852)} km/h</p>
+        <p><b>Latitude:</b> ${p.latitude}</p>
+        <p><b>Longitude:</b> ${p.longitude}</p>
+        <p><b>Battery:</b> ${p.attributes.batteryLevel || "N/A"}%</p>
+        <p><b>Last Update:</b> ${new Date(p.deviceTime).toLocaleString()}</p>
+
+        <hr>
+
+        <div style="margin-top:10px;">
+            <button onclick="sendCommand(${p.deviceId}, 'engineStop')" 
+                style="background:red;color:white;padding:6px 10px;margin-right:5px;border:none;">
+                🔴 Engine OFF
+            </button>
+
+            <button onclick="sendCommand(${p.deviceId}, 'engineResume')" 
+                style="background:green;color:white;padding:6px 10px;border:none;">
+                🟢 Engine ON
+            </button>
         </div>
-    `;
+    </div>
+`;
     }
     //calculate distance
     function calculateDistance(points) {
@@ -932,6 +947,20 @@ if (!res) return;
         const currentTime = new Date(startPoint.time.getTime() + t * (endPoint.time - startPoint.time));
         document.getElementById("timeLabel").innerText = currentTime.toLocaleTimeString();
     });
+    //command function
+    async function sendCommand(deviceId, type) {
+        const res = await apiFetch("/api/traccar/command", {
+            method: "POST",
+            body: JSON.stringify({ deviceId, type })
+        });
+
+        if (!res) return;
+
+        const data = await res.json();
+
+        alert("Command sent: " + type);
+        console.log("Command response:", data);
+    }
     // INITIAL LOAD
     loadPositions()
     loadVehicles()
