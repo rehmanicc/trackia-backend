@@ -213,59 +213,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // LOAD VEHICLES SIDEBAR
     async function loadVehicles() {
+  const res = await fetch("/api/traccar/positions");
+  const positions = await res.json();
 
-        const res = await apiFetch("/api/traccar/positions")
-        if (!res) return;
-        const positions = await res.json()
-        console.log("Positions response:", positions);
-        const list = document.getElementById("vehicleList")
-        list.innerHTML = ""
+  if (!Array.isArray(positions)) {
+    console.error("Invalid positions:", positions);
+    return;
+  }
 
-        positions.forEach(p => {
+  positions.forEach(pos => {
+    const { deviceId, latitude, longitude } = pos;
 
-            const item = document.createElement("div")
+    if (markers[deviceId]) {
+      // ✅ Move existing marker smoothly
+      markers[deviceId].setLatLng([latitude, longitude]);
+    } else {
+      // ✅ Create new marker
+      const marker = L.marker([latitude, longitude])
+        .addTo(map)
+        .bindPopup(`Device: ${deviceId}`);
 
-            item.style.border = "1px solid #ccc"
-            item.style.padding = "8px"
-            item.style.marginBottom = "6px"
-            item.style.cursor = "pointer"
-
-            const lastUpdate = new Date(p.deviceTime)
-            const now = new Date()
-
-            const diffMinutes = (now - lastUpdate) / 60000
-
-            let status = "Online"
-            let color = "green"
-
-            if (diffMinutes > 5) {
-                status = "Offline"
-                color = "red"
-            }
-
-            item.innerHTML = `
-<b>Vehicle ${p.deviceId}</b><br>
-Status: <span style="color:${color}">${status}</span><br>
-Speed: ${Math.round(p.speed * 1.852)} km/h<br>
-Battery: ${p.attributes.batteryLevel || "N/A"}%
-`
-
-            item.onclick = () => {
-                selectedVehicleId = p.deviceId;
-
-                map.setView([p.latitude, p.longitude], 16)
-                if (markers[p.deviceId]) {
-                    markers[p.deviceId].openPopup();
-                }
-
-                renderVehicleDetails(p);
-            }
-
-            list.appendChild(item)
-
-        })
-
+      markers[deviceId] = marker;
     }
+  });
+}
 
 
     // LOAD POSITIONS
