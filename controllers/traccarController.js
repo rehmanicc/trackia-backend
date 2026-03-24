@@ -29,7 +29,6 @@ exports.getDevices = async (req, res) => {
 };
 
 //Get positions API
-const axios = require("axios");
 
 exports.getPositions = async (req, res) => {
   try {
