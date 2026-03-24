@@ -217,7 +217,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const res = await apiFetch("/api/traccar/positions")
         if (!res) return;
         const positions = await res.json()
-
+        console.log("Positions response:", positions);
         const list = document.getElementById("vehicleList")
         list.innerHTML = ""
 
@@ -745,7 +745,7 @@ Battery: ${p.attributes.batteryLevel || "N/A"}%
 
         const container = document.getElementById("vehicleDetails");
 
-       container.innerHTML = `
+        container.innerHTML = `
     <div style="border:1px solid #ccc;padding:10px;background:#fff;">
         <h4>Vehicle ${p.deviceId}</h4>
 
