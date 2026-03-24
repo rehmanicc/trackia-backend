@@ -36,8 +36,8 @@ exports.getPositions = async (req, res) => {
       `${process.env.TRACCAR_URL}/api/positions`,
       {
         auth: {
-          username: "admin",   // your traccar username
-          password: "admin",   // your password
+          username: "admin@trackia.com",   // your traccar username
+          password: "admin123",   // your password
         },
       }
     );
