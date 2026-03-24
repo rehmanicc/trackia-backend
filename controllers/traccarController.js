@@ -9,15 +9,7 @@ const socket = require("../socket");
 exports.getDevices = async (req, res) => {
   try {
 
-    const response = await axios.get(
-      `${TRACCAR_URL}/devices`,
-      {
-        auth: {
-          username: EMAIL,
-          password: PASSWORD
-        }
-      }
-    );
+    const response = await traccarAPI.get("/api/devices");
 
     res.json(response.data);
 
@@ -37,72 +29,36 @@ exports.getDevices = async (req, res) => {
 };
 
 //Get positions API
+const axios = require("axios");
+
 exports.getPositions = async (req, res) => {
-  console.log("API HIT: getPositions called");
-
   try {
-
-    const response = await traccarAPI.get("/positions");
-    const positions = response.data;
-
-    // SAVE POSITIONS (NO DUPLICATES)
-    for (const pos of positions) {
-
-      await Position.updateOne(
-        {
-          deviceId: pos.deviceId,
-          deviceTime: new Date(pos.deviceTime) // ✅ FIX
+    const response = await axios.get(
+      `${process.env.TRACCAR_URL}/api/positions`,
+      {
+        auth: {
+          username: "admin",   // your traccar username
+          password: "admin",   // your password
         },
-        {
-          $set: {
-            latitude: pos.latitude,
-            longitude: pos.longitude,
-            speed: pos.speed,
-            deviceTime: new Date(pos.deviceTime) // ✅ FIX
-          }
-        },
-        { upsert: true }
-      );
+      }
+    );
 
-    }
-    if (positions.length > 0) {
-      socket.getIO().emit("positions", positions);
-    }
-    res.json(positions);
-
+    res.json(response.data);
   } catch (error) {
-
-    console.log("POSITION ERROR:", error.message);
-
-    if (error.response) {
-      console.log(error.response.data);
-    }
-
-    res.status(500).json({
-      error: error.message
-    });
-
+    console.error("Traccar error:", error.message);
+    res.status(500).json({ error: error.message });
   }
-  };
+};
 //add device
 exports.addDevice = async (req, res) => {
   try {
 
     const { name, uniqueId } = req.body;
 
-    const response = await axios.post(
-      `${TRACCAR_URL}/devices`,
-      {
-        name: name,
-        uniqueId: uniqueId
-      },
-      {
-        auth: {
-          username: EMAIL,
-          password: PASSWORD
-        }
-      }
-    );
+   const response = await traccarAPI.post("/api/devices", {
+  name,
+  uniqueId
+});
 
     res.json(response.data);
 
@@ -126,20 +82,9 @@ exports.getRoute = async (req, res) => {
 
     const { deviceId, from, to } = req.query;
 
-    const response = await axios.get(
-      `${TRACCAR_URL}/reports/route`,
-      {
-        params: {
-          deviceId,
-          from,
-          to
-        },
-        auth: {
-          username: EMAIL,
-          password: PASSWORD
-        }
-      }
-    );
+ const response = await traccarAPI.get("/api/reports/route", {
+  params: { deviceId, from, to }
+});
 
     res.json(response.data);
 
@@ -163,20 +108,9 @@ exports.getTrips = async (req, res) => {
 
     const { deviceId, from, to } = req.query;
 
-    const response = await axios.get(
-      `${TRACCAR_URL}/reports/trips`,
-      {
-        params: {
-          deviceId,
-          from,
-          to
-        },
-        auth: {
-          username: EMAIL,
-          password: PASSWORD
-        }
-      }
-    );
+    const response = await traccarAPI.get("/api/reports/trips", {
+  params: { deviceId, from, to }
+});
 
     res.json(response.data);
 
@@ -192,5 +126,37 @@ exports.getTrips = async (req, res) => {
       error: error.message
     });
 
+  }
+};
+//commands
+// SEND COMMAND
+exports.sendCommand = async (req, res) => {
+  try {
+    const { deviceId, type } = req.body;
+
+    // Validate input
+    if (!deviceId || !type) {
+      return res.status(400).json({
+        error: "deviceId and type are required"
+      });
+    }
+
+    const response = await traccarAPI.post("/api/commands/send", {
+      deviceId,
+      type
+    });
+
+    res.json(response.data);
+
+  } catch (error) {
+    console.error("COMMAND ERROR:", error.message);
+
+    if (error.response) {
+      console.error("Traccar Response:", error.response.data);
+    }
+
+    res.status(500).json({
+      error: error.message || "Failed to send command"
+    });
   }
 };

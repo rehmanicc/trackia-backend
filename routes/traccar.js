@@ -1,4 +1,4 @@
-const { getDevices, getPositions, addDevice, getRoute } = require("../controllers/traccarController");
+const { getDevices, getPositions, addDevice, getRoute, sendCommand } = require("../controllers/traccarController");
 const Position = require("../models/Position")
 const express = require("express");
 const router = express.Router();
@@ -14,4 +14,6 @@ router.get("/positions", getPositions);
 router.get("/route", getRoute);
 
 router.get("/trips", getTrips);
+
+router.post("/command", authMiddleware, sendCommand);
 module.exports = router;
