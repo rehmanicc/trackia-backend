@@ -36,13 +36,20 @@ exports.getPositions = async (req, res) => {
       `${process.env.TRACCAR_URL}/api/positions`,
       {
         auth: {
-          username: process.env.TRACCAR_EMAIL,   // your traccar username
-          password: process.env.TRACCAR_PASSWORD,   // your password
+          username: process.env.TRACCAR_EMAIL,
+          password: process.env.TRACCAR_PASSWORD,
         },
       }
     );
 
-    res.json(response.data);
+    const positions = response.data;
+
+    // ✅ 🔥 EMIT TO SOCKET CLIENTS
+    const io = require("../socket").getIO();
+    io.emit("positions", positions);
+
+    res.json(positions);
+
   } catch (error) {
     console.error("Traccar error:", error.message);
     res.status(500).json({ error: error.message });

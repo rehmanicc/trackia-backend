@@ -12,7 +12,28 @@ const server = http.createServer(app);
 // ✅ SOCKET INIT
 const socket = require("./socket");
 const io = socket.init(server);
+const axios = require("axios");
 
+setInterval(async () => {
+  try {
+    const response = await axios.get(
+      `${process.env.TRACCAR_URL}/api/positions`,
+      {
+        auth: {
+          username: process.env.TRACCAR_EMAIL,
+          password: process.env.TRACCAR_PASSWORD,
+        },
+      }
+    );
+
+    io.emit("positions", response.data);
+
+    console.log("📡 Positions emitted:", response.data.length);
+
+  } catch (err) {
+    console.log("Polling error:", err.message);
+  }
+}, 5000); // every 5 seconds
 // ======================
 // MONGODB CONNECTION
 // ======================

@@ -120,11 +120,18 @@ document.addEventListener("DOMContentLoaded", () => {
     })
 
     const socket = io("https://trackia-backend.onrender.com")
+    socket.on("connect", () => {
+        console.log("✅ Socket connected:", socket.id);
+    });
+
+    socket.on("disconnect", () => {
+        console.log("❌ Socket disconnected");
+    });
 
     socket.on("positions", (positions) => {
 
         positions.forEach((pos) => {
-
+            console.log("📡 Positions received:", positions);
             const id = pos.deviceId;
             const lat = pos.latitude;
             const lng = pos.longitude;
@@ -179,6 +186,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     rotationOrigin: 'center center'
                 })
                     .addTo(map)
+                    .on("click", () => {
+                        selectedVehicleId = id;
+                        console.log("Selected vehicle:", id);
+                    })
                     .bindPopup(
                         "Vehicle " + id +
                         "<br>Speed: " + Math.round(pos.speed * 1.852) + " km/h"
@@ -212,31 +223,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     // LOAD VEHICLES SIDEBAR
-    async function loadVehicles() {
-  const res = await fetch("/api/traccar/positions");
-  const positions = await res.json();
-
-  if (!Array.isArray(positions)) {
-    console.error("Invalid positions:", positions);
-    return;
-  }
-
-  positions.forEach(pos => {
-    const { deviceId, latitude, longitude } = pos;
-
-    if (markers[deviceId]) {
-      // ✅ Move existing marker smoothly
-      markers[deviceId].setLatLng([latitude, longitude]);
-    } else {
-      // ✅ Create new marker
-      const marker = L.marker([latitude, longitude])
-        .addTo(map)
-        .bindPopup(`Device: ${deviceId}`);
-
-      markers[deviceId] = marker;
-    }
-  });
-}
 
 
     // LOAD POSITIONS
@@ -934,11 +920,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     // INITIAL LOAD
     loadPositions()
-    loadVehicles()
+
     loadGeofences()
 
 
-    setInterval(loadVehicles, 5000)
     window.showRoute = showRoute;
     window.addDevice = addDevice;
     window.startPlayback = startPlayback;
