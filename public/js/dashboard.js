@@ -129,7 +129,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     socket.on("positions", (positions) => {
-
+        updateVehicleList(positions);
         positions.forEach((pos) => {
             console.log("📡 Positions received:", positions);
             const id = pos.deviceId;
@@ -930,3 +930,29 @@ document.addEventListener("DOMContentLoaded", () => {
     window.logout = logout;
     window.togglePlayback = togglePlayback;
 });
+function updateVehicleList(positions) {
+    const container = document.getElementById("vehicleList");
+    if (!container) return;
+
+    container.innerHTML = "";
+
+    positions.forEach(pos => {
+        const lastUpdate = new Date(pos.deviceTime);
+        const now = new Date();
+        const diffMinutes = (now - lastUpdate) / 60000;
+
+        const isOnline = diffMinutes <= 5;
+
+        const div = document.createElement("div");
+        div.style.borderBottom = "1px solid #ccc";
+        div.style.padding = "6px";
+
+        div.innerHTML = `
+            <b>Vehicle ${pos.deviceId}</b><br>
+            Status: ${isOnline ? "🟢 Online" : "🔴 Offline"}<br>
+            Speed: ${Math.round((pos.speed || 0) * 1.852)} km/h
+        `;
+
+        container.appendChild(div);
+    });
+}
