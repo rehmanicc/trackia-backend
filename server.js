@@ -109,15 +109,15 @@ app.use(cors({
 }));
 
 app.use(express.json());
-app.use(express.static("public"));
-
 // ======================
 // TEST ROUTE
 // ======================
 app.get("/", (req, res) => {
   res.send("Trackia Backend Running");
 });
-
+app.get("/api/test", (req, res) => {
+  res.json({ message: "API working" });
+});
 // ======================
 // ROUTES
 // ======================
@@ -127,10 +127,10 @@ const geofenceRoutes = require("./routes/geofence");
 const tripRoutes = require("./routes/trips");
 
 app.use("/api/auth", authRoutes);
-app.use("/api/traccar", traccarRoutes);
 app.use("/api/geofence", geofenceRoutes);
 app.use("/api/trips", tripRoutes);
 app.use("/api/traccar", traccarRoutes);
+app.use(express.static("public"));
 // ======================
 // DB CHECK ROUTE
 // ======================
