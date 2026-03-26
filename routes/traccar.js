@@ -2,14 +2,12 @@ const express = require("express");
 const router = express.Router();
 
 const axios = require("axios");
-const Device = require("../models/Device");
-
 const {
-  getDevices,
-  getPositions,
-  getRoute,
-  sendCommand,
-  getTrips
+    getDevices,
+    getPositions,
+    getRoute,
+    sendCommand,
+    getTrips
 } = require("../controllers/traccarController");
 
 const authMiddleware = require("../middleware/authMiddleware");
@@ -26,55 +24,55 @@ router.get("/devices", authMiddleware, getDevices);
 // ======================
 router.post("/devices", authMiddleware, async (req, res) => {
 
-  if (req.user.role !== "admin") {
-    return res.status(403).json({ error: "Only admin can add devices" });
-  }
-
-  const { name, uniqueId } = req.body;
-
-  if (!name || !uniqueId) {
-    return res.status(400).json({ error: "Missing fields" });
-  }
-
-  try {
-
-    // 🔹 Prevent duplicate IMEI
-    const exists = await Device.findOne({ uniqueId });
-    if (exists) {
-      return res.status(400).json({ error: "Device already exists" });
+    if (req.user.role !== "admin") {
+        return res.status(403).json({ error: "Only admin can add devices" });
     }
 
-    // 🔹 Create in Traccar
-    const traccarRes = await axios.post(
-      `${process.env.TRACCAR_URL}/api/devices`,
-      { name, uniqueId },
-      {
-        auth: {
-          username: process.env.TRACCAR_EMAIL,
-          password: process.env.TRACCAR_PASSWORD
+    const { name, uniqueId } = req.body;
+
+    if (!name || !uniqueId) {
+        return res.status(400).json({ error: "Missing fields" });
+    }
+
+    try {
+
+        // 🔹 Prevent duplicate IMEI
+        const exists = await Device.findOne({ uniqueId });
+        if (exists) {
+            return res.status(400).json({ error: "Device already exists" });
         }
-      }
-    );
 
-    const traccarDevice = traccarRes.data;
+        // 🔹 Create in Traccar
+        const traccarRes = await axios.post(
+            `${process.env.TRACCAR_URL}/api/devices`,
+            { name, uniqueId },
+            {
+                auth: {
+                    username: process.env.TRACCAR_EMAIL,
+                    password: process.env.TRACCAR_PASSWORD
+                }
+            }
+        );
 
-    // 🔹 Save in DB
-    const device = new Device({
-      name,
-      uniqueId,
-      traccarId: traccarDevice.id,
-      companyId: req.user.companyId, // 🔥 secure
-      createdBy: req.user.id
-    });
+        const traccarDevice = traccarRes.data;
 
-    await device.save();
+        // 🔹 Save in DB
+        const device = new Device({
+            name,
+            uniqueId,
+            traccarId: traccarDevice.id,
+            companyId: req.user.companyId, // 🔥 secure
+            createdBy: req.user.id
+        });
 
-    res.json({ success: true, device });
+        await device.save();
 
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).json({ error: "Failed to create device" });
-  }
+        res.json({ success: true, device });
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ error: "Failed to create device" });
+    }
 });
 
 
