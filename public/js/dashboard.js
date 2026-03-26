@@ -3,15 +3,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let playbackData = [];
     let playbackMarker;
-    let playInterval;
     let isPlaying = false;
     let playbackIndex = 0;
     let playbackPoints = [];
-    let playbackInterval;
-    let playbackTimer;
     let selectedVehicleId = null;
     let autoFollow = true;
-    let playbackSpeed = 2; // default speed
     let startMarker = null;
     let endMarker = null;
     let routeLine = null;
@@ -130,18 +126,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     socket.on("positions", (positions) => {
         updateVehicleList(positions);
+        console.log("📡 Positions received:", positions);
         positions.forEach((pos) => {
-            console.log("📡 Positions received:", positions);
             const id = pos.deviceId;
             const lat = pos.latitude;
             const lng = pos.longitude;
             const course = pos.course || 0;
+            checkGeofences(id, lat, lng);
+            const isOnline = isVehicleOnline(pos.deviceTime);
 
-            const lastUpdate = new Date(pos.deviceTime);
-            const now = new Date();
-            const diffMinutes = (now - lastUpdate) / 60000;
-
-            const isOnline = diffMinutes <= 5;
             const icon = isOnline ? onlineIcon : offlineIcon;
 
             if (markers[id]) {
@@ -203,9 +196,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
     });
-    function enableFollow() {
-        autoFollow = true;
-    }
     // ADD DEVICE
     async function addDevice() {
 
@@ -225,52 +215,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // LOAD VEHICLES SIDEBAR
 
 
-    // LOAD POSITIONS
-    async function loadPositions() {
 
-        const response = await apiFetch("/api/traccar/positions")
-        if (!response) return;
-        const positions = await response.json()
-
-        positions.forEach(pos => {
-
-            const id = pos.deviceId
-            const lat = pos.latitude
-            const lng = pos.longitude
-
-            checkGeofences(id, lat, lng)
-
-            const lastUpdate = new Date(pos.deviceTime)
-            const now = new Date()
-            const diffMinutes = (now - lastUpdate) / 60000
-
-            const isOnline = diffMinutes <= 5
-
-            if (markers[id]) {
-
-                markers[id].setLatLng([lat, lng])
-
-                // ✅ UPDATE ICON HERE
-                markers[id].setIcon(
-                    isOnline ? onlineIcon : offlineIcon
-                )
-
-            } else {
-
-                markers[id] = L.marker([lat, lng], {
-                    icon: isOnline ? onlineIcon : offlineIcon
-                })
-                    .addTo(map)
-                    .bindPopup(
-                        "Vehicle " + id +
-                        "<br>Speed: " + Math.round(pos.speed * 1.852) + " km/h"
-                    )
-
-            }
-
-        })
-
-    }
 
     // ROUTE HISTORY
     async function showRoute() {
@@ -442,7 +387,9 @@ document.addEventListener("DOMContentLoaded", () => {
         })
 
     }
-
+    function isVehicleOnline(deviceTime) {
+        return ((new Date() - new Date(deviceTime)) / 60000) <= 5;
+    }
     //playback
     let smoothAnimationId = null; // store requestAnimationFrame ID
     let startTime = null;
@@ -919,11 +866,8 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log("Command response:", data);
     }
     // INITIAL LOAD
-    loadPositions()
 
     loadGeofences()
-
-
     window.showRoute = showRoute;
     window.addDevice = addDevice;
     window.startPlayback = startPlayback;
@@ -937,11 +881,7 @@ function updateVehicleList(positions) {
     container.innerHTML = "";
 
     positions.forEach(pos => {
-        const lastUpdate = new Date(pos.deviceTime);
-        const now = new Date();
-        const diffMinutes = (now - lastUpdate) / 60000;
-
-        const isOnline = diffMinutes <= 5;
+        const isOnline = isVehicleOnline(pos.deviceTime);
 
         const div = document.createElement("div");
         div.style.borderBottom = "1px solid #ccc";
