@@ -65,7 +65,6 @@ exports.getPositions = async (req, res) => {
   }
 };
 //add device
-const Device = require("../models/Device");
 
 exports.addDevice = async (req, res) => {
     try {
