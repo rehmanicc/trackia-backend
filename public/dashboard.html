@@ -29,15 +29,44 @@
             <hr>
 
             <!-- ADMIN PANEL -->
-            <div id="adminPanel">
 
-                <h3>Add Vehicle</h3>
+            <div id="adminPanel" style="display:none;">
+
+                <h3>Admin Panel</h3>
+
+                <!-- 🔹 CREATE USER -->
+                <h4>Create User</h4>
+
+                <input id="newUserName" placeholder="Name" style="width:100%;margin-bottom:5px;">
+                <input id="newUserEmail" placeholder="Email" style="width:100%;margin-bottom:5px;">
+                <input id="newUserPassword" placeholder="Password" type="password"
+                    style="width:100%;margin-bottom:5px;">
+
+                <select id="newUserRole" style="width:100%;margin-bottom:5px;">
+                    <option value="user">User</option>
+                </select>
+
+                <button onclick="createUser()">Create User</button>
+
+                <hr>
+
+                <!-- 🔹 ADD VEHICLE -->
+                <h4>Add Vehicle</h4>
 
                 <input id="vehicleName" placeholder="Vehicle Name" style="width:100%;margin-bottom:5px;">
                 <input id="vehicleUniqueId" placeholder="Tracker IMEI / Unique ID"
                     style="width:100%;margin-bottom:5px;">
 
                 <button onclick="addDevice()">Add Vehicle</button>
+
+            </div>
+            <hr>
+            <!-- USER PANEL -->
+            <div id="userPanel" style="display:none;">
+
+                <h3>User Panel</h3>
+
+                <p>You can create up to <b>3 geofences</b></p>
 
             </div>
 
@@ -61,13 +90,20 @@
             <div id="vehicleDetails" style="margin-top:10px;"></div>
             <hr>
             <h3>Alerts</h3>
+            <div style="padding:8px; border-bottom:1px solid #ccc; background:#fafafa;">
+
+                <select id="alertTypeFilter">
+                    <option value="all">All</option>
+                    <option value="enter">Entered</option>
+                    <option value="exit">Exited</option>
+                </select>
+                <input type="text" id="vehicleSearch" placeholder="Search Vehicle ID..."
+                    style="margin-left:10px; padding:4px;">
+            </div>
             <div id="alertList"></div>
             <h3>Route Playback</h3>
-
             <input id="playbackDeviceId" placeholder="Device ID" style="width:100%;margin-bottom:5px;">
-
             <input id="playbackDate" type="date" style="width:100%;margin-bottom:10px;">
-
             <button onclick="startPlayback()">Start Playback</button>
             <div id="tripSummary" style="padding:10px; background:#fff; border:1px solid #ccc; margin-top:10px;">
                 <h3>Trip Summary</h3>

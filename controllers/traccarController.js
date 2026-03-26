@@ -5,29 +5,38 @@ const EMAIL = process.env.TRACCAR_EMAIL;
 const PASSWORD = process.env.TRACCAR_PASSWORD;
 const traccarAPI = require("../services/traccarAPI");
 const socket = require("../socket");
+
 // GET DEVICES
+const Device = require("../models/Device");
+
 exports.getDevices = async (req, res) => {
-  try {
+    try {
+        const user = req.user;
 
-    const response = await traccarAPI.get("/api/devices");
+        let devices;
 
-    res.json(response.data);
+        if (user.role === "owner") {
+            // 👑 Super Admin → all company devices
+            devices = await Device.find({ companyId: user.companyId });
+        }
 
-  } catch (error) {
+        else if (user.role === "admin") {
+            // 🧑‍💼 Admin → only his devices
+            devices = await Device.find({ assignedTo: user._id });
+        }
 
-    console.log("TRACCAR ERROR:", error.message);
+        else {
+            // 👤 User → only assigned devices
+            devices = await Device.find({ assignedTo: user._id });
+        }
 
-    if (error.response) {
-      console.log(error.response.data);
+        res.json(devices);
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
     }
-
-    res.status(500).json({
-      error: error.message
-    });
-
-  }
 };
-
 //Get positions API
 
 exports.getPositions = async (req, res) => {
@@ -56,31 +65,52 @@ exports.getPositions = async (req, res) => {
   }
 };
 //add device
+const Device = require("../models/Device");
+
 exports.addDevice = async (req, res) => {
-  try {
+    try {
+        const { name, uniqueId } = req.body;
 
-    const { name, uniqueId } = req.body;
+        const user = req.user;
 
-   const response = await traccarAPI.post("/api/devices", {
-  name,
-  uniqueId
-});
+        let assignedTo = null;
 
-    res.json(response.data);
+        // 🔥 ROLE LOGIC
+        if (user.role === "admin") {
+            assignedTo = user._id; // auto assign to admin
+        }
 
-  } catch (error) {
+        if (user.role === "user") {
+            return res.status(403).json({ error: "Access denied" });
+        }
 
-    console.log("ADD DEVICE ERROR:", error.message);
+        // 1️⃣ Create in Traccar
+        const response = await axios.post(
+            `${process.env.TRACCAR_URL}/api/devices`,
+            { name, uniqueId },
+            {
+                auth: {
+                    username: process.env.TRACCAR_EMAIL,
+                    password: process.env.TRACCAR_PASSWORD
+                }
+            }
+        );
 
-    if (error.response) {
-      console.log(error.response.data);
+        // 2️⃣ Save in MongoDB
+        const device = await Device.create({
+            name,
+            uniqueId,
+            companyId: user.companyId, // 🔥 IMPORTANT
+            createdBy: user._id,
+            assignedTo
+        });
+
+        res.json(device);
+
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message });
     }
-
-    res.status(500).json({
-      error: error.message
-    });
-
-  }
 };
 //get routs
 exports.getRoute = async (req, res) => {

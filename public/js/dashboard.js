@@ -1,3 +1,4 @@
+let allowedDevices = {};
 document.addEventListener("DOMContentLoaded", () => {
     // all your JS code here
 
@@ -13,14 +14,15 @@ document.addEventListener("DOMContentLoaded", () => {
     let routeLine = null;
     let stopMarkers = [];
     let lastAlertTime = {};
+    let isPlaybackMode = false;
     const token = localStorage.getItem("token")
+
 
 
     if (!token) {
         alert("Please login first")
         window.location.href = "login.html"
     }
-
     let payload = null;
 
     try {
@@ -30,8 +32,22 @@ document.addEventListener("DOMContentLoaded", () => {
         localStorage.removeItem("token");
         window.location.href = "login.html";
     }
-    if (payload.role !== "admin") {
-        document.getElementById("adminPanel").style.display = "none"
+    const userRole = payload.role;
+    // Hide both panels first
+    document.getElementById("adminPanel").style.display = "none";
+    document.getElementById("userPanel").style.display = "none";
+
+    // Show based on role
+    if (userRole === "admin") {
+        document.getElementById("adminPanel").style.display = "block";
+    }
+
+    if (userRole === "user") {
+        document.getElementById("userPanel").style.display = "block";
+    }
+
+    if (userRole === "owner") {
+        document.getElementById("adminPanel").style.display = "block"; // owner acts like admin
     }
 
     function logout() {
@@ -69,8 +85,10 @@ document.addEventListener("DOMContentLoaded", () => {
     let markers = {}
     let geofences = []
     let alerts = []
-    let vehicleStates = {}
-
+    let vehicleStates = JSON.parse(localStorage.getItem("vehicleStates") || "{}");
+    setTimeout(() => {
+        localStorage.removeItem("vehicleStates");
+    }, 1000 * 60 * 60 * 24);
     const map = L.map("map", {
         rotate: true,
         touchRotate: true,
@@ -100,7 +118,10 @@ document.addEventListener("DOMContentLoaded", () => {
     map.addControl(drawControl)
 
     map.on(L.Draw.Event.CREATED, async function (event) {
-
+        if (geofences.length >= 3) {
+            alert("Maximum 3 geofences allowed");
+            return;
+        }
         const layer = event.layer
         drawnItems.addLayer(layer)
 
@@ -110,112 +131,103 @@ document.addEventListener("DOMContentLoaded", () => {
             method: "POST",
             body: JSON.stringify(geojson)
         })
-
+        await loadGeofences();
         alert("Geofence Saved")
 
     })
 
-    const socket = io("https://trackia-backend.onrender.com")
-    socket.on("connect", () => {
-        console.log("✅ Socket connected:", socket.id);
-    });
+    let socket;
 
-    socket.on("disconnect", () => {
-        console.log("❌ Socket disconnected");
-    });
+    async function initApp() {
 
-    socket.on("positions", (positions) => {
-        updateVehicleList(positions);
-        console.log("📡 Positions received:", positions);
-        positions.forEach((pos) => {
-            const id = pos.deviceId;
-            const lat = pos.latitude;
-            const lng = pos.longitude;
-            const course = pos.course || 0;
-            checkGeofences(id, lat, lng);
-            const isOnline = isVehicleOnline(pos.deviceTime);
+        await fetchAllowedDevices();   // ✅ FIRST
 
-            const icon = isOnline ? onlineIcon : offlineIcon;
-
-            if (markers[id]) {
-
-                const current = markers[id].getLatLng();
-
-                // Smooth animation
-                const steps = 20;
-                let i = 0;
-
-                const deltaLat = (lat - current.lat) / steps;
-                const deltaLng = (lng - current.lng) / steps;
-
-                const deltaAngle =
-                    ((course - (markers[id].options.rotationAngle || 0) + 540) % 360) - 180;
-
-                const stepAngle = deltaAngle / steps;
-
-                const move = setInterval(() => {
-                    i++;
-
-                    markers[id].setLatLng([
-                        current.lat + deltaLat * i,
-                        current.lng + deltaLng * i
-                    ]);
-
-                    markers[id].setRotationAngle(
-                        (markers[id].options.rotationAngle || 0) + stepAngle * i
-                    );
-
-                    markers[id].setIcon(icon);
-
-                    if (i >= steps) clearInterval(move);
-
-                }, 100);
-
-            } else {
-
-                markers[id] = L.marker([lat, lng], {
-                    icon: icon,
-                    rotationAngle: course,
-                    rotationOrigin: 'center center'
-                })
-                    .addTo(map)
-                    .on("click", () => {
-                        selectedVehicleId = id;
-                        console.log("Selected vehicle:", id);
-                    })
-                    .bindPopup(
-                        "Vehicle " + id +
-                        "<br>Speed: " + Math.round(pos.speed * 1.852) + " km/h"
-                    );
+        socket = io("https://trackia-backend.onrender.com", {
+            auth: {
+                token: localStorage.getItem("token")
             }
-
-            if (selectedVehicleId === id) {
-                renderVehicleDetails(pos);
-            }
-
+        });
+        socket.on("connect", () => {
+            console.log("✅ Socket connected:", socket.id);
         });
 
-    });
+        socket.on("disconnect", () => {
+            console.log("❌ Socket disconnected");
+        });
+
+        socket.on("positions", (positions) => {
+
+            if (isPlaybackMode) return;
+
+            const filteredPositions = positions.filter(pos =>
+                allowedDevices[pos.deviceId]
+            );
+
+            updateVehicleList(filteredPositions);
+
+            filteredPositions.forEach((pos) => {
+
+                const id = pos.deviceId;
+
+                if (!allowedDevices[id]) return;
+
+                const lat = pos.latitude;
+                const lng = pos.longitude;
+                const course = pos.course || 0;
+
+                checkGeofences(id, lat, lng);
+
+                const isOnline = isVehicleOnline(pos.deviceTime);
+                const icon = isOnline ? onlineIcon : offlineIcon;
+
+                // (rest of your marker code stays same)
+            });
+        });
+
+        loadGeofences();
+    }
+
+    initApp();
     // ADD DEVICE
     async function addDevice() {
 
-        const name = document.getElementById("vehicleName").value
-        const imei = document.getElementById("vehicleUniqueId").value
+        // ✅ Role check
+        if (userRole !== "admin" && userRole !== "owner") {
+            alert("Access Denied");
+            return;
+        }
 
-        await apiFetch("/api/traccar/devices", {
-            method: "POST",
-            body: JSON.stringify({ name, uniqueId: imei })
-        })
+        const name = document.getElementById("vehicleName").value.trim();
+        const imei = document.getElementById("vehicleUniqueId").value.trim();
 
-        alert("Vehicle Added")
+        // ✅ Validation
+        if (!name || !imei) {
+            alert("Please fill all fields");
+            return;
+        }
 
+        try {
+            const res = await apiFetch("/api/traccar/devices", {
+                method: "POST",
+                body: JSON.stringify({
+                    name,
+                    uniqueId: imei
+                })
+            });
+
+            if (!res) return;
+
+            alert("Vehicle Added");
+
+            // ✅ Clear inputs
+            document.getElementById("vehicleName").value = "";
+            document.getElementById("vehicleUniqueId").value = "";
+
+        } catch (err) {
+            console.error(err);
+            alert("Failed to add vehicle");
+        }
     }
-
-
-    // LOAD VEHICLES SIDEBAR
-
-
-
 
     // ROUTE HISTORY
     async function showRoute() {
@@ -298,10 +310,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
         geofences.forEach((f, index) => {
 
+            // 🔥 STEP 1: FAST FILTER (BOUNDING BOX)
+            const bbox = turf.bbox(f);
+
+            const [minLng, minLat, maxLng, maxLat] = bbox;
+
+            if (
+                lng < minLng || lng > maxLng ||
+                lat < minLat || lat > maxLat
+            ) {
+                return; // skip expensive check
+            }
+
+            // 🔥 STEP 2: PRECISE CHECK
             const inside = turf.booleanPointInPolygon(point, f);
+
             const key = deviceId + "_" + index;
 
-            // ✅ Initialize state
+            // 🔥 STEP 3: INITIAL STATE
             if (!(key in vehicleStates)) {
                 vehicleStates[key] = inside;
                 return;
@@ -309,86 +335,144 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const previousState = vehicleStates[key];
 
-            // ✅ ENTER event (only once)
+            // 🔥 STEP 4: ENTER EVENT
             if (!previousState && inside) {
-                addAlert(`Vehicle ${deviceId} ENTERED ${f.name || "geofence"}`);
-                L.geoJSON(f, {
-                    style: { color: "green", weight: 3 }
-                }).addTo(map);
-                map.panTo([lat, lng]);
+                addAlert(deviceId, index, "enter",
+                    `Vehicle ${deviceId} ENTERED ${f.name || "geofence"}`
+                );
             }
 
-            // ✅ EXIT event (only once)
+            // 🔥 STEP 5: EXIT EVENT
             if (previousState && !inside) {
-                addAlert(`Vehicle ${deviceId} exited ${f.name || "zone"}`);
-
-                L.geoJSON(f, {
-                    style: { color: "red", weight: 3 }
-                }).addTo(map);
-                map.panTo([lat, lng]);
+                addAlert(deviceId, index, "exit",
+                    `Vehicle ${deviceId} EXITED ${f.name || "zone"}`
+                );
             }
 
-            // ✅ Update state
+            // 🔥 STEP 6: UPDATE STATE
             vehicleStates[key] = inside;
-
         });
+
+        // 🔥 STEP 7: SAVE STATE (IMPORTANT)
+        localStorage.setItem("vehicleStates", JSON.stringify(vehicleStates));
     }
 
-    // ALERT SYSTEM
-    function addAlert(message) {
+    function addAlert(deviceId, geofenceId, type, message) {
+        if (!allowedDevices[deviceId]) return;
+        deviceId = String(deviceId);
+        geofenceId = String(geofenceId);
+        type = type.toLowerCase().trim();
 
+        const key = `${deviceId}_${geofenceId}_${type}`;
         const now = Date.now();
 
-        // ⛔ Prevent spam (3 sec cooldown per message)
-        if (lastAlertTime[message] && (now - lastAlertTime[message] < 3000)) {
+        console.log("ALERT KEY:", key);
+
+        // ✅ 1. HARD DUPLICATE CHECK (latest alert)
+        const last = alerts[0];
+        if (
+            last &&
+            last.deviceId == deviceId &&
+            last.geofenceId == geofenceId &&
+            last.type === type
+        ) {
+            console.log("BLOCKED (same as last alert)");
             return;
         }
 
-        lastAlertTime[message] = now;
+        // ✅ 2. TIME-BASED BLOCK
+        if (lastAlertTime[key] && (now - lastAlertTime[key] < 5000)) {
+            console.log("BLOCKED (cooldown)");
+            return;
+        }
+
+        lastAlertTime[key] = now;
 
         alerts.unshift({
-            message: message,
+            deviceId,
+            geofenceId,
+            type,
+            message,
             time: new Date()
         });
 
-        if (alerts.length > 20) {
-            alerts.pop();
-        }
+        if (alerts.length > 50) alerts.pop();
 
         renderAlerts();
     }
 
-
     function renderAlerts() {
 
-        const container = document.getElementById("alertList")
-        container.innerHTML = ""
+        const container = document.getElementById("alertList");
+        container.innerHTML = "";
 
-        alerts.forEach(a => {
+        // 🔹 Get filter values
+        const typeFilter = document.getElementById("alertTypeFilter")?.value || "all";
+        const search = document.getElementById("vehicleSearch")?.value || "";
 
-            const div = document.createElement("div")
+        // 🔹 APPLY FILTERS
+        let filteredAlerts = alerts;
 
-            div.style.border = "1px solid #ddd"
-            div.style.padding = "6px"
-            div.style.marginBottom = "5px"
-            if (a.message.includes("entered")) {
-                div.style.background = "#d4edda"; // green
-            } else {
-                div.style.background = "#f8d7da"; // red
+        // Filter by type
+        if (typeFilter !== "all") {
+            filteredAlerts = filteredAlerts.filter(a => a.type === typeFilter);
+        }
+
+        // Search by vehicle ID
+        if (search) {
+            filteredAlerts = filteredAlerts.filter(a =>
+                a.deviceId.toString().includes(search)
+            );
+        }
+
+        // 🔹 GROUP BY VEHICLE
+        const grouped = {};
+
+        filteredAlerts.forEach(a => {
+            if (!grouped[a.deviceId]) {
+                grouped[a.deviceId] = [];
             }
+            grouped[a.deviceId].push(a);
+        });
 
-            div.innerHTML = `
-<b>${a.message}</b><br>
-<small>${a.time.toLocaleTimeString()}</small>
-`
+        // 🔹 RENDER GROUPS
+        Object.keys(grouped).forEach(deviceId => {
 
-            container.appendChild(div)
+            // 🚗 Vehicle header
+            const header = document.createElement("div");
+            header.style.background = "#eee";
+            header.style.padding = "6px";
+            header.style.fontWeight = "bold";
+            header.style.borderBottom = "1px solid #ccc";
 
-        })
+            header.innerHTML = `🚗 Vehicle ${deviceId}`;
+            container.appendChild(header);
 
-    }
-    function isVehicleOnline(deviceTime) {
-        return ((new Date() - new Date(deviceTime)) / 60000) <= 5;
+            // 🔹 Alerts under this vehicle
+            grouped[deviceId].forEach(a => {
+
+                const div = document.createElement("div");
+
+                div.style.borderBottom = "1px solid #ddd";
+                div.style.padding = "6px";
+                div.style.marginBottom = "3px";
+
+                // ✅ Use TYPE (not message)
+                if (a.type === "enter") {
+                    div.style.background = "#d4edda"; // green
+                } else {
+                    div.style.background = "#f8d7da"; // red
+                }
+
+                div.innerHTML = `
+                ${a.message}<br>
+                <small>${a.time.toLocaleTimeString()}</small>
+            `;
+
+                container.appendChild(div);
+            });
+
+        });
     }
     //playback
     let smoothAnimationId = null; // store requestAnimationFrame ID
@@ -505,6 +589,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     //play back
     async function startPlayback() {
+        isPlaybackMode = true;
         clearPlayback();
         document.getElementById("playbackControl").style.display = "block";
         document.getElementById("playToggleBtn").style.display = "flex";
@@ -608,6 +693,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     //clear function
     function clearPlayback() {
+        isPlaybackMode = false;
         if (isPlaying) stopAutoPlayback();
         // Remove route
         if (routeLine) {
@@ -851,6 +937,69 @@ document.addEventListener("DOMContentLoaded", () => {
         const currentTime = new Date(startPoint.time.getTime() + t * (endPoint.time - startPoint.time));
         document.getElementById("timeLabel").innerText = currentTime.toLocaleTimeString();
     });
+    async function fetchAllowedDevices() {
+        try {
+            const res = await fetch("/api/traccar/devices", {
+                headers: {
+                    Authorization: "Bearer " + localStorage.getItem("token")
+                }
+            });
+
+            const devices = await res.json();
+
+            allowedDevices = {};
+
+            devices.forEach(device => {
+                allowedDevices[device.traccarId] = device;
+            });
+
+            console.log("✅ Allowed Devices:", allowedDevices);
+
+        } catch (err) {
+            console.error("❌ Error fetching devices:", err);
+        }
+    }
+    // create user function
+    async function createUser() {
+
+        const name = document.getElementById("newUserName").value.trim();
+        const email = document.getElementById("newUserEmail").value.trim();
+        const password = document.getElementById("newUserPassword").value.trim();
+        const role = document.getElementById("newUserRole").value;
+
+        if (!name || !email || !password) {
+            alert("Fill all fields");
+            return;
+        }
+
+        try {
+            const res = await fetch("/api/auth/register", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + localStorage.getItem("token")
+                },
+                body: JSON.stringify({ name, email, password, role })
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                alert("User created successfully");
+
+                // clear form
+                document.getElementById("newUserName").value = "";
+                document.getElementById("newUserEmail").value = "";
+                document.getElementById("newUserPassword").value = "";
+            } else {
+                alert(data.error || "Error creating user");
+            }
+
+        } catch (err) {
+            console.error(err);
+            alert("Server error");
+        }
+    }
     //command function
     async function sendCommand(deviceId, type) {
         const res = await apiFetch("/api/traccar/command", {
@@ -866,13 +1015,13 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log("Command response:", data);
     }
     // INITIAL LOAD
-
-    loadGeofences()
     window.showRoute = showRoute;
     window.addDevice = addDevice;
     window.startPlayback = startPlayback;
     window.logout = logout;
     window.togglePlayback = togglePlayback;
+    window.addAlert = addAlert;
+    window.createUser = createUser;
 });
 function updateVehicleList(positions) {
     const container = document.getElementById("vehicleList");
@@ -881,6 +1030,9 @@ function updateVehicleList(positions) {
     container.innerHTML = "";
 
     positions.forEach(pos => {
+
+        if (!allowedDevices[pos.deviceId]) return;
+
         const isOnline = isVehicleOnline(pos.deviceTime);
 
         const div = document.createElement("div");
@@ -895,4 +1047,7 @@ function updateVehicleList(positions) {
 
         container.appendChild(div);
     });
+}
+function isVehicleOnline(deviceTime) {
+    return ((new Date() - new Date(deviceTime)) / 60000) <= 5;
 }

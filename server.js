@@ -8,12 +8,69 @@ const http = require("http");
 
 const app = express();
 const server = http.createServer(app);
+const jwt = require("jsonwebtoken");
+const Device = require("./models/Device");
 
 // ✅ SOCKET INIT
 const socket = require("./socket");
 const io = socket.init(server);
 const axios = require("axios");
 
+async function getAllowedDeviceIds(user) {
+
+  if (user.role === "owner") {
+    const devices = await Device.find();
+    return devices.map(d => d.traccarId);
+  }
+
+  if (user.role === "admin") {
+    const devices = await Device.find({ companyId: user.companyId });
+    return devices.map(d => d.traccarId);
+  }
+
+  if (user.role === "user") {
+    const devices = await Device.find({ assignedTo: user.id });
+    return devices.map(d => d.traccarId);
+  }
+
+  return [];
+}
+async function broadcastPositionsByRooms(allPositions) {
+
+  // 🔹 1. OWNER → gets all
+  io.to("owner").emit("positions", allPositions);
+
+  // 🔹 2. ADMIN (by company)
+  const companies = {};
+
+  allPositions.forEach(pos => {
+    const device = pos.deviceId;
+
+    // Group later
+    if (!companies[device]) companies[device] = [];
+    companies[device].push(pos);
+  });
+
+  // Get all devices from DB
+  const devices = await Device.find();
+
+  devices.forEach(device => {
+
+    const posList = allPositions.filter(p => p.deviceId === device.traccarId);
+
+    if (posList.length === 0) return;
+
+    // Admin room
+    io.to(`company_${device.companyId}`).emit("positions", posList);
+
+    // User room
+    if (device.assignedTo) {
+      io.to(`user_${device.assignedTo}`).emit("positions", posList);
+    }
+
+  });
+
+}
 setInterval(async () => {
   try {
     const response = await axios.get(
@@ -26,7 +83,7 @@ setInterval(async () => {
       }
     );
 
-    io.emit("positions", response.data);
+    broadcastPositionsByRooms(response.data);
 
     console.log("📡 Positions emitted:", response.data.length);
 
@@ -101,14 +158,45 @@ app.get("/check-db", async (req, res) => {
 // ======================
 // SOCKET CONNECTION
 // ======================
-io.on("connection", (socket) => {
-  console.log("Client connected:", socket.id);
+io.on("connection", async (socket) => {
+
+  try {
+    const token = socket.handshake.auth?.token;
+
+    if (!token) {
+      console.log("❌ No token");
+      return socket.disconnect();
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    socket.user = decoded;
+
+    // ✅ Assign room
+    if (decoded.role === "owner") {
+      socket.join("owner");
+    }
+
+    if (decoded.role === "admin") {
+      socket.join(`company_${decoded.companyId}`);
+    }
+
+    if (decoded.role === "user") {
+      socket.join(`user_${decoded.id}`);
+    }
+
+    console.log("✅ User connected:", decoded.id);
+
+  } catch (err) {
+    console.log("❌ Invalid token");
+    socket.disconnect();
+  }
 
   socket.on("disconnect", () => {
-    console.log("Client disconnected");
+    console.log("Client disconnected:", socket.id);
   });
-});
 
+});
 // ======================
 // SERVER START
 // ======================
