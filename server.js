@@ -130,7 +130,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/traccar", traccarRoutes);
 app.use("/api/geofence", geofenceRoutes);
 app.use("/api/trips", tripRoutes);
-
+app.use("/api/traccar", traccarRoutes);
 // ======================
 // DB CHECK ROUTE
 // ======================
