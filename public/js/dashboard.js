@@ -995,7 +995,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const devices = await apiFetch("/api/traccar/devices");
 
             allowedDevices = {};
-
+            console.log("📦 Devices from backend:", devices);
             devices.forEach(device => {
                 allowedDevices[device.traccarId] = device;
             });

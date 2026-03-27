@@ -74,13 +74,11 @@ router.post("/devices", authMiddleware, async (req, res) => {
 
     try {
 
-        // 🔹 Prevent duplicate IMEI
         const exists = await Device.findOne({ uniqueId });
         if (exists) {
             return res.status(400).json({ error: "Device already exists" });
         }
 
-        // 🔹 Create in Traccar
         const traccarRes = await axios.post(
             `${process.env.TRACCAR_URL}/api/devices`,
             { name, uniqueId },
@@ -94,21 +92,30 @@ router.post("/devices", authMiddleware, async (req, res) => {
 
         const traccarDevice = traccarRes.data;
 
-        // 🔹 Save in DB
+        // 🔥 CRITICAL VALIDATION
+        if (!traccarDevice || !traccarDevice.id) {
+            return res.status(500).json({
+                error: "Traccar did not return device ID"
+            });
+        }
+
         const device = new Device({
             name,
             uniqueId,
-            traccarId: traccarDevice.id,
-            companyId: req.user.companyId, // 🔥 secure
-            createdBy: req.user.id
+            traccarId: Number(traccarDevice.id), // 🔥 FORCE NUMBER
+            companyId: req.user.companyId,
+            createdBy: req.user.id,
+            assignedTo: req.user.id // ✅ IMPORTANT
         });
 
         await device.save();
 
+        console.log("✅ Saved Device:", device);
+
         res.json({ success: true, device });
 
     } catch (err) {
-        console.error(err.message);
+        console.error("❌ DEVICE CREATE ERROR:", err.message);
         res.status(500).json({ error: "Failed to create device" });
     }
 });
