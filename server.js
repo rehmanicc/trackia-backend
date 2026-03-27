@@ -202,7 +202,6 @@ io.on("connection", async (socket) => {
 // ======================
 const PORT = process.env.PORT || 5000;
 const User = require("./models/User");
-const Device = require("./models/Device");
 app.delete("/api/reset", async (req, res) => {
   try {
     await User.deleteMany({});
