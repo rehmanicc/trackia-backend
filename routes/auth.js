@@ -11,46 +11,36 @@ if (!process.env.JWT_SECRET) {
 // REGISTER
 router.post("/register", authMiddleware, async (req, res) => {
 
-  const { name, email, password, role } = req.body;
+  const { name, email, password } = req.body;
 
-  // 🔐 Only owner/admin can create users
-  if (req.user.role === "user") {
-    return res.status(403).json({ error: "Access denied" });
+  // 🔐 ONLY ADMIN CAN CREATE USERS
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ error: "Only admin can create users" });
   }
 
-  // ❌ Prevent admin creating admin
-  if (req.user.role === "admin" && role === "admin") {
-    return res.status(403).json({ error: "Admin cannot create another admin" });
+  try {
+    // 🔐 HASH PASSWORD
+    const hash = await bcrypt.hash(password, 10);
+
+    // 🔐 CREATE USER (ONLY ONCE)
+    const user = new User({
+      name,
+      email,
+      password: hash,
+      role: "user", // 🔥 force role
+      companyId: req.user.companyId
+    });
+
+    await user.save();
+
+    res.json({ message: "User created", user });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to create user" });
   }
-
-  const hash = await bcrypt.hash(password, 10);
-
-  let finalCompanyId;
-
-  if (req.user.role === "owner") {
-    // Owner creates admin/user → new company OR same company
-    finalCompanyId = req.user.companyId || null;
-  }
-
-  if (req.user.role === "admin") {
-    // Admin can only create users under same company
-    finalCompanyId = req.user.companyId;
-  }
-
-  const user = new User({
-    name,
-    email,
-    password: hash,
-    role,
-    companyId: finalCompanyId
-  });
-
-  await user.save();
-
-  res.json({ message: "User created", user });
 
 });
-
 // LOGIN
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
