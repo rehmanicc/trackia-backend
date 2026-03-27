@@ -99,6 +99,7 @@ exports.addDevice = async (req, res) => {
         const device = await Device.create({
             name,
             uniqueId,
+            traccarId: response.data.id,
             companyId: user.companyId, // 🔥 IMPORTANT
             createdBy: user._id,
             assignedTo
