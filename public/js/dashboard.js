@@ -173,10 +173,6 @@ document.addEventListener("DOMContentLoaded", () => {
             console.log("✅ Socket connected:", socket.id);
         });
 
-        socket.on("disconnect", () => {
-            console.log("❌ Socket disconnected");
-        });
-
         socket.on("positions", (positions) => {
 
             if (isPlaybackMode) return;
@@ -184,10 +180,19 @@ document.addEventListener("DOMContentLoaded", () => {
             console.log("🔥 Positions:", positions);
             console.log("🔥 AllowedDevices:", allowedDevices);
 
+            console.log("🔑 Allowed keys:", Object.keys(allowedDevices));
+
+            positions.forEach(p => {
+                console.log("📡 Position deviceId:", p.deviceId);
+            });
+
             const filteredPositions = positions.filter(pos =>
                 allowedDevices[String(pos.deviceId)]
             );
 
+            console.log("✅ Filtered:", filteredPositions);
+
+            // ✅ MOVE THIS INSIDE
             updateVehicleList(filteredPositions);
 
             filteredPositions.forEach((pos) => {
@@ -207,14 +212,13 @@ document.addEventListener("DOMContentLoaded", () => {
                     return;
                 }
 
-                const course = pos.course || 0;
                 console.log("FINAL CHECK:", id, allowedDevices[id], lat, lng);
+
                 checkGeofences(id, lat, lng);
 
                 const isOnline = isVehicleOnline(pos.deviceTime);
                 const icon = isOnline ? onlineIcon : offlineIcon;
 
-                // ✅ CREATE / UPDATE MARKER
                 if (!markers[id]) {
                     console.log("✅ Creating marker:", id);
 
@@ -229,6 +233,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
 
             });
+
         });
         loadGeofences();
     }
