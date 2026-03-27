@@ -16,11 +16,11 @@ async function apiFetch(endpoint, options = {}) {
     }
   });
   if (!res.ok) {
-  const text = await res.text();
-  console.error("❌ API Error:", text);
-  throw new Error("API failed");
-}
-return res.json();
+    const text = await res.text();
+    console.error("❌ API Error:", text);
+    throw new Error("API failed");
+  }
+  return res.json();
   // 🔥 Handle token expiry
   if (res.status === 401) {
     alert("Session expired. Please login again.");

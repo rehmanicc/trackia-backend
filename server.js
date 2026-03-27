@@ -201,7 +201,18 @@ io.on("connection", async (socket) => {
 // SERVER START
 // ======================
 const PORT = process.env.PORT || 5000;
+const User = require("./models/User");
+const Device = require("./models/Device");
+app.delete("/api/reset", async (req, res) => {
+  try {
+    await User.deleteMany({});
+    await Device.deleteMany({});
 
+    res.json({ message: "Database reset successful" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

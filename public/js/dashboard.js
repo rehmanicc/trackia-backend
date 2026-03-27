@@ -49,7 +49,23 @@ document.addEventListener("DOMContentLoaded", () => {
     if (userRole === "owner") {
         document.getElementById("adminPanel").style.display = "block"; // owner acts like admin
     }
+    const roleSelect = document.getElementById("newUserRole");
 
+    // Clear existing options
+    roleSelect.innerHTML = "";
+
+    if (userRole === "owner") {
+        roleSelect.innerHTML = `
+        <option value="admin">Admin</option>
+        <option value="user">User</option>
+    `;
+    } else if (userRole === "admin") {
+        roleSelect.innerHTML = `
+        <option value="user">User</option>
+    `;
+    } else {
+        roleSelect.style.display = "none";
+    }
     function logout() {
         localStorage.removeItem("token")
         window.location.href = "login.html"
@@ -284,22 +300,26 @@ document.addEventListener("DOMContentLoaded", () => {
     // LOAD GEOFENCES
     async function loadGeofences() {
 
-        const res = await apiFetch("/api/geofence")
-        if (!res) return;
-        const fences = await res.json()
+        try {
+            const fences = await apiFetch("/api/geofence");
 
-        geofences = fences
+            if (!fences) return;
 
-        fences.forEach(f => {
+            geofences = fences;
 
-            const layer = L.geoJSON(f)
+            fences.forEach(f => {
 
-            layer.eachLayer(l => {
-                drawnItems.addLayer(l)
-            })
+                const layer = L.geoJSON(f);
 
-        })
+                layer.eachLayer(l => {
+                    drawnItems.addLayer(l);
+                });
 
+            });
+
+        } catch (err) {
+            console.error("❌ Error loading geofences:", err);
+        }
     }
 
 
@@ -939,13 +959,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     async function fetchAllowedDevices() {
         try {
-            const res = await fetch("/api/traccar/devices", {
-                headers: {
-                    Authorization: "Bearer " + localStorage.getItem("token")
-                }
-            });
-
-            const devices = await res.json();
+            const devices = await apiFetch("/api/traccar/devices");
 
             allowedDevices = {};
 
@@ -973,7 +987,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         try {
-            const res = await fetch("/api/auth/register", {
+            const res = await apiFetch("/api/auth/register", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

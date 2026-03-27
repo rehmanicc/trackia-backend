@@ -11,11 +11,16 @@ if (!process.env.JWT_SECRET) {
 // REGISTER
 router.post("/register", authMiddleware, async (req, res) => {
 
-  const { name, email, password, role, companyId } = req.body;
+  const { name, email, password, role } = req.body;
 
   // 🔐 Only owner/admin can create users
   if (req.user.role === "user") {
     return res.status(403).json({ error: "Access denied" });
+  }
+
+  // ❌ Prevent admin creating admin
+  if (req.user.role === "admin" && role === "admin") {
+    return res.status(403).json({ error: "Admin cannot create another admin" });
   }
 
   const hash = await bcrypt.hash(password, 10);
@@ -23,15 +28,12 @@ router.post("/register", authMiddleware, async (req, res) => {
   let finalCompanyId;
 
   if (req.user.role === "owner") {
-    // 👑 Owner assigns company manually
-    if (!companyId) {
-      return res.status(400).json({ error: "companyId required" });
-    }
-    finalCompanyId = companyId;
+    // Owner creates admin/user → new company OR same company
+    finalCompanyId = req.user.companyId || null;
   }
 
   if (req.user.role === "admin") {
-    // 👨‍💼 Admin inherits company automatically
+    // Admin can only create users under same company
     finalCompanyId = req.user.companyId;
   }
 
@@ -48,7 +50,6 @@ router.post("/register", authMiddleware, async (req, res) => {
   res.json({ message: "User created", user });
 
 });
-
 
 // LOGIN
 router.post("/login", async (req, res) => {
