@@ -1,4 +1,7 @@
 require("dotenv").config();
+const Position = require("./models/Position");
+const PositionArchive = require("./models/PositionsArchive");
+const Trip = require("./models/Trip");
 console.log("MONGO_URI:", process.env.MONGO_URI);
 
 const express = require("express");
