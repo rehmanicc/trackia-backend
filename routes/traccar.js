@@ -92,20 +92,28 @@ router.post("/devices", authMiddleware, async (req, res) => {
 
         const traccarDevice = traccarRes.data;
 
-        // 🔥 CRITICAL VALIDATION
+        // 🔥 VALIDATE TRACCAR ID
         if (!traccarDevice || !traccarDevice.id) {
             return res.status(500).json({
                 error: "Traccar did not return device ID"
             });
         }
 
+        // 🔥 COMPANY CHECK
+        if (!req.user.companyId) {
+            return res.status(400).json({
+                error: "User has no companyId. Please contact owner."
+            });
+        }
+
+        // ✅ NOW CREATE DEVICE (OUTSIDE IF)
         const device = new Device({
             name,
             uniqueId,
-            traccarId: Number(traccarDevice.id), // 🔥 FORCE NUMBER
+            traccarId: Number(traccarDevice.id),
             companyId: req.user.companyId,
             createdBy: req.user.id,
-            assignedTo: req.user.id // ✅ IMPORTANT
+            assignedTo: req.user.id
         });
 
         await device.save();

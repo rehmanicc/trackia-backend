@@ -29,7 +29,7 @@ router.post("/register", authMiddleware, async (req, res) => {
         email,
         password: hash,
         role: "admin",
-        companyId: null // or generate new company later
+        companyId: company._id
       });
 
       await user.save();
