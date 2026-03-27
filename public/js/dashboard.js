@@ -980,46 +980,43 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
     // create user function
-    async function createUser() {
+  async function createUser() {
 
-        const name = document.getElementById("newUserName").value.trim();
-        const email = document.getElementById("newUserEmail").value.trim();
-        const password = document.getElementById("newUserPassword").value.trim();
-        const role = document.getElementById("newUserRole").value;
+    const name = document.getElementById("newUserName").value.trim();
+    const email = document.getElementById("newUserEmail").value.trim();
+    const password = document.getElementById("newUserPassword").value.trim();
+    const role = document.getElementById("newUserRole").value;
 
-        if (!name || !email || !password) {
-            alert("Fill all fields");
-            return;
-        }
-
-        try {
-            const res = await apiFetch("/api/auth/register", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": "Bearer " + localStorage.getItem("token")
-                },
-                body: JSON.stringify({ name, email, password, role })
-            });
-
-            const data = await res.json();
-
-            if (res.ok) {
-                alert("User created successfully");
-
-                // clear form
-                document.getElementById("newUserName").value = "";
-                document.getElementById("newUserEmail").value = "";
-                document.getElementById("newUserPassword").value = "";
-            } else {
-                alert(data.error || "Error creating user");
-            }
-
-        } catch (err) {
-            console.error(err);
-            alert("Server error");
-        }
+    if (!name || !email || !password) {
+        alert("Fill all fields");
+        return;
     }
+
+    try {
+        const data = await apiFetch("/api/auth/register", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + localStorage.getItem("token")
+            },
+            body: JSON.stringify({ name, email, password, role })
+        });
+
+        // ✅ success (apiFetch only returns if success)
+        alert(data.message || "User created successfully");
+
+        // clear form
+        document.getElementById("newUserName").value = "";
+        document.getElementById("newUserEmail").value = "";
+        document.getElementById("newUserPassword").value = "";
+
+    } catch (err) {
+        console.error(err);
+
+        // ✅ show backend error
+        alert(err.message || "Server error");
+    }
+}
     //command function
     async function sendCommand(deviceId, type) {
         const res = await apiFetch("/api/traccar/command", {
