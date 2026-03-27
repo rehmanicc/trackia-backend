@@ -181,31 +181,55 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (isPlaybackMode) return;
 
+            console.log("🔥 Positions:", positions);
+            console.log("🔥 AllowedDevices:", allowedDevices);
+
             const filteredPositions = positions.filter(pos =>
-                allowedDevices[pos.deviceId]
+                allowedDevices[String(pos.deviceId)]
             );
 
             updateVehicleList(filteredPositions);
 
             filteredPositions.forEach((pos) => {
 
-                const id = pos.deviceId;
+                const id = String(pos.deviceId);
 
-                if (!allowedDevices[id]) return;
+                if (!allowedDevices[id]) {
+                    console.log("❌ Not allowed:", id);
+                    return;
+                }
 
-                const lat = pos.latitude;
-                const lng = pos.longitude;
+                const lat = pos.latitude || pos.lat;
+                const lng = pos.longitude || pos.lon;
+
+                if (!lat || !lng) {
+                    console.log("❌ Invalid coords:", pos);
+                    return;
+                }
+
                 const course = pos.course || 0;
-
+                console.log("FINAL CHECK:", id, allowedDevices[id], lat, lng);
                 checkGeofences(id, lat, lng);
 
                 const isOnline = isVehicleOnline(pos.deviceTime);
                 const icon = isOnline ? onlineIcon : offlineIcon;
 
-                // (rest of your marker code stays same)
+                // ✅ CREATE / UPDATE MARKER
+                if (!markers[id]) {
+                    console.log("✅ Creating marker:", id);
+
+                    markers[id] = L.marker([lat, lng], {
+                        icon: icon
+                    }).addTo(map);
+
+                } else {
+                    console.log("🔄 Updating marker:", id);
+
+                    markers[id].setLatLng([lat, lng]);
+                }
+
             });
         });
-
         loadGeofences();
     }
 
@@ -214,8 +238,8 @@ document.addEventListener("DOMContentLoaded", () => {
     async function addDevice() {
 
         // ✅ Role check
-        if (userRole !== "admin" && userRole !== "owner") {
-            alert("Access Denied");
+        if (userRole !== "admin") {
+            alert("Only admin can add devices");
             return;
         }
 
@@ -236,8 +260,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     uniqueId: imei
                 })
             });
-
-            if (!res) return;
 
             alert("Vehicle Added");
 
@@ -980,43 +1002,43 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
     // create user function
-  async function createUser() {
+    async function createUser() {
 
-    const name = document.getElementById("newUserName").value.trim();
-    const email = document.getElementById("newUserEmail").value.trim();
-    const password = document.getElementById("newUserPassword").value.trim();
-    const role = document.getElementById("newUserRole").value;
+        const name = document.getElementById("newUserName").value.trim();
+        const email = document.getElementById("newUserEmail").value.trim();
+        const password = document.getElementById("newUserPassword").value.trim();
+        const role = document.getElementById("newUserRole").value;
 
-    if (!name || !email || !password) {
-        alert("Fill all fields");
-        return;
+        if (!name || !email || !password) {
+            alert("Fill all fields");
+            return;
+        }
+
+        try {
+            const data = await apiFetch("/api/auth/register", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + localStorage.getItem("token")
+                },
+                body: JSON.stringify({ name, email, password, role })
+            });
+
+            // ✅ success (apiFetch only returns if success)
+            alert(data.message || "User created successfully");
+
+            // clear form
+            document.getElementById("newUserName").value = "";
+            document.getElementById("newUserEmail").value = "";
+            document.getElementById("newUserPassword").value = "";
+
+        } catch (err) {
+            console.error(err);
+
+            // ✅ show backend error
+            alert(err.message || "Server error");
+        }
     }
-
-    try {
-        const data = await apiFetch("/api/auth/register", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + localStorage.getItem("token")
-            },
-            body: JSON.stringify({ name, email, password, role })
-        });
-
-        // ✅ success (apiFetch only returns if success)
-        alert(data.message || "User created successfully");
-
-        // clear form
-        document.getElementById("newUserName").value = "";
-        document.getElementById("newUserEmail").value = "";
-        document.getElementById("newUserPassword").value = "";
-
-    } catch (err) {
-        console.error(err);
-
-        // ✅ show backend error
-        alert(err.message || "Server error");
-    }
-}
     //command function
     async function sendCommand(deviceId, type) {
         const res = await apiFetch("/api/traccar/command", {
@@ -1048,8 +1070,7 @@ function updateVehicleList(positions) {
 
     positions.forEach(pos => {
 
-        if (!allowedDevices[pos.deviceId]) return;
-
+        if (!allowedDevices[String(pos.deviceId)]) return;
         const isOnline = isVehicleOnline(pos.deviceTime);
 
         const div = document.createElement("div");
