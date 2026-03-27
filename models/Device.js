@@ -5,19 +5,22 @@ const deviceSchema = new mongoose.Schema({
     name: String,
     uniqueId: String,
 
-    // 🔥 LINK TO COMPANY
+    // ✅ ADD THIS
+    traccarId: {
+        type: Number,
+        required: true
+    },
+
     companyId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Company"
     },
 
-    // 🔥 WHO CREATED
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User"
     },
 
-    // 🔥 WHO CAN ACCESS (ADMIN/USER)
     assignedTo: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User"
