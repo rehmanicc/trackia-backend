@@ -1,27 +1,10 @@
 const mongoose = require("mongoose");
 
-const userSchema = new mongoose.Schema({
+const companySchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true
+  }
+}, { timestamps: true });
 
-name: String,
-
-email: {
-type: String,
-unique: true
-},
-
-password: String,
-
-role: {
-type: String,
-enum: ["owner","admin","user"],
-default: "user"
-},
-
-companyId: {
-type: mongoose.Schema.Types.ObjectId,
-ref: "Company"
-}
-
-});
-
-module.exports = mongoose.model("User", userSchema);
+module.exports = mongoose.model("Company", companySchema);

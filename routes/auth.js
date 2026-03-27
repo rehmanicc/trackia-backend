@@ -10,7 +10,7 @@ if (!process.env.JWT_SECRET) {
 }
 // REGISTER
 router.post("/register", authMiddleware, async (req, res) => {
-
+  const Company = require("../models/Company");
   const { name, email, password, role } = req.body;
 
   try {
@@ -23,6 +23,11 @@ router.post("/register", authMiddleware, async (req, res) => {
       }
 
       const hash = await bcrypt.hash(password, 10);
+
+      // ✅ CREATE COMPANY FIRST
+      const company = await Company.create({
+        name: name + " Company"
+      });
 
       const user = new User({
         name,
@@ -60,8 +65,8 @@ router.post("/register", authMiddleware, async (req, res) => {
 
   } catch (err) {
     console.error(err);
-      console.error("❌ REGISTER ERROR:", err); // 🔥 FULL ERROR
-      res.status(500).json({ error: "Failed to create user" });
+    console.error("❌ REGISTER ERROR:", err); // 🔥 FULL ERROR
+    res.status(500).json({ error: "Failed to create user" });
   }
 
 });
