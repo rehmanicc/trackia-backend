@@ -206,7 +206,9 @@ app.delete("/api/reset", async (req, res) => {
   try {
     await User.deleteMany({});
     await Device.deleteMany({});
-
+    await Position.deleteMany({});          // ✅ ADD
+    await PositionArchive.deleteMany({});   // ✅ ADD
+    await Trip.deleteMany({});
     res.json({ message: "Database reset successful" });
   } catch (err) {
     res.status(500).json({ error: err.message });
