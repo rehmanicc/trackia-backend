@@ -35,43 +35,43 @@ document.addEventListener("DOMContentLoaded", () => {
     const userRole = payload.role;
     // Hide both panels first
     document.getElementById("adminPanel").style.display = "none";
-document.getElementById("userPanel").style.display = "none";
+    document.getElementById("userPanel").style.display = "none";
 
-// ✅ PANEL CONTROL
-if (userRole === "admin") {
-    document.getElementById("adminPanel").style.display = "block";
-}
+    // ✅ PANEL CONTROL
+    if (userRole === "admin") {
+        document.getElementById("adminPanel").style.display = "block";
+    }
 
-if (userRole === "user") {
-    document.getElementById("userPanel").style.display = "block";
-}
+    if (userRole === "user") {
+        document.getElementById("userPanel").style.display = "block";
+    }
 
-if (userRole === "owner") {
-    document.getElementById("adminPanel").style.display = "block";
-}
+    if (userRole === "owner") {
+        document.getElementById("adminPanel").style.display = "block";
+    }
 
-// ✅ ROLE DROPDOWN CONTROL
-const roleSelect = document.getElementById("newUserRole");
+    // ✅ ROLE DROPDOWN CONTROL
+    const roleSelect = document.getElementById("newUserRole");
 
-roleSelect.innerHTML = "";
+    roleSelect.innerHTML = "";
 
-if (userRole === "owner") {
-    // 👑 Owner → ONLY admin
-    roleSelect.innerHTML = `
+    if (userRole === "owner") {
+        // 👑 Owner → ONLY admin
+        roleSelect.innerHTML = `
         <option value="admin">Admin</option>
     `;
-}
+    }
 
-else if (userRole === "admin") {
-    // 👨‍💼 Admin → ONLY user
-    roleSelect.innerHTML = `
+    else if (userRole === "admin") {
+        // 👨‍💼 Admin → ONLY user
+        roleSelect.innerHTML = `
         <option value="user">User</option>
     `;
-}
+    }
 
-else {
-    roleSelect.style.display = "none";
-}
+    else {
+        roleSelect.style.display = "none";
+    }
     function logout() {
         localStorage.removeItem("token")
         window.location.href = "login.html"
