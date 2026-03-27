@@ -5,7 +5,6 @@ const deviceSchema = new mongoose.Schema({
     name: String,
     uniqueId: String,
 
-    // ✅ ADD THIS
     traccarId: {
         type: Number,
         required: true

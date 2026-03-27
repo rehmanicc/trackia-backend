@@ -17,17 +17,17 @@ exports.getDevices = async (req, res) => {
 
         if (user.role === "owner") {
             // 👑 Super Admin → all company devices
-            devices = await Device.find({ companyId: user.companyId });
+            devices = await Device.find();
         }
 
         else if (user.role === "admin") {
             // 🧑‍💼 Admin → only his devices
-            devices = await Device.find({ assignedTo: user._id });
+            devices = await Device.find({ assignedTo: user.id });
         }
 
         else {
             // 👤 User → only assigned devices
-            devices = await Device.find({ assignedTo: user._id });
+            devices = await Device.find({ assignedTo: user.id });
         }
 
         res.json(devices);
