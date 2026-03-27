@@ -11,29 +11,52 @@ if (!process.env.JWT_SECRET) {
 // REGISTER
 router.post("/register", authMiddleware, async (req, res) => {
 
-  const { name, email, password } = req.body;
-
-  // 🔐 ONLY ADMIN CAN CREATE USERS
-  if (req.user.role !== "admin") {
-    return res.status(403).json({ error: "Only admin can create users" });
-  }
+  const { name, email, password, role } = req.body;
 
   try {
-    // 🔐 HASH PASSWORD
-    const hash = await bcrypt.hash(password, 10);
 
-    // 🔐 CREATE USER (ONLY ONCE)
-    const user = new User({
-      name,
-      email,
-      password: hash,
-      role: "user", // 🔥 force role
-      companyId: req.user.companyId
-    });
+    // 🔐 OWNER → can create ADMIN only
+    if (req.user.role === "owner") {
 
-    await user.save();
+      if (role !== "admin") {
+        return res.status(403).json({ error: "Owner can only create admin" });
+      }
 
-    res.json({ message: "User created", user });
+      const hash = await bcrypt.hash(password, 10);
+
+      const user = new User({
+        name,
+        email,
+        password: hash,
+        role: "admin",
+        companyId: null // or generate new company later
+      });
+
+      await user.save();
+
+      return res.json({ message: "Admin created", user });
+    }
+
+    // 🔐 ADMIN → can create USER only
+    if (req.user.role === "admin") {
+
+      const hash = await bcrypt.hash(password, 10);
+
+      const user = new User({
+        name,
+        email,
+        password: hash,
+        role: "user",
+        companyId: req.user.companyId
+      });
+
+      await user.save();
+
+      return res.json({ message: "User created", user });
+    }
+
+    // 🔐 USER → no access
+    return res.status(403).json({ error: "Access denied" });
 
   } catch (err) {
     console.error(err);
