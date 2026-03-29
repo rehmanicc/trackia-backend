@@ -71,7 +71,7 @@ async function loadDevices(query = "") {
 
         const option = document.createElement("option"); // ✅ FIRST create
 
-        const id = d._id || d.id;
+        const id = d.traccarId; 
         const name = d.name || d.uniqueId;
 
         deviceMap[id] = name;
