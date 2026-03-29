@@ -38,9 +38,6 @@ exports.getDevices = async (req, res) => {
     }
 };
 //Get positions API
-
-const Position = require("../models/Position");
-
 exports.getPositions = async (req, res) => {
   try {
     const response = await axios.get(
