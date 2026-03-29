@@ -52,12 +52,14 @@ const authRoutes = require("./routes/auth");
 const traccarRoutes = require("./routes/traccar");
 const geofenceRoutes = require("./routes/geofence");
 const tripRoutes = require("./routes/trips");
+const analyticsRoutes = require("./routes/analyticsRoutes");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/geofence", geofenceRoutes);
 app.use("/api/trips", tripRoutes);
 app.use("/api/traccar", traccarRoutes);
 app.use(express.static("public"));
+pp.use("/api/analytics", analyticsRoutes);
 // ======================
 // DB CHECK ROUTE
 // ======================
