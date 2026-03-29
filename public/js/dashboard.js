@@ -210,7 +210,7 @@ document.addEventListener("DOMContentLoaded", () => {
     async function initApp() {
 
         await fetchAllowedDevices();
-
+        await loadGeofences();
         // ✅ LOAD INITIAL POSITIONS FIRST
         await loadInitialPositions();
 
@@ -346,8 +346,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const avgSpeed = calculateAvgSpeed(distance, duration);
 
         console.log("Analytics:", distance, duration, avgSpeed); // ✅ DEBUG
+        const stops = detectStops(data);
+        renderStops(stops);
 
-        renderAnalytics(distance, duration, avgSpeed);
+        renderTripSummary(data, stops);
     }
     // LOAD GEOFENCES
     async function loadGeofences() {
@@ -358,7 +360,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!fences) return;
 
             geofences = fences;
-
+            drawnItems.clearLayers();
             fences.forEach(f => {
 
                 const layer = L.geoJSON(f);
@@ -397,35 +399,45 @@ document.addEventListener("DOMContentLoaded", () => {
             // 🔥 STEP 2: PRECISE CHECK
             const inside = turf.booleanPointInPolygon(point, f);
 
-            const key = deviceId + "_" + index;
+            const geofenceId = f._id || f.id || index; // safe fallback
 
             // 🔥 STEP 3: INITIAL STATE
-            if (!(key in vehicleStates)) {
-                vehicleStates[key] = inside;
+            if (!vehicleStates[deviceId]) {
+                vehicleStates[deviceId] = {};
+            }
+
+            if (!vehicleStates[deviceId][geofenceId]) {
+                vehicleStates[deviceId][geofenceId] = {
+                    inside: inside,
+                    lastEvent: null,
+                    lastUpdate: Date.now()
+                };
                 return;
             }
 
-            const previousState = vehicleStates[key];
-
-            // 🔥 STEP 4: ENTER EVENT
+            const state = vehicleStates[deviceId][geofenceId];
+            const previousState = state.inside;
+            //ENTER EVENT
             if (!previousState && inside) {
-                addAlert(deviceId, index, "enter",
-                    `Vehicle ${deviceId} ENTERED ${f.name || "geofence"}`
-                );
+                state.lastEvent = "enter";
+                state.lastUpdate = Date.now();
+
+                triggerGeofenceEvent(deviceId, geofenceId, "enter", f);
             }
 
-            // 🔥 STEP 5: EXIT EVENT
+            // EXIT
             if (previousState && !inside) {
-                addAlert(deviceId, index, "exit",
-                    `Vehicle ${deviceId} EXITED ${f.name || "zone"}`
-                );
+                state.lastEvent = "exit";
+                state.lastUpdate = Date.now();
+
+                triggerGeofenceEvent(deviceId, geofenceId, "exit", f);
             }
 
-            // 🔥 STEP 6: UPDATE STATE
-            vehicleStates[key] = inside;
+            // UPDATE STATE
+            state.inside = inside;
         });
 
-        // 🔥 STEP 7: SAVE STATE (IMPORTANT)
+        //SAVE STATE (IMPORTANT)
         localStorage.setItem("vehicleStates", JSON.stringify(vehicleStates));
     }
 
@@ -453,7 +465,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         // ✅ 2. TIME-BASED BLOCK
-        if (lastAlertTime[key] && (now - lastAlertTime[key] < 5000)) {
+        if (lastAlertTime[key] && (now - lastAlertTime[key] < 20000)) {
             console.log("BLOCKED (cooldown)");
             return;
         }
@@ -472,7 +484,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
         renderAlerts();
     }
+function triggerGeofenceEvent(deviceId, geofenceId, type, geofence) {
 
+    addAlert(
+        deviceId,
+        geofenceId,
+        type,
+        `Vehicle ${deviceId} ${type.toUpperCase()} ${geofence.name || "zone"}`
+    );
+
+    // next step → visual update
+}
     function renderAlerts() {
 
         const container = document.getElementById("alertList");
