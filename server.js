@@ -59,7 +59,7 @@ app.use("/api/geofence", geofenceRoutes);
 app.use("/api/trips", tripRoutes);
 app.use("/api/traccar", traccarRoutes);
 app.use(express.static("public"));
-pp.use("/api/analytics", analyticsRoutes);
+app.use("/api/analytics", analyticsRoutes);
 // ======================
 // DB CHECK ROUTE
 // ======================
