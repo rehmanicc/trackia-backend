@@ -8,7 +8,6 @@ const PositionSchema = new mongoose.Schema({
   deviceTime: Date   // ✅ use real time from Traccar
 });
 
-// ❌ REMOVE unique index (VERY IMPORTANT)
-// PositionSchema.index({ deviceId: 1, timestamp: 1 }, { unique: true });
+PositionSchema.index({ deviceId: 1, deviceTime: 1 }, { unique: true });
 
 module.exports = mongoose.model("Position", PositionSchema);

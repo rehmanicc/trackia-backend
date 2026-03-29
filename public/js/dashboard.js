@@ -16,7 +16,9 @@ document.addEventListener("DOMContentLoaded", () => {
     let lastAlertTime = {};
     let isPlaybackMode = false;
     let lastPositions = {};
+    let geofenceLayers = {};
     const token = localStorage.getItem("token")
+    let geofenceBBoxes = {};
 
 
 
@@ -361,21 +363,33 @@ document.addEventListener("DOMContentLoaded", () => {
 
             geofences = fences;
             drawnItems.clearLayers();
+
             fences.forEach(f => {
 
-                const layer = L.geoJSON(f);
+                const layer = L.geoJSON(f, {
+                    style: {
+                        color: "#3388ff",
+                        weight: 2,
+                        fillOpacity: 0.2
+                    }
+                });
 
                 layer.eachLayer(l => {
+
+                    const geofenceId = f._id || f.id;
+                    geofenceBBoxes[geofenceId] = turf.bbox(f);
+
+                    geofenceLayers[geofenceId] = l;
+
                     drawnItems.addLayer(l);
                 });
 
-            });
+            }); // ✅ THIS WAS MISSING
 
         } catch (err) {
             console.error("❌ Error loading geofences:", err);
         }
     }
-
 
     // CHECK GEOFENCE ENTRY/EXIT
     function checkGeofences(deviceId, lat, lng) {
@@ -384,8 +398,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         geofences.forEach((f, index) => {
 
-            // 🔥 STEP 1: FAST FILTER (BOUNDING BOX)
-            const bbox = turf.bbox(f);
+            const geofenceId = f._id || f.id || index;
+
+            const bbox = geofenceBBoxes[geofenceId];
+            if (!bbox) return; // ✅ safety fix
 
             const [minLng, minLat, maxLng, maxLat] = bbox;
 
@@ -393,15 +409,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 lng < minLng || lng > maxLng ||
                 lat < minLat || lat > maxLat
             ) {
-                return; // skip expensive check
+                return;
             }
 
-            // 🔥 STEP 2: PRECISE CHECK
             const inside = turf.booleanPointInPolygon(point, f);
 
-            const geofenceId = f._id || f.id || index; // safe fallback
-
-            // 🔥 STEP 3: INITIAL STATE
             if (!vehicleStates[deviceId]) {
                 vehicleStates[deviceId] = {};
             }
@@ -410,37 +422,62 @@ document.addEventListener("DOMContentLoaded", () => {
                 vehicleStates[deviceId][geofenceId] = {
                     inside: inside,
                     lastEvent: null,
-                    lastUpdate: Date.now()
+                    lastUpdate: Date.now(),
+                    enterCount: 0,
+                    exitCount: 0
                 };
                 return;
             }
 
             const state = vehicleStates[deviceId][geofenceId];
             const previousState = state.inside;
-            //ENTER EVENT
-            if (!previousState && inside) {
-                state.lastEvent = "enter";
-                state.lastUpdate = Date.now();
+            const CONFIRM_COUNT = 3;
+            const COOLDOWN = 10000;
 
-                triggerGeofenceEvent(deviceId, geofenceId, "enter", f);
+            // ENTER
+            if (inside) {
+                state.enterCount++;
+                state.exitCount = 0;
+
+                if (!previousState && state.enterCount >= CONFIRM_COUNT) {
+
+                    if (Date.now() - state.lastUpdate < COOLDOWN) return;
+
+                    state.lastEvent = "enter";
+                    state.lastUpdate = Date.now();
+                    state.inside = true;
+                    state.enterCount = 0;
+
+                    triggerGeofenceEvent(deviceId, geofenceId, "enter", f);
+                }
             }
 
             // EXIT
-            if (previousState && !inside) {
-                state.lastEvent = "exit";
-                state.lastUpdate = Date.now();
+            else {
+                state.exitCount++;
+                state.enterCount = 0;
 
-                triggerGeofenceEvent(deviceId, geofenceId, "exit", f);
+                if (previousState && state.exitCount >= CONFIRM_COUNT) {
+
+                    if (Date.now() - state.lastUpdate < COOLDOWN) return;
+
+                    state.lastEvent = "exit";
+                    state.lastUpdate = Date.now();
+                    state.inside = false;
+                    state.exitCount = 0;
+
+                    triggerGeofenceEvent(deviceId, geofenceId, "exit", f);
+                }
             }
 
-            // UPDATE STATE
-            state.inside = inside;
         });
 
-        //SAVE STATE (IMPORTANT)
-        localStorage.setItem("vehicleStates", JSON.stringify(vehicleStates));
+        // ✅ OPTIMIZED SAVE
+        if (!window._lastStateSave || Date.now() - window._lastStateSave > 5000) {
+            localStorage.setItem("vehicleStates", JSON.stringify(vehicleStates));
+            window._lastStateSave = Date.now();
+        }
     }
-
     function addAlert(deviceId, geofenceId, type, message) {
         if (!allowedDevices[deviceId]) return;
         deviceId = String(deviceId);
@@ -484,17 +521,47 @@ document.addEventListener("DOMContentLoaded", () => {
 
         renderAlerts();
     }
-function triggerGeofenceEvent(deviceId, geofenceId, type, geofence) {
+    function triggerGeofenceEvent(deviceId, geofenceId, type, geofence) {
 
-    addAlert(
-        deviceId,
-        geofenceId,
-        type,
-        `Vehicle ${deviceId} ${type.toUpperCase()} ${geofence.name || "zone"}`
-    );
+        addAlert(
+            deviceId,
+            geofenceId,
+            type,
+            `Vehicle ${deviceId} ${type.toUpperCase()} ${geofence.name || "zone"}`
+        );
 
-    // next step → visual update
-}
+        updateGeofenceVisual(geofenceId, type);
+    }
+    function updateGeofenceVisual(geofenceId, type) {
+
+        const layer = geofenceLayers[geofenceId];
+        if (!layer) return;
+
+        if (type === "enter") {
+            layer.setStyle({
+                color: "green",
+                fillColor: "green",
+                fillOpacity: 0.3
+            });
+        }
+
+        if (type === "exit") {
+            layer.setStyle({
+                color: "red",
+                fillColor: "red",
+                fillOpacity: 0.3
+            });
+        }
+
+        // 🔥 Optional: reset after few seconds
+        setTimeout(() => {
+            layer.setStyle({
+                color: "#3388ff",
+                fillColor: "#3388ff",
+                fillOpacity: 0.2
+            });
+        }, 5000);
+    }
     function renderAlerts() {
 
         const container = document.getElementById("alertList");

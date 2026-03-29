@@ -39,6 +39,8 @@ exports.getDevices = async (req, res) => {
 };
 //Get positions API
 
+const Position = require("../models/Position");
+
 exports.getPositions = async (req, res) => {
   try {
     const response = await axios.get(
@@ -53,7 +55,23 @@ exports.getPositions = async (req, res) => {
 
     const positions = response.data;
 
-    // ✅ 🔥 EMIT TO SOCKET CLIENTS
+    // 🔥 PREPARE BULK DATA
+    const docs = positions.map(p => ({
+      deviceId: p.deviceId,
+      latitude: p.latitude,
+      longitude: p.longitude,
+      speed: p.speed,
+      deviceTime: p.deviceTime
+    }));
+
+    // 🔥 INSERT (FAST + SAFE)
+    try {
+      await Position.insertMany(docs, { ordered: false });
+    } catch (err) {
+      // ignore duplicate errors
+    }
+
+    // ✅ SOCKET EMIT
     const io = require("../socket").getIO();
     io.emit("positions", positions);
 
