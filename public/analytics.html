@@ -1,67 +1,69 @@
-<link rel="stylesheet" href="styles.css">
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Analytics - Trackia</title>
-
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
- </head>
-
 <body>
 
-<h1>📊 Geofence Analytics</h1>
+<div class="dashboard">
 
-<div class="cards">
-  <div class="card">
-    <h3>Total Visits</h3>
-    <p id="totalVisits">0</p>
-  </div>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <h2>🚀 Trackia</h2>
+    <ul>
+      <li>Dashboard</li>
+      <li>Analytics</li>
+      <li>Devices</li>
+      <li>Geofences</li>
+    </ul>
+  </aside>
 
-  <div class="card">
-    <h3>Total Time (min)</h3>
-    <p id="totalTime">0</p>
-  </div>
+  <!-- Main Content -->
+  <main class="main">
+
+    <!-- Header -->
+    <div class="header">
+      <h1>📊 Analytics Dashboard</h1>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="cards">
+      <div class="card">
+        <h3>Total Visits</h3>
+        <p id="totalVisits">0</p>
+      </div>
+      <div class="card">
+        <h3>Total Time (min)</h3>
+        <p id="totalTime">0</p>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filters">
+      <!-- your existing filters -->
+    </div>
+
+    <!-- Charts -->
+    <div class="charts">
+      <canvas id="dailyChart"></canvas>
+      <canvas id="geofenceChart"></canvas>
+      <canvas id="deviceChart"></canvas>
+    </div>
+
+    <!-- Sessions -->
+    <div class="sessions">
+      <h2>Sessions</h2>
+      <table id="sessionTable">
+        <thead>
+          <tr>
+            <th>Device</th>
+            <th>Geofence</th>
+            <th>Enter</th>
+            <th>Exit</th>
+            <th>Duration</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+  </main>
+
 </div>
-<div class="filters">
-
-  <label>From:</label>
-  <input type="date" id="fromDate">
-
-  <label>To:</label>
-  <input type="date" id="toDate">
-
-  <label>Device:</label>
-  <select id="deviceSelect">
-    <option value="">All</option>
-  </select>
-
-  <label>Geofence:</label>
-  <select id="geofenceSelect">
-    <option value="">All</option>
-  </select>
-
-  <button onclick="applyFilters()">Apply</button>
-
-</div>
-<canvas id="dailyChart"></canvas>
-<canvas id="geofenceChart"></canvas>
-<canvas id="deviceChart"></canvas>
-<h2>Sessions</h2>
-
-<table id="sessionTable">
-  <thead>
-    <tr>
-      <th>Device</th>
-      <th>Geofence</th>
-      <th>Enter</th>
-      <th>Exit</th>
-      <th>Duration (min)</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
-</table>
-<script src="analytics.js"></script>
 
 </body>
-</html>

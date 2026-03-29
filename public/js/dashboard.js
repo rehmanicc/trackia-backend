@@ -26,6 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
         alert("Please login first")
         window.location.href = "login.html"
     }
+
     let payload = null;
 
     try {
