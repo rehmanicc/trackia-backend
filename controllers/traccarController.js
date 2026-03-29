@@ -4,7 +4,6 @@ const TRACCAR_URL = process.env.TRACCAR_URL;
 const EMAIL = process.env.TRACCAR_EMAIL;
 const PASSWORD = process.env.TRACCAR_PASSWORD;
 const traccarAPI = require("../services/traccarAPI");
-const socket = require("../socket");
 const { processPosition } = require("../services/geofenceEngine");
 
 // GET DEVICES

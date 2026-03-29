@@ -326,12 +326,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         from = new Date(from).toISOString();
         to = new Date(to).toISOString();
+        const data = await apiFetch(`/api/traccar/route?deviceId=${deviceId}&from=${from}&to=${to}`);
+        if (!data) return;
 
-        const res = await apiFetch(`/api/traccar/route?deviceId=${deviceId}&from=${from}&to=${to}`)
-        if (!res) return;
-        const data = await res.json();
-
-        console.log("Route Data:", data); // ✅ DEBUG
+        console.log("Route Data:", data);
 
         // ❌ If no data → stop here
         if (!data || data.length === 0) {
@@ -402,94 +400,6 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error("❌ Error loading geofences:", err);
         }
     }
-
-    // CHECK GEOFENCE ENTRY/EXIT
-    function checkGeofences(deviceId, lat, lng) {
-
-        const point = turf.point([lng, lat]);
-
-        geofences.forEach((f, index) => {
-
-            const geofenceId = f._id || f.id || index;
-
-            const bbox = geofenceBBoxes[geofenceId];
-            if (!bbox) return; // ✅ safety fix
-
-            const [minLng, minLat, maxLng, maxLat] = bbox;
-
-            if (
-                lng < minLng || lng > maxLng ||
-                lat < minLat || lat > maxLat
-            ) {
-                return;
-            }
-
-            const inside = turf.booleanPointInPolygon(point, f);
-
-            if (!vehicleStates[deviceId]) {
-                vehicleStates[deviceId] = {};
-            }
-
-            if (!vehicleStates[deviceId][geofenceId]) {
-                vehicleStates[deviceId][geofenceId] = {
-                    inside: inside,
-                    lastEvent: null,
-                    lastUpdate: Date.now(),
-                    enterCount: 0,
-                    exitCount: 0
-                };
-                return;
-            }
-
-            const state = vehicleStates[deviceId][geofenceId];
-            const previousState = state.inside;
-            const CONFIRM_COUNT = 3;
-            const COOLDOWN = 10000;
-
-            // ENTER
-            if (inside) {
-                state.enterCount++;
-                state.exitCount = 0;
-
-                if (!previousState && state.enterCount >= CONFIRM_COUNT) {
-
-                    if (Date.now() - state.lastUpdate < COOLDOWN) return;
-
-                    state.lastEvent = "enter";
-                    state.lastUpdate = Date.now();
-                    state.inside = true;
-                    state.enterCount = 0;
-
-                    triggerGeofenceEvent(deviceId, geofenceId, "enter", f);
-                }
-            }
-
-            // EXIT
-            else {
-                state.exitCount++;
-                state.enterCount = 0;
-
-                if (previousState && state.exitCount >= CONFIRM_COUNT) {
-
-                    if (Date.now() - state.lastUpdate < COOLDOWN) return;
-
-                    state.lastEvent = "exit";
-                    state.lastUpdate = Date.now();
-                    state.inside = false;
-                    state.exitCount = 0;
-
-                    triggerGeofenceEvent(deviceId, geofenceId, "exit", f);
-                }
-            }
-
-        });
-
-        // ✅ OPTIMIZED SAVE
-        if (!window._lastStateSave || Date.now() - window._lastStateSave > 5000) {
-            localStorage.setItem("vehicleStates", JSON.stringify(vehicleStates));
-            window._lastStateSave = Date.now();
-        }
-    }
     function addAlert(deviceId, geofenceId, type, message) {
         if (!allowedDevices[deviceId]) return;
         deviceId = String(deviceId);
@@ -532,17 +442,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (alerts.length > 50) alerts.pop();
 
         renderAlerts();
-    }
-    function triggerGeofenceEvent(deviceId, geofenceId, type, geofence) {
-
-        addAlert(
-            deviceId,
-            geofenceId,
-            type,
-            `Vehicle ${deviceId} ${type.toUpperCase()} ${geofence.name || "zone"}`
-        );
-
-        updateGeofenceVisual(geofenceId, type);
     }
     function updateGeofenceVisual(geofenceId, type) {
 
@@ -782,9 +681,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const url = `${BASE_URL}/api/traccar/route?deviceId=${deviceId}&from=${from}&to=${to}`;
         // ✅ 3. Fetch data
-        const res = await apiFetch(`/api/traccar/route?deviceId=${deviceId}&from=${from}&to=${to}`)
-        if (!res) return;
-        const data = await res.json();
+        const data = await apiFetch(`/api/traccar/route?deviceId=${deviceId}&from=${from}&to=${to}`);
+        if (!data) return;
 
         if (!data || data.length < 2) {
             alert("Not enough data for playback");
@@ -1166,17 +1064,21 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     //command function
     async function sendCommand(deviceId, type) {
-        const res = await apiFetch("/api/traccar/command", {
-            method: "POST",
-            body: JSON.stringify({ deviceId, type })
-        });
+        try {
+            const data = await apiFetch("/api/traccar/command", {
+                method: "POST",
+                body: JSON.stringify({ deviceId, type })
+            });
 
-        if (!res) return;
+            if (!data) return;
 
-        const data = await res.json();
+            alert("Command sent: " + type);
+            console.log("Command response:", data);
 
-        alert("Command sent: " + type);
-        console.log("Command response:", data);
+        } catch (err) {
+            console.error(err);
+            alert("Failed to send command");
+        }
     }
     // INITIAL LOAD
     window.showRoute = showRoute;

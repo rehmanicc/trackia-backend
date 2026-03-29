@@ -15,13 +15,8 @@ async function apiFetch(endpoint, options = {}) {
       Authorization: "Bearer " + token
     }
   });
-  if (!res.ok) {
-    const text = await res.text();
-    console.error("❌ API Error:", text);
-    throw new Error("API failed");
-  }
-  return res.json();
-  // 🔥 Handle token expiry
+
+  // 🔥 HANDLE TOKEN FIRST
   if (res.status === 401) {
     alert("Session expired. Please login again.");
     localStorage.removeItem("token");
@@ -29,5 +24,11 @@ async function apiFetch(endpoint, options = {}) {
     return;
   }
 
-  return res;
+  if (!res.ok) {
+    const text = await res.text();
+    console.error("❌ API Error:", text);
+    throw new Error(text);
+  }
+
+  return res.json();
 }

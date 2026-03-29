@@ -1,7 +1,6 @@
 const turf = require("@turf/turf");
 const Geofence = require("../models/Geofence");
-const Position = require("../models/Position");
-
+const { saveGeofenceEvent } = require("./geofenceEventService");
 // 🔥 In-memory state
 let vehicleStates = {};
 
@@ -19,9 +18,21 @@ async function processPosition(position, io) {
 
         const geofenceId = f._id.toString();
 
+        // 🔥 STEP 1: FAST BBOX CHECK
+        const bbox = turf.bbox(f);
+        const [minLng, minLat, maxLng, maxLat] = bbox;
+
+        if (
+            longitude < minLng || longitude > maxLng ||
+            latitude < minLat || latitude > maxLat
+        ) {
+            continue;
+        }
+
+        // 🔥 STEP 2: PRECISE CHECK
         const inside = turf.booleanPointInPolygon(point, f);
 
-        // INIT
+        // ================= STATE INIT =================
         if (!vehicleStates[deviceId]) {
             vehicleStates[deviceId] = {};
         }
@@ -29,7 +40,9 @@ async function processPosition(position, io) {
         if (!vehicleStates[deviceId][geofenceId]) {
             vehicleStates[deviceId][geofenceId] = {
                 inside,
-                lastUpdate: Date.now()
+                lastUpdate: Date.now(),
+                enterCount: 0,
+                exitCount: 0
             };
             continue;
         }
@@ -37,35 +50,75 @@ async function processPosition(position, io) {
         const state = vehicleStates[deviceId][geofenceId];
         const previous = state.inside;
 
-        // ENTER
-        if (!previous && inside) {
-            state.inside = true;
-            state.lastUpdate = Date.now();
+        const CONFIRM_COUNT = 3;
+        const COOLDOWN = 10000;
 
-            emitEvent(io, deviceId, geofenceId, "enter");
+        // ================= ENTER =================
+        if (inside) {
+            state.enterCount++;
+            state.exitCount = 0;
+
+            if (!previous && state.enterCount >= CONFIRM_COUNT) {
+
+                if (Date.now() - state.lastUpdate < COOLDOWN) continue;
+
+                state.inside = true;
+                state.lastUpdate = Date.now();
+                state.enterCount = 0;
+
+                emitEvent(io, deviceId, geofenceId, "enter", {
+                    lat: latitude,
+                    lng: longitude
+                });
+            }
         }
 
-        // EXIT
-        if (previous && !inside) {
-            state.inside = false;
-            state.lastUpdate = Date.now();
+        // ================= EXIT =================
+        else {
+            state.exitCount++;
+            state.enterCount = 0;
 
-            emitEvent(io, deviceId, geofenceId, "exit");
+            if (previous && state.exitCount >= CONFIRM_COUNT) {
+
+                if (Date.now() - state.lastUpdate < COOLDOWN) continue;
+
+                state.inside = false;
+                state.lastUpdate = Date.now();
+                state.exitCount = 0;
+
+                emitEvent(io, deviceId, geofenceId, "exit", {
+                    lat: latitude,
+                    lng: longitude
+                });
+            }
         }
     }
 }
-
 // EMIT EVENT
-function emitEvent(io, deviceId, geofenceId, type) {
 
+async function emitEvent(io, deviceId, geofenceId, type, position) {
+
+    const event = {
+        deviceId,
+        geofenceId,
+        type: type.toUpperCase(),
+        timestamp: new Date(),
+        position
+    };
+
+    // ✅ 1. SAVE TO DB (FIXED)
+    await saveGeofenceEvent(event);
+
+    // ✅ 2. EMIT TO FRONTEND
     io.emit("geofenceEvent", {
         deviceId,
         geofenceId,
         type,
-        time: new Date()
+        time: event.timestamp
     });
 
     console.log(`🚧 ${type.toUpperCase()} → Device ${deviceId} Geofence ${geofenceId}`);
 }
+
 
 module.exports = { processPosition };
