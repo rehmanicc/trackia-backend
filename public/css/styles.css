@@ -129,3 +129,33 @@ cursor:pointer;
     text-align: center;
     font-size: 13px;
 }
+
+    .cards {
+      display: flex;
+      gap: 20px;
+    }
+
+    .card {
+      background: #1e293b;
+      padding: 20px;
+      border-radius: 10px;
+      flex: 1;
+    }
+
+    canvas {
+      margin-top: 30px;
+      background: white;
+      border-radius: 10px;
+      padding: 10px;
+    }
+    .filters {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
+.filters select,
+.filters input {
+  padding: 5px;
+}

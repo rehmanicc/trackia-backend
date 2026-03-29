@@ -1,0 +1,67 @@
+<link rel="stylesheet" href="styles.css">
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Analytics - Trackia</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+ </head>
+
+<body>
+
+<h1>📊 Geofence Analytics</h1>
+
+<div class="cards">
+  <div class="card">
+    <h3>Total Visits</h3>
+    <p id="totalVisits">0</p>
+  </div>
+
+  <div class="card">
+    <h3>Total Time (min)</h3>
+    <p id="totalTime">0</p>
+  </div>
+</div>
+<div class="filters">
+
+  <label>From:</label>
+  <input type="date" id="fromDate">
+
+  <label>To:</label>
+  <input type="date" id="toDate">
+
+  <label>Device:</label>
+  <select id="deviceSelect">
+    <option value="">All</option>
+  </select>
+
+  <label>Geofence:</label>
+  <select id="geofenceSelect">
+    <option value="">All</option>
+  </select>
+
+  <button onclick="applyFilters()">Apply</button>
+
+</div>
+<canvas id="dailyChart"></canvas>
+<canvas id="geofenceChart"></canvas>
+<canvas id="deviceChart"></canvas>
+<h2>Sessions</h2>
+
+<table id="sessionTable">
+  <thead>
+    <tr>
+      <th>Device</th>
+      <th>Geofence</th>
+      <th>Enter</th>
+      <th>Exit</th>
+      <th>Duration (min)</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+<script src="analytics.js"></script>
+
+</body>
+</html>

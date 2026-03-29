@@ -1,4 +1,4 @@
-// services/analyticsService.js
+
 
 const GeofenceEvent = require("../models/GeofenceEvent");
 
@@ -25,10 +25,8 @@ async function getGeofenceDurations({ deviceId, geofenceId, from, to }) {
     for (const event of events) {
 
         if (event.type === "ENTER") {
-    if (!activeEnter) {
-        activeEnter = event;
-    }
-}
+            activeEnter = event;
+        }
 
         if (event.type === "EXIT" && activeEnter) {
 
@@ -47,7 +45,23 @@ async function getGeofenceDurations({ deviceId, geofenceId, from, to }) {
             activeEnter = null;
         }
     }
+    // ✅ HANDLE MISSING EXIT (ADD HERE)
 
+    if (activeEnter) {
+        const now = new Date();
+
+        const duration =
+            now - new Date(activeEnter.timestamp);
+
+        sessions.push({
+            deviceId: activeEnter.deviceId,
+            geofenceId: activeEnter.geofenceId,
+            enterTime: activeEnter.timestamp,
+            exitTime: now,
+            durationMs: duration,
+            durationMinutes: Math.floor(duration / 60000)
+        });
+    }
     return sessions;
 }
 async function getVisitCount({ deviceId, geofenceId, from, to }) {
@@ -92,9 +106,102 @@ async function getAnalyticsSummary({ deviceId, geofenceId, from, to }) {
         sessions
     };
 }
+async function getDailyTime({ deviceId, geofenceId, from, to }) {
 
+    const sessions = await getGeofenceDurations({
+        deviceId,
+        geofenceId,
+        from,
+        to
+    });
+
+    const dailyMap = {};
+
+    sessions.forEach(session => {
+
+        const day = new Date(session.enterTime)
+            .toISOString()
+            .split("T")[0]; // YYYY-MM-DD
+
+        if (!dailyMap[day]) {
+            dailyMap[day] = 0;
+        }
+
+        dailyMap[day] += session.durationMs;
+    });
+
+    // Convert to array
+    return Object.entries(dailyMap)
+        .map(([date, duration]) => ({
+            date,
+            totalTimeMinutes: Math.floor(duration / 60000)
+        }))
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+}
+async function getTopGeofences({ deviceId, geofenceId, from, to }) {
+
+    const match = { type: "ENTER" };
+    if (deviceId) match.deviceId = deviceId;
+    if (geofenceId) match.geofenceId = geofenceId;
+    if (from || to) {
+        match.timestamp = {};
+        if (from) match.timestamp.$gte = new Date(from);
+        if (to) match.timestamp.$lte = new Date(to);
+    }
+
+    const result = await GeofenceEvent.aggregate([
+        { $match: match },
+        {
+            $group: {
+                _id: "$geofenceId",
+                visits: { $sum: 1 }
+            }
+        },
+        { $sort: { visits: -1 } },
+        { $limit: 10 }
+    ]);
+
+    return result;
+}
+async function getDeviceSummary({ deviceId, geofenceId, from, to }) {
+
+    const match = {};
+    if (deviceId) match.deviceId = deviceId;
+    if (geofenceId) match.geofenceId = geofenceId;
+    if (from || to) {
+        match.timestamp = {};
+        if (from) match.timestamp.$gte = new Date(from);
+        if (to) match.timestamp.$lte = new Date(to);
+    }
+
+    const result = await GeofenceEvent.aggregate([
+        { $match: match },
+        {
+            $group: {
+                _id: "$deviceId",
+                totalEvents: { $sum: 1 },
+                enters: {
+                    $sum: {
+                        $cond: [{ $eq: ["$type", "ENTER"] }, 1, 0]
+                    }
+                },
+                exits: {
+                    $sum: {
+                        $cond: [{ $eq: ["$type", "EXIT"] }, 1, 0]
+                    }
+                }
+            }
+        },
+        { $sort: { totalEvents: -1 } }
+    ]);
+
+    return result;
+}
 module.exports = {
     getGeofenceDurations,
     getVisitCount,
-    getAnalyticsSummary
+    getAnalyticsSummary,
+    getDailyTime,
+    getTopGeofences,
+    getDeviceSummary
 };

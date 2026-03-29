@@ -1080,6 +1080,9 @@ document.addEventListener("DOMContentLoaded", () => {
             alert("Failed to send command");
         }
     }
+    function openAnalytics() {
+        window.open("/analytics.html", "_blank");
+    }
     // INITIAL LOAD
     window.showRoute = showRoute;
     window.addDevice = addDevice;
