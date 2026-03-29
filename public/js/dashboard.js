@@ -368,8 +368,14 @@ document.addEventListener("DOMContentLoaded", () => {
     async function loadGeofences() {
 
         try {
-            const fences = await apiFetch(`/api/geofence?deviceId=${selectedVehicleId}`);
 
+            let url = "/api/geofence";
+
+            if (selectedVehicleId) {
+                url += `?deviceId=${selectedVehicleId}`;
+            }
+
+            const fences = await apiFetch(url);
             if (!fences) return;
 
             geofences = fences;

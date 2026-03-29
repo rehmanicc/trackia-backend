@@ -7,15 +7,26 @@ const authMiddleware = require("../middleware/authMiddleware");
 // GET GEOFENCES (PER USER + DEVICE)
 // ======================
 router.get("/", authMiddleware, async (req, res) => {
+  try {
+    const { deviceId } = req.query;
 
-  const deviceId = req.query.deviceId;
+    const query = {
+      userId: req.user.id
+    };
 
-  const geofences = await Geofence.find({
-    userId: req.user.id,
-    deviceId
-  });
+    // ✅ FIX: handle null safely
+    if (deviceId && deviceId !== "null") {
+      query.deviceId = Number(deviceId);
+    }
 
-  res.json(geofences);
+    const geofences = await Geofence.find(query);
+
+    res.json(geofences);
+
+  } catch (err) {
+    console.error("❌ Geofence fetch error:", err);
+    res.status(500).json({ error: "Failed to fetch geofences" });
+  }
 });
 
 // ======================
