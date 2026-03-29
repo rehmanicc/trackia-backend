@@ -169,7 +169,7 @@ document.addEventListener("DOMContentLoaded", () => {
         drawnItems.addLayer(layer)
 
         const geojson = layer.toGeoJSON()
-
+        geojson.deviceId = selectedVehicleId;
         await apiFetch("/api/geofence", {
             method: "POST",
             body: JSON.stringify(geojson)
@@ -245,7 +245,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 if (!lat || !lng) return;
 
-                checkGeofences(id, lat, lng);
                 console.log("📡 Positions:", filteredPositions);
                 lastPositions[id] = pos;
                 updateMarker(id, pos);
@@ -258,6 +257,19 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             updateVehicleList(Object.values(lastPositions));
 
+        });
+        socket.on("geofenceEvent", (event) => {
+
+            const { deviceId, geofenceId, type } = event;
+
+            addAlert(
+                deviceId,
+                geofenceId,
+                type,
+                `Vehicle ${deviceId} ${type.toUpperCase()} geofence`
+            );
+
+            updateGeofenceVisual(geofenceId, type);
         });
     }
     // ADD DEVICE
@@ -357,7 +369,7 @@ document.addEventListener("DOMContentLoaded", () => {
     async function loadGeofences() {
 
         try {
-            const fences = await apiFetch("/api/geofence");
+            const fences = await apiFetch(`/api/geofence?deviceId=${selectedVehicleId}`);
 
             if (!fences) return;
 

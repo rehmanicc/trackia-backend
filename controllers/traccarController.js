@@ -5,6 +5,7 @@ const EMAIL = process.env.TRACCAR_EMAIL;
 const PASSWORD = process.env.TRACCAR_PASSWORD;
 const traccarAPI = require("../services/traccarAPI");
 const socket = require("../socket");
+const { processPosition } = require("../services/geofenceEngine");
 
 // GET DEVICES
 const Device = require("../models/Device");
@@ -65,12 +66,21 @@ exports.getPositions = async (req, res) => {
     try {
       await Position.insertMany(docs, { ordered: false });
     } catch (err) {
-      // ignore duplicate errors
+      // ignore duplicates
     }
 
     // ✅ SOCKET EMIT
     const io = require("../socket").getIO();
     io.emit("positions", positions);
+
+    // 🔥 RUN GEOFENCE ENGINE (NON-BLOCKING)
+    positions.forEach(p => {
+      processPosition({
+        deviceId: p.deviceId,
+        latitude: p.latitude,
+        longitude: p.longitude
+      }, io);
+    });
 
     res.json(positions);
 
