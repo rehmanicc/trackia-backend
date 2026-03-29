@@ -1,9 +1,10 @@
 let deviceMap = {};
 let geofenceMap = {};
 let dailyChart, geoChart, deviceChart;
+const API_BASE = "https://your-backend.onrender.com";
 async function loadAnalytics(query = "") {
 
-    const res = await fetch(`/api/analytics/report?${query}`);
+    const res = await fetch(`${API_BASE}/api/analytics/report?${query}`);
     const data = await res.json();
 
     document.getElementById("totalVisits").innerText = data.totalVisits;
@@ -27,7 +28,7 @@ async function loadAnalytics(query = "") {
 
 async function loadDailyChart(query = "") {
 
-    const res = await fetch(`/api/analytics/daily?${query}`);
+    const res = await fetch(`${API_BASE}/api/analytics/daily?${query}`);
     const data = await res.json();
     if (dailyChart) dailyChart.destroy();
     dailyChart = new Chart(document.getElementById("dailyChart"), {
@@ -44,7 +45,7 @@ async function loadDailyChart(query = "") {
 
 async function loadGeofenceChart(query = "") {
 
-    const res = await fetch(`/api/analytics/top-geofences?${query}`);
+    const res = await fetch(`${API_BASE}/api/analytics/top-geofences?${query}`);
     const data = await res.json();
     if (geoChart) geoChart.destroy();
 
@@ -61,7 +62,7 @@ async function loadGeofenceChart(query = "") {
 }
 async function loadDevices(query = "") {
 
-    const res = await fetch("/api/traccar/devices");
+    const res = await fetch("${API_BASE}/api/traccar/devices");
     const devices = await res.json();
 
     const select = document.getElementById("deviceSelect");
@@ -83,7 +84,7 @@ async function loadDevices(query = "") {
 }
 async function loadGeofences(query = "") {
 
-    const res = await fetch("/api/geofence");
+    const res = await fetch("${API_BASE}/api/geofence");
     const geofences = await res.json();
 
     const select = document.getElementById("geofenceSelect");
@@ -98,7 +99,7 @@ async function loadGeofences(query = "") {
 }
 async function loadDeviceChart(query = "") {
 
-    const res = await fetch(`/api/analytics/device-summary?${query}`);
+    const res = await fetch(`${API_BASE}/api/analytics/device-summary?${query}`);
     const data = await res.json();
 
     if (deviceChart) deviceChart.destroy();
@@ -125,8 +126,9 @@ function getFilters() {
 
     if (from) params.append("from", from);
     if (to) params.append("to", to);
-    if (deviceId) params.append("deviceId", deviceId);
-    if (geofenceId) params.append("geofenceId", geofenceId);
+if (deviceId && deviceId !== "null" && deviceId !== "") {
+    params.append("deviceId", deviceId);
+}    if (geofenceId) params.append("geofenceId", geofenceId);
 
     return params.toString();
 }

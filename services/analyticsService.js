@@ -6,7 +6,9 @@ async function getGeofenceDurations({ deviceId, geofenceId, from, to }) {
 
     const query = {};
 
-    if (deviceId) query.deviceId = deviceId;
+    if (deviceId && deviceId !== "null") {
+        query.deviceId = Number(deviceId);
+    }
     if (geofenceId) query.geofenceId = geofenceId;
 
     if (from || to) {
@@ -70,7 +72,9 @@ async function getVisitCount({ deviceId, geofenceId, from, to }) {
         type: "ENTER"
     };
 
-    if (deviceId) query.deviceId = deviceId;
+    if (deviceId && deviceId !== "null") {
+        query.deviceId = Number(deviceId);
+    }
     if (geofenceId) query.geofenceId = geofenceId;
 
     if (from || to) {
