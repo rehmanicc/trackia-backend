@@ -18,150 +18,120 @@
 
 <body>
 
-    <div style="display:flex;height:100vh;">
+    <div class="app">
 
         <!-- SIDEBAR -->
-        <div id="sidebar" style="width:320px;background:#f5f5f5;padding:10px;overflow:auto;">
+        <aside class="sidebar">
+            <div class="logo">🚀 Trackia</div>
 
-            <h2>Trackia Dashboard</h2>
+            <nav>
+                <ul>
+                    <li class="active">📍 Live Tracking</li>
+                    <li onclick="openAnalytics()">📊 Analytics</li>
+                    <li>📦 Fleet</li>
+                    <li>📍 Geofencing</li>
+                    <li>⚙️ Settings</li>
+                </ul>
+            </nav>
 
-            <button onclick="logout()">Logout</button>
-
-            <hr>
-
-            <!-- ADMIN PANEL -->
-            <div id="adminPanel" style="display:none;">
-
-                <h3>Admin Panel</h3>
-
-                <h4>Create User</h4>
-                <input id="newUserName" placeholder="Name" style="width:100%;margin-bottom:5px;">
-                <input id="newUserEmail" placeholder="Email" style="width:100%;margin-bottom:5px;">
-                <input id="newUserPassword" placeholder="Password" type="password"
-                    style="width:100%;margin-bottom:5px;">
-
-                <select id="newUserRole" style="width:100%;margin-bottom:5px;"></select>
-
-                <button onclick="createUser()">Create User</button>
-
-                <hr>
-
-                <h4>Add Vehicle</h4>
-                <input id="vehicleName" placeholder="Vehicle Name" style="width:100%;margin-bottom:5px;">
-                <input id="vehicleUniqueId" placeholder="Tracker IMEI / Unique ID"
-                    style="width:100%;margin-bottom:5px;">
-
-                <button onclick="addDevice()">Add Vehicle</button>
-
+            <div class="user">
+                <button onclick="logout()">Logout</button>
             </div>
+        </aside>
 
-            <hr>
 
-            <!-- USER PANEL -->
-            <div id="userPanel" style="display:none;">
-                <h3>User Panel</h3>
-                <p>You can create up to <b>3 geofences</b></p>
-            </div>
+        <!-- MAIN AREA -->
+        <div class="main">
 
-            <hr>
-
-            <!-- ROUTE HISTORY -->
-            <h3>Route History</h3>
-
-            <input id="routeDeviceId" placeholder="Device ID" style="width:100%;margin-bottom:5px;">
-            <input id="fromTime" type="datetime-local" style="width:100%;margin-bottom:5px;">
-            <input id="toTime" type="datetime-local" style="width:100%;margin-bottom:5px;">
-
-            <button onclick="showRoute()">Show Route</button>
-
-            <!-- ✅ TRIP SUMMARY (CORRECT POSITION) -->
-            <div id="tripSummary" style="
-                background:#fff;
-                padding:12px;
-                margin-top:10px;
-                border-radius:8px;
-                border:1px solid #ccc;
-                box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-            ">
-                <h3 style="margin-bottom:10px;">🚗 Trip Summary</h3>
-
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                    <div><b>Distance:</b> <span id="sumDistance">0</span> km</div>
-                    <div><b>Duration:</b> <span id="sumDuration">0</span></div>
-                    <div><b>Avg Speed:</b> <span id="sumSpeed">0</span> km/h</div>
-                    <div><b>Stops:</b> <span id="sumStops">0</span></div>
-                    <div><b>Idle Time:</b> <span id="sumIdle">0</span> min</div>
+            <!-- HEADER -->
+            <header class="header">
+                <div>
+                    <h2>Live Tracking</h2>
+                    <p>Real-time fleet monitoring</p>
                 </div>
+
+                <div class="status">
+                    🟢 Live Updates Active
+                </div>
+            </header>
+
+            <!-- ✅ MOVE STATS BAR HERE -->
+            <div class="stats-bar">
+
+                <div class="stat-card moving">
+                    <span id="countMoving">0</span>
+                    <p>Moving</p>
+                </div>
+
+                <div class="stat-card idle">
+                    <span id="countIdle">0</span>
+                    <p>Idle</p>
+                </div>
+
+                <div class="stat-card stopped">
+                    <span id="countStopped">0</span>
+                    <p>Stopped</p>
+                </div>
+
+                <div class="stat-card offline">
+                    <span id="countOffline">0</span>
+                    <p>Offline</p>
+                </div>
+
             </div>
 
-            <hr>
+            <!-- CONTENT -->
+            <div class="content">
 
-            <!-- VEHICLES -->
-            <h3>Vehicles</h3>
-            <div id="vehicleList"></div>
+                <!-- VEHICLE PANEL -->
+                <div class="vehicle-panel">
 
-            <hr>
+                    <div class="filters">
 
-            <!-- VEHICLE DETAILS -->
-            <div id="vehicleDetails" style="margin-top:10px;"></div>
+                        <input type="text" id="searchInput" placeholder="Search vehicles..." />
 
-            <hr>
+                        <select id="statusFilter">
+                            <option value="all">All</option>
+                            <option value="moving">Moving</option>
+                            <option value="idle">Idle</option>
+                            <option value="stopped">Stopped</option>
+                            <option value="offline">Offline</option>
+                        </select>
 
-            <!-- ALERTS -->
-            <h3>Alerts</h3>
-            <div style="padding:8px; border-bottom:1px solid #ccc; background:#fafafa;">
+                    </div>
 
-                <select id="alertTypeFilter">
-                    <option value="all">All</option>
-                    <option value="enter">Entered</option>
-                    <option value="exit">Exited</option>
-                </select>
+                    <div id="vehicleList" class="vehicle-list"></div>
 
-                <input type="text" id="vehicleSearch" placeholder="Search Vehicle ID..."
-                    style="margin-left:10px; padding:4px;">
-            </div>
+                </div>
 
-            <div id="alertList"></div>
 
-            <hr>
+                <!-- MAP -->
+                <div id="map" class="map-container">
 
-            <!-- ROUTE PLAYBACK -->
-            <h3>Route Playback</h3>
+                    <!-- KEEP PLAYBACK -->
+                    <div id="playbackControl">
+                        <div id="playbackRow">
+                            <div id="playToggleBtn" onclick="togglePlayback()">▶</div>
 
-            <input id="playbackDeviceId" placeholder="Device ID" style="width:100%;margin-bottom:5px;">
-            <input id="playbackDate" type="date" style="width:100%;margin-bottom:10px;">
+                            <input type="range" id="timeSlider">
 
-            <button onclick="startPlayback()">Start Playback</button>
-            <hr>
-            <a href="analytics.html">📊 Analytics</a>
-        </div>
+                            <div id="speedContainer">
+                                <input type="range" id="speedSlider" min="0.5" max="16" step="0.2" value="1">
+                                <span id="speedLabel">1x</span>
+                            </div>
+                        </div>
 
-        <!-- MAP -->
-        <div id="map" style="flex:1; position:relative;">
-
-            <div id="playbackControl">
-                <div id="playbackRow">
-
-                    <div id="playToggleBtn" onclick="togglePlayback()">▶</div>
-
-                    <input type="range" id="timeSlider" min="0" max="100" value="0" style="flex:2;">
-
-                    <div id="speedContainer">
-                        <input type="range" id="speedSlider" min="0.5" max="16" step="0.2" value="1">
-                        <span id="speedLabel">1x</span>
+                        <div id="timeLabel">00:00:00</div>
                     </div>
 
                 </div>
 
-                <div id="timeLabel">00:00:00</div>
             </div>
-
         </div>
+        
 
-    </div>
-
-    <script src="js/api.js"></script>
-    <script src="js/dashboard.js"></script>
+        <script src="js/api.js"></script>
+        <script src="js/dashboard.js"></script>
 
 </body>
 

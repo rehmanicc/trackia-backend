@@ -1,4 +1,5 @@
 let allowedDevices = {};
+let selectedVehicleId = null;
 document.addEventListener("DOMContentLoaded", () => {
     // all your JS code here
 
@@ -7,7 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let isPlaying = false;
     let playbackIndex = 0;
     let playbackPoints = [];
-    let selectedVehicleId = null;
+
     let autoFollow = true;
     let startMarker = null;
     let endMarker = null;
@@ -37,17 +38,19 @@ document.addEventListener("DOMContentLoaded", () => {
         window.location.href = "login.html";
     }
     const userRole = payload.role;
-    // Hide both panels first
-    document.getElementById("adminPanel").style.display = "none";
-    document.getElementById("userPanel").style.display = "none";
+    const adminPanel = document.getElementById("adminPanel");
+    const userPanel = document.getElementById("userPanel");
+
+    if (adminPanel) adminPanel.style.display = "none";
+    if (userPanel) userPanel.style.display = "none";
 
     // ✅ PANEL CONTROL
     if (userRole === "admin") {
-        document.getElementById("adminPanel").style.display = "block";
+        if (adminPanel) adminPanel.style.display = "block";
     }
 
     if (userRole === "user") {
-        document.getElementById("userPanel").style.display = "block";
+        if (userPanel) userPanel.style.display = "block";
     }
 
     if (userRole === "owner") {
@@ -55,26 +58,24 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ✅ ROLE DROPDOWN CONTROL
+
+
     const roleSelect = document.getElementById("newUserRole");
 
-    roleSelect.innerHTML = "";
+    if (roleSelect) {
 
-    if (userRole === "owner") {
-        // 👑 Owner → ONLY admin
-        roleSelect.innerHTML = `
-        <option value="admin">Admin</option>
-    `;
-    }
+        roleSelect.innerHTML = "";
 
-    else if (userRole === "admin") {
-        // 👨‍💼 Admin → ONLY user
-        roleSelect.innerHTML = `
-        <option value="user">User</option>
-    `;
-    }
+        if (userRole === "owner") {
+            roleSelect.innerHTML = `<option value="admin">Admin</option>`;
+        }
+        else if (userRole === "admin") {
+            roleSelect.innerHTML = `<option value="user">User</option>`;
+        }
+        else {
+            roleSelect.style.display = "none";
+        }
 
-    else {
-        roleSelect.style.display = "none";
     }
     function logout() {
         localStorage.removeItem("token")
@@ -124,12 +125,24 @@ document.addEventListener("DOMContentLoaded", () => {
         const icon = isOnline ? onlineIcon : offlineIcon;
 
         if (!markers[id] || !map.hasLayer(markers[id])) {
+
             markers[id] = L.marker([lat, lng], { icon }).addTo(map);
+            markers[id].on("click", () => {
+                selectedVehicleId = String(id);
+
+                highlightVehicleCard(selectedVehicleId);
+            });
+
         } else {
             markers[id].setLatLng([lat, lng]);
             markers[id].setIcon(icon);
         }
+        markers[id].bindPopup(`
+    <b>Vehicle ${id}</b><br>
+    Click to view details
+`);
     }
+
     setTimeout(() => {
         localStorage.removeItem("vehicleStates");
     }, 1000 * 60 * 60 * 24);
@@ -162,24 +175,50 @@ document.addEventListener("DOMContentLoaded", () => {
     map.addControl(drawControl)
 
     map.on(L.Draw.Event.CREATED, async function (event) {
+
+        if (!selectedVehicleId) {
+            alert("Please select a vehicle first");
+            return;
+        }
+
         if (geofences.length >= 3) {
             alert("Maximum 3 geofences allowed");
             return;
         }
-        const layer = event.layer
-        drawnItems.addLayer(layer)
 
-        const geojson = layer.toGeoJSON()
-        geojson.deviceId = selectedVehicleId;
+        const layer = event.layer;
+        drawnItems.addLayer(layer);
+
+        const geojson = layer.toGeoJSON();
+
+        // ✅ FIX: Proper structure
+        const payload = {
+            ...geojson,
+            deviceId: Number(selectedVehicleId) // ensure number
+        };
+
+        console.log("📤 Sending geofence:", payload);
+
         await apiFetch("/api/geofence", {
             method: "POST",
-            body: JSON.stringify(geojson)
-        })
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + localStorage.getItem("token")
+
+            },
+            body: JSON.stringify(payload)
+        });
+
+        alert("Geofence Saved");
         await loadGeofences();
-        alert("Geofence Saved")
+    });
+    document.getElementById("searchInput")?.addEventListener("input", () => {
+        updateVehicleList(Object.values(lastPositions));
+    });
 
-    })
-
+    document.getElementById("statusFilter")?.addEventListener("change", () => {
+        updateVehicleList(Object.values(lastPositions));
+    });
     let socket;
     async function loadInitialPositions() {
         try {
@@ -1132,41 +1171,124 @@ function smoothMove(marker, newLatLng, duration = 1000) {
     requestAnimationFrame(animate);
 }
 function updateVehicleList(positions) {
+
     const container = document.getElementById("vehicleList");
+    const search = document.getElementById("searchInput")?.value.toLowerCase() || "";
+    const statusFilter = document.getElementById("statusFilter")?.value || "all";
+
     if (!container) return;
 
     container.innerHTML = "";
+
+    let counts = {
+        moving: 0,
+        idle: 0,
+        stopped: 0,
+        offline: 0
+    };
 
     positions.forEach(pos => {
 
         if (!allowedDevices[String(pos.deviceId)]) return;
 
+        const device = allowedDevices[String(pos.deviceId)];
+
         const isOnline = isVehicleOnline(pos.deviceTime);
+        const speed = Math.round((pos.speed || 0) * 1.852);
+
+        let status = "offline";
+        let statusColor = "#6b7280";
+
+        if (isOnline) {
+            if (speed > 5) {
+                status = "moving";
+                statusColor = "#10b981";
+            } else if (speed > 0) {
+                status = "idle";
+                statusColor = "#f59e0b";
+            } else {
+                status = "stopped";
+                statusColor = "#ef4444";
+            }
+        }
+
+        // ✅ COUNTING
+        counts[status]++;
+
+        // 🔍 FILTERS
+        if (statusFilter !== "all" && status !== statusFilter) return;
+
+        const name = (device.name || "").toLowerCase();
+        if (search && !name.includes(search) && !String(pos.deviceId).includes(search)) return;
+
+        const minutesAgo = Math.floor((new Date() - new Date(pos.deviceTime)) / 60000);
 
         const div = document.createElement("div");
-        div.style.borderBottom = "1px solid #ccc";
-        div.style.padding = "6px";
+        div.className = "vehicle-card";
+        div.dataset.id = pos.deviceId;
 
         div.innerHTML = `
-        <b>Vehicle ${pos.deviceId}</b><br>
-        Status: ${isOnline ? "🟢 Online" : "🔴 Offline"}<br>
-        Speed: ${Math.round((pos.speed || 0) * 1.852)} km/h
-    `;
+            <div class="vehicle-header">
+                <div class="vehicle-name">
+                    🚗 ${device.name || "Vehicle " + pos.deviceId}
+                </div>
 
-        // ✅ CRITICAL FIX
-        div.style.cursor = "pointer";
+                <div class="status-badge" style="background:${statusColor}">
+                    ${status}
+                </div>
+            </div>
+
+            <div class="vehicle-body">
+                <div>Speed: <b>${speed} km/h</b></div>
+                <div>Last update: ${minutesAgo} min ago</div>
+            </div>
+        `;
 
         div.onclick = () => {
-            selectedVehicleId = pos.deviceId;
-
-            console.log("✅ Selected Vehicle:", selectedVehicleId);
-            alert("Selected Vehicle: " + selectedVehicleId);
+            selectedVehicleId = String(pos.deviceId);
+            highlightVehicleCard(selectedVehicleId);
+            focusOnVehicle(selectedVehicleId);
         };
 
         container.appendChild(div);
     });
+
+    // ✅ UPDATE STATS UI
+    document.getElementById("countMoving").innerText = counts.moving;
+    document.getElementById("countIdle").innerText = counts.idle;
+    document.getElementById("countStopped").innerText = counts.stopped;
+    document.getElementById("countOffline").innerText = counts.offline;
+
+    if (selectedVehicleId) {
+        highlightVehicleCard(selectedVehicleId);
+    }
 }
 function isVehicleOnline(deviceTime) {
     return ((new Date() - new Date(deviceTime)) / 60000) <= 5;
 }
+function highlightVehicleCard(id) {
+    document.querySelectorAll(".vehicle-card").forEach(card => {
+        card.classList.remove("active");
 
+        if (card.dataset.id === String(id)) {
+            card.classList.add("active");
+
+            // auto scroll
+            card.scrollIntoView({ block: "center", behavior: "smooth" });
+        }
+    });
+}
+
+function focusOnVehicle(id) {
+    const marker = markers[id];
+    if (!marker) return;
+
+    const latlng = marker.getLatLng();
+
+    map.setView(latlng, 15, {
+        animate: true,
+        duration: 0.5
+    });
+
+    marker.openPopup?.();
+}
