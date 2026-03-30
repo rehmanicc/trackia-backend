@@ -187,7 +187,12 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19
-    }).addTo(map)
+    }).addTo(map);
+    setTimeout(() => {
+        try {
+            map.removeControl(drawControl);
+        } catch (e) { }
+    }, 500);
 
     const drawnItems = new L.FeatureGroup()
     map.addLayer(drawnItems)
@@ -205,7 +210,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     map.on(L.Draw.Event.CREATED, async function (event) {
-
+        if (currentMode !== "geofence") {
+            alert("Switch to Geofence mode first");
+            return;
+        }
         if (!selectedVehicleId) {
             alert("Please select a vehicle first");
             return;
@@ -271,38 +279,38 @@ document.addEventListener("DOMContentLoaded", () => {
         map.removeControl(drawControl); // disable drawing
     }
     function renderGeofenceList() {
-    const container = document.getElementById("geofenceList");
-    if (!container) return;
+        const container = document.getElementById("geofenceList");
+        if (!container) return;
 
-    container.innerHTML = "";
+        container.innerHTML = "";
 
-    geofences.forEach(f => {
+        geofences.forEach(f => {
 
-        const div = document.createElement("div");
-        div.className = "vehicle-card";
+            const div = document.createElement("div");
+            div.className = "vehicle-card";
 
-        div.innerHTML = `📍 Geofence ${f._id}`;
+            div.innerHTML = `📍 Geofence ${f._id}`;
 
-        div.onclick = () => {
-            selectedGeofenceId = f._id;
-        };
+            div.onclick = () => {
+                selectedGeofenceId = f._id;
+            };
 
-        container.appendChild(div);
-    });
-}
-async function deleteSelectedGeofence() {
-    if (!selectedGeofenceId) {
-        alert("Select geofence first");
-        return;
+            container.appendChild(div);
+        });
     }
+    async function deleteSelectedGeofence() {
+        if (!selectedGeofenceId) {
+            alert("Select geofence first");
+            return;
+        }
 
-    await apiFetch(`/api/geofence/${selectedGeofenceId}`, {
-        method: "DELETE"
-    });
+        await apiFetch(`/api/geofence/${selectedGeofenceId}`, {
+            method: "DELETE"
+        });
 
-    selectedGeofenceId = null;
-    await loadGeofences();
-}
+        selectedGeofenceId = null;
+        await loadGeofences();
+    }
     let socket;
     async function loadInitialPositions() {
         try {
@@ -1225,6 +1233,9 @@ async function deleteSelectedGeofence() {
     window.togglePlayback = togglePlayback;
     window.addAlert = addAlert;
     window.createUser = createUser;
+    window.deleteSelectedGeofence = deleteSelectedGeofence;
+    window.openGeofence = openGeofence;
+    window.openLive = openLive;
     initApp();
     setInterval(() => {
         console.log("🔄 Fallback refresh...");
