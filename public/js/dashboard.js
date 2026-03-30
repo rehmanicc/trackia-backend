@@ -258,6 +258,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // ✅ THEN CONNECT SOCKET
         socket = io("https://trackia-backend.onrender.com", {
+            transports: ["websocket"],
             auth: {
                 token: localStorage.getItem("token")
             }

@@ -18,6 +18,23 @@ const Device = require("./models/Device");
 const socket = require("./socket");
 const io = socket.init(server);
 
+
+app.use(cors({
+    origin: [
+        "http://127.0.0.1:8080",
+        "http://localhost:8080"
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true
+}));
+
+app.options("*", cors());
+app.use((req, res, next) => {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Headers", "*");
+    res.header("Access-Control-Allow-Methods", "*");
+    next();
+});
 // ======================
 // MONGODB CONNECTION
 // ======================
@@ -31,10 +48,6 @@ mongoose.connect(process.env.MONGO_URI)
 // ======================
 // MIDDLEWARE
 // ======================
-app.use(cors({
-  origin: "*"
-}));
-
 app.use(express.json());
 // ======================
 // TEST ROUTE
@@ -146,3 +159,6 @@ app.delete("/api/reset", async (req, res) => {
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
+setInterval(() => {
+  console.log("🔥 Server alive");
+}, 1000 * 60 * 5);
