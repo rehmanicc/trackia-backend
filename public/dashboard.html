@@ -29,7 +29,7 @@
                     <li class="active">📍 Live Tracking</li>
                     <li onclick="openAnalytics()">📊 Analytics</li>
                     <li>📦 Fleet</li>
-                    <li>📍 Geofencing</li>
+                    <li onclick="openGeofence()">📍 Geofencing</li>
                     <li>⚙️ Settings</li>
                 </ul>
             </nav>
@@ -103,7 +103,16 @@
                     <div id="vehicleList" class="vehicle-list"></div>
 
                 </div>
+                <div id="geofencePanel" class="vehicle-panel" style="display:none;">
 
+                    <div style="padding:10px;">
+                        <button onclick="enableGeofenceDraw()">➕ Add Geofence</button>
+                        <button onclick="deleteSelectedGeofence()">🗑 Delete</button>
+                    </div>
+
+                    <div id="geofenceList"></div>
+
+                </div>
 
                 <!-- MAP -->
                 <div id="map" class="map-container">
@@ -128,7 +137,7 @@
 
             </div>
         </div>
-        
+
 
         <script src="js/api.js"></script>
         <script src="js/dashboard.js"></script>

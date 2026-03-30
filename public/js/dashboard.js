@@ -1,5 +1,6 @@
 let allowedDevices = {};
 let selectedVehicleId = null;
+
 document.addEventListener("DOMContentLoaded", () => {
     // all your JS code here
 
@@ -20,6 +21,8 @@ document.addEventListener("DOMContentLoaded", () => {
     let geofenceLayers = {};
     const token = localStorage.getItem("token")
     let geofenceBBoxes = {};
+    let currentMode = "live";
+    let selectedGeofenceId = null;
 
 
 
@@ -200,7 +203,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     })
 
-    map.addControl(drawControl)
 
     map.on(L.Draw.Event.CREATED, async function (event) {
 
@@ -247,6 +249,60 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("statusFilter")?.addEventListener("change", () => {
         updateVehicleList(Object.values(lastPositions));
     });
+    function openGeofence() {
+        currentMode = "geofence";
+
+        document.querySelector(".header h2").innerText = "Geofencing";
+
+        document.querySelector(".vehicle-panel").style.display = "none";
+        document.getElementById("geofencePanel").style.display = "block";
+
+        map.addControl(drawControl); // enable drawing
+    }
+
+    function openLive() {
+        currentMode = "live";
+
+        document.querySelector(".header h2").innerText = "Live Tracking";
+
+        document.querySelector(".vehicle-panel").style.display = "block";
+        document.getElementById("geofencePanel").style.display = "none";
+
+        map.removeControl(drawControl); // disable drawing
+    }
+    function renderGeofenceList() {
+    const container = document.getElementById("geofenceList");
+    if (!container) return;
+
+    container.innerHTML = "";
+
+    geofences.forEach(f => {
+
+        const div = document.createElement("div");
+        div.className = "vehicle-card";
+
+        div.innerHTML = `📍 Geofence ${f._id}`;
+
+        div.onclick = () => {
+            selectedGeofenceId = f._id;
+        };
+
+        container.appendChild(div);
+    });
+}
+async function deleteSelectedGeofence() {
+    if (!selectedGeofenceId) {
+        alert("Select geofence first");
+        return;
+    }
+
+    await apiFetch(`/api/geofence/${selectedGeofenceId}`, {
+        method: "DELETE"
+    });
+
+    selectedGeofenceId = null;
+    await loadGeofences();
+}
     let socket;
     async function loadInitialPositions() {
         try {
@@ -476,6 +532,7 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (err) {
             console.error("❌ Error loading geofences:", err);
         }
+        renderGeofenceList();
     }
     function addAlert(deviceId, geofenceId, type, message) {
         if (!allowedDevices[deviceId]) return;
