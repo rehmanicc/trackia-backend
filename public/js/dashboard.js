@@ -82,11 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
         window.location.href = "login.html"
     }
 
-    const vehicleIcon = L.icon({
-        iconUrl: "icons/car.png",
-        iconSize: [40, 40],
-        iconAnchor: [16, 16]
-    })
+
     const onlineIcon = L.icon({
         iconUrl: "/icons/carg.png",
         iconSize: [40, 40],
@@ -94,7 +90,7 @@ document.addEventListener("DOMContentLoaded", () => {
     })
 
     const offlineIcon = L.icon({
-        iconUrl: "/icons/carr.png",
+        iconUrl: "/icons/cargrey.png",
         iconSize: [40, 40],
         iconAnchor: [16, 16]
     })
@@ -122,8 +118,35 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!lat || !lng) return;
 
         const isOnline = isVehicleOnline(pos.deviceTime);
-        const icon = isOnline ? onlineIcon : offlineIcon;
+        const speed = Math.round((pos.speed || 0) * 1.852);
 
+        let icon;
+
+        if (!isOnline) {
+            icon = L.icon({
+                iconUrl: "/icons/cargrey.png",
+                iconSize: [40, 40],
+                iconAnchor: [20, 20]
+            });
+        } else if (speed > 5) {
+            icon = L.icon({
+                iconUrl: "/icons/carg.png",   // moving
+                iconSize: [40, 40],
+                iconAnchor: [20, 20]
+            });
+        } else if (speed > 0) {
+            icon = L.icon({
+                iconUrl: "/icons/caridle.png", // idle
+                iconSize: [40, 40],
+                iconAnchor: [20, 20]
+            });
+        } else {
+            icon = L.icon({
+                iconUrl: "/icons/carr.png",   // stopped
+                iconSize: [40, 40],
+                iconAnchor: [20, 20]
+            });
+        }
         if (!markers[id] || !map.hasLayer(markers[id])) {
 
             markers[id] = L.marker([lat, lng], { icon }).addTo(map);
@@ -137,10 +160,15 @@ document.addEventListener("DOMContentLoaded", () => {
             markers[id].setLatLng([lat, lng]);
             markers[id].setIcon(icon);
         }
-        markers[id].bindPopup(`
-    <b>Vehicle ${id}</b><br>
-    Click to view details
-`);
+        markers[id].bindTooltip(
+            `${speed} km/h`,
+            {
+                permanent: true,
+                direction: "top",
+                offset: [0, -20],
+                className: "speed-label"
+            }
+        );
     }
 
     setTimeout(() => {
@@ -258,7 +286,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // ✅ THEN CONNECT SOCKET
         socket = io("https://trackia-backend.onrender.com", {
-            transports: ["websocket"],
+            transports: ["polling", "websocket"],
+            reconnectionAttempts: 5,
+            reconnectionDelay: 2000,
             auth: {
                 token: localStorage.getItem("token")
             }
