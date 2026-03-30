@@ -198,15 +198,16 @@ document.addEventListener("DOMContentLoaded", () => {
     map.addLayer(drawnItems)
 
     const drawControl = new L.Control.Draw({
-        edit: { featureGroup: drawnItems },
         draw: {
             polygon: true,
             rectangle: true,
             circle: true,
+            circlemarker: false, // ✅ REMOVE extra circle
             marker: false,
             polyline: false
-        }
-    })
+        },
+        edit: false // ✅ disable edit/delete toolbar
+    });
 
 
     map.on(L.Draw.Event.CREATED, async function (event) {
@@ -235,8 +236,9 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!name) return;
         // ✅ FIX: Proper structure
         const payload = {
-            ...geojson,
-            name,
+            name, // ✅ important
+            type: geojson.geometry.type, // Polygon / Circle
+            geometry: geojson.geometry, // actual shape
             deviceId: Number(selectedVehicleId)
         };
 
@@ -289,42 +291,55 @@ document.addEventListener("DOMContentLoaded", () => {
 
         container.innerHTML = "";
 
+        // group by vehicle
+        const grouped = {};
+
         geofences.forEach(f => {
+            const key = f.deviceId || "unknown";
+            if (!grouped[key]) grouped[key] = [];
+            grouped[key].push(f);
+        });
 
-            const div = document.createElement("div");
-            div.className = "vehicle-card";
+        Object.keys(grouped).forEach(deviceId => {
 
-            div.innerHTML = `
-            <div style="display:flex; justify-content:space-between;">
-            <span>📍 ${f.name || "Unnamed"}</span>
-            <button onclick="editGeofenceName('${f._id}')">✏️</button>
-            </div>
+            const vehicleDiv = document.createElement("div");
+            vehicleDiv.style.fontWeight = "bold";
+            vehicleDiv.style.marginTop = "10px";
+            vehicleDiv.innerHTML = `🚗 Vehicle ${deviceId}`;
+
+            container.appendChild(vehicleDiv);
+
+            grouped[deviceId].forEach(f => {
+
+                const div = document.createElement("div");
+                div.className = "vehicle-card";
+
+                div.innerHTML = `
+                <div style="display:flex; justify-content:space-between;">
+                    <span>📍 ${f.name || "Unnamed"}</span>
+                    <button onclick="editGeofenceName('${f._id}')">✏️</button>
+                </div>
             `;
 
-            div.onclick = () => {
-                selectedGeofenceId = f._id;
+                div.onclick = () => {
+                    selectedGeofenceId = f._id;
 
-                // reset all geofence styles
-                Object.values(geofenceLayers).forEach(l => {
-                    l.setStyle({
-                        color: "#3388ff",
-                        weight: 2
-                    });
-                });
-
-                // highlight selected
-                if (geofenceLayers[f._id]) {
-                    geofenceLayers[f._id].setStyle({
-                        color: "orange",
-                        weight: 3
+                    Object.values(geofenceLayers).forEach(l => {
+                        l.setStyle({ color: "#3388ff" });
                     });
 
-                    // zoom to geofence
-                    map.fitBounds(geofenceLayers[f._id].getBounds());
-                }
-            };
+                    if (geofenceLayers[f._id]) {
+                        geofenceLayers[f._id].setStyle({
+                            color: "orange",
+                            weight: 3
+                        });
 
-            container.appendChild(div);
+                        map.fitBounds(geofenceLayers[f._id].getBounds());
+                    }
+                };
+
+                container.appendChild(div);
+            });
         });
     }
     async function editGeofenceName(id) {
