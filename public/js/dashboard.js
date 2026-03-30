@@ -85,18 +85,28 @@ document.addEventListener("DOMContentLoaded", () => {
         window.location.href = "login.html"
     }
 
-
-    const onlineIcon = L.icon({
-        iconUrl: "/icons/carg.png",
-        iconSize: [40, 40],
-        iconAnchor: [16, 16]
-    })
-
-    const offlineIcon = L.icon({
-        iconUrl: "/icons/cargrey.png",
-        iconSize: [40, 40],
-        iconAnchor: [16, 16]
-    })
+    const icons = {
+        moving: L.icon({
+            iconUrl: "/icons/carg.png",
+            iconSize: [40, 40],
+            iconAnchor: [20, 20]
+        }),
+        idle: L.icon({
+            iconUrl: "/icons/caridle.png",
+            iconSize: [40, 40],
+            iconAnchor: [20, 20]
+        }),
+        stopped: L.icon({
+            iconUrl: "/icons/carr.png",
+            iconSize: [40, 40],
+            iconAnchor: [20, 20]
+        }),
+        offline: L.icon({
+            iconUrl: "/icons/cargrey.png",
+            iconSize: [40, 40],
+            iconAnchor: [20, 20]
+        })
+    };
     const startIcon = L.icon({
         iconUrl: "https://maps.google.com/mapfiles/ms/icons/green-dot.png",
         iconSize: [32, 32],
@@ -111,8 +121,6 @@ document.addEventListener("DOMContentLoaded", () => {
     let markers = {}
     let geofences = []
     let alerts = []
-    let vehicleStates = JSON.parse(localStorage.getItem("vehicleStates") || "{}");
-
     function updateMarker(id, pos) {
 
         const lat = pos.latitude || pos.lat;
@@ -120,36 +128,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!lat || !lng) return;
 
-        const isOnline = isVehicleOnline(pos.deviceTime);
-        const speed = Math.round((pos.speed || 0) * 1.852);
 
-        let icon;
+        const { state, speed } = getVehicleState(pos);
 
-        if (!isOnline) {
-            icon = L.icon({
-                iconUrl: "/icons/cargrey.png",
-                iconSize: [40, 40],
-                iconAnchor: [20, 20]
-            });
-        } else if (speed > 5) {
-            icon = L.icon({
-                iconUrl: "/icons/carg.png",   // moving
-                iconSize: [40, 40],
-                iconAnchor: [20, 20]
-            });
-        } else if (speed > 0) {
-            icon = L.icon({
-                iconUrl: "/icons/caridle.png", // idle
-                iconSize: [40, 40],
-                iconAnchor: [20, 20]
-            });
-        } else {
-            icon = L.icon({
-                iconUrl: "/icons/carr.png",   // stopped
-                iconSize: [40, 40],
-                iconAnchor: [20, 20]
-            });
-        }
+        let icon = icons[state];
         if (!markers[id] || !map.hasLayer(markers[id])) {
 
             markers[id] = L.marker([lat, lng], { icon }).addTo(map);
@@ -163,15 +145,19 @@ document.addEventListener("DOMContentLoaded", () => {
             markers[id].setLatLng([lat, lng]);
             markers[id].setIcon(icon);
         }
-        markers[id].bindTooltip(
-            `${speed} km/h`,
-            {
-                permanent: true,
-                direction: "top",
-                offset: [0, -20],
-                className: "speed-label"
-            }
-        );
+        if (!markers[id]._tooltip) {
+            markers[id].bindTooltip(
+                `${speed} km/h`,
+                {
+                    permanent: true,
+                    direction: "top",
+                    offset: [0, -20],
+                    className: "speed-label"
+                }
+            );
+        } else {
+            markers[id].setTooltipContent(`${speed} km/h`);
+        };
     }
 
     setTimeout(() => {
@@ -224,8 +210,8 @@ document.addEventListener("DOMContentLoaded", () => {
             f => String(f.deviceId) === String(selectedVehicleId)
         );
 
-        if (deviceGeofences.length >= 3) {
-            alert("Maximum 3 geofences allowed for this vehicle");
+        if (deviceGeofences.length >= 2) {
+            alert("Maximum 2 geofences allowed for this vehicle");
             return;
         }
         const layer = event.layer;
@@ -424,8 +410,6 @@ document.addEventListener("DOMContentLoaded", () => {
         socket.on("positions", (positions) => {
 
             if (isPlaybackMode) return;
-            positions.forEach(p => {
-            });
 
             const filteredPositions = positions.filter(pos =>
                 allowedDevices[String(pos.deviceId)]
@@ -444,11 +428,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 lastPositions[id] = pos;
                 updateMarker(id, pos);
 
-            });
-            Object.keys(allowedDevices).forEach(id => {
-                if (lastPositions[id]) {
-                    updateMarker(id, lastPositions[id]);
-                }
             });
             updateVehicleList(Object.values(lastPositions));
 
@@ -522,8 +501,6 @@ document.addEventListener("DOMContentLoaded", () => {
         from = new Date(from).toISOString();
         to = new Date(to).toISOString();
         const data = await apiFetch(`/api/traccar/route?deviceId=${deviceId}&from=${from}&to=${to}`);
-        if (!data) return;
-
         console.log("Route Data:", data);
 
         // ❌ If no data → stop here
@@ -577,7 +554,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             fences.forEach(f => {
 
-                const layer = L.geoJSON(f, {
+                const layer = L.geoJSON({ type: "Feature", geometry: f.geometry }, {
                     style: {
                         color: "#3388ff",
                         weight: 2,
@@ -588,8 +565,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 layer.eachLayer(l => {
 
                     const geofenceId = f._id || f.id;
-                    geofenceBBoxes[geofenceId] = turf.bbox(f);
-
+                    geofenceBBoxes[geofenceId] = turf.bbox({
+                        type: "Feature",
+                        geometry: f.geometry
+                    });
                     geofenceLayers[geofenceId] = l;
 
                     drawnItems.addLayer(l);
@@ -1353,24 +1332,16 @@ function updateVehicleList(positions) {
 
         const device = allowedDevices[String(pos.deviceId)];
 
-        const isOnline = isVehicleOnline(pos.deviceTime);
-        const speed = Math.round((pos.speed || 0) * 1.852);
+        const { state, speed } = getVehicleState(pos);
 
-        let status = "offline";
-        let statusColor = "#6b7280";
+        let status = state;
 
-        if (isOnline) {
-            if (speed > 5) {
-                status = "moving";
-                statusColor = "#10b981";
-            } else if (speed > 0) {
-                status = "idle";
-                statusColor = "#f59e0b";
-            } else {
-                status = "stopped";
-                statusColor = "#ef4444";
-            }
-        }
+        let statusColor = {
+            moving: "#10b981",
+            idle: "#f59e0b",
+            stopped: "#ef4444",
+            offline: "#6b7280"
+        }[state];
 
         // ✅ COUNTING
         counts[status]++;
@@ -1425,6 +1396,15 @@ function updateVehicleList(positions) {
 }
 function isVehicleOnline(deviceTime) {
     return ((new Date() - new Date(deviceTime)) / 60000) <= 5;
+}
+function getVehicleState(pos) {
+    const isOnline = isVehicleOnline(pos.deviceTime);
+    const speed = Math.round((pos.speed || 0) * 1.852);
+
+    if (!isOnline) return { state: "offline", speed };
+    if (speed > 5) return { state: "moving", speed };
+    if (speed > 0) return { state: "idle", speed };
+    return { state: "stopped", speed };
 }
 function highlightVehicleCard(id) {
     document.querySelectorAll(".vehicle-card").forEach(card => {

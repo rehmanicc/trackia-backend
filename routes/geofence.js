@@ -62,10 +62,7 @@ router.post("/", authMiddleware, async (req, res) => {
   }
 
   // 🔥 ROLE-BASED LIMIT
-  let limit = 3;
-
-  if (req.user.role === "admin") limit = 50;
-  if (req.user.role === "owner") limit = 1000;
+  const limit = 2;
 
   // 🔥 COUNT PER DEVICE
   const count = await Geofence.countDocuments({

@@ -1,7 +1,9 @@
 const mongoose = require("mongoose");
 
 const geofenceSchema = new mongoose.Schema({
-    type: Object,
+    name: String, // ✅ ADD THIS
+    type: String, // ✅ FIX TYPE
+    geometry: Object, // ✅ ADD THIS
     userId: mongoose.Schema.Types.ObjectId,
     deviceId: Number
 }, { timestamps: true });
