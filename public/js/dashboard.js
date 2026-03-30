@@ -219,20 +219,25 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        if (geofences.length >= 3) {
-            alert("Maximum 3 geofences allowed");
+        const deviceGeofences = geofences.filter(
+            f => String(f.deviceId) === String(selectedVehicleId)
+        );
+
+        if (deviceGeofences.length >= 3) {
+            alert("Maximum 3 geofences allowed for this vehicle");
             return;
         }
-
         const layer = event.layer;
         drawnItems.addLayer(layer);
 
         const geojson = layer.toGeoJSON();
-
+        const name = prompt("Enter geofence name:");
+        if (!name) return;
         // ✅ FIX: Proper structure
         const payload = {
             ...geojson,
-            deviceId: Number(selectedVehicleId) // ensure number
+            name,
+            deviceId: Number(selectedVehicleId)
         };
 
         console.log("📤 Sending geofence:", payload);
@@ -289,20 +294,60 @@ document.addEventListener("DOMContentLoaded", () => {
             const div = document.createElement("div");
             div.className = "vehicle-card";
 
-            div.innerHTML = `📍 Geofence ${f._id}`;
+            div.innerHTML = `
+            <div style="display:flex; justify-content:space-between;">
+            <span>📍 ${f.name || "Unnamed"}</span>
+            <button onclick="editGeofenceName('${f._id}')">✏️</button>
+            </div>
+            `;
 
             div.onclick = () => {
                 selectedGeofenceId = f._id;
+
+                // reset all geofence styles
+                Object.values(geofenceLayers).forEach(l => {
+                    l.setStyle({
+                        color: "#3388ff",
+                        weight: 2
+                    });
+                });
+
+                // highlight selected
+                if (geofenceLayers[f._id]) {
+                    geofenceLayers[f._id].setStyle({
+                        color: "orange",
+                        weight: 3
+                    });
+
+                    // zoom to geofence
+                    map.fitBounds(geofenceLayers[f._id].getBounds());
+                }
             };
 
             container.appendChild(div);
         });
+    }
+    async function editGeofenceName(id) {
+
+        const newName = prompt("Enter new name:");
+        if (!newName) return;
+
+        await apiFetch(`/api/geofence/${id}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ name: newName })
+        });
+
+        await loadGeofences();
     }
     async function deleteSelectedGeofence() {
         if (!selectedGeofenceId) {
             alert("Select geofence first");
             return;
         }
+        if (!confirm("Delete this geofence?")) return;
 
         await apiFetch(`/api/geofence/${selectedGeofenceId}`, {
             method: "DELETE"
@@ -1236,6 +1281,7 @@ document.addEventListener("DOMContentLoaded", () => {
     window.deleteSelectedGeofence = deleteSelectedGeofence;
     window.openGeofence = openGeofence;
     window.openLive = openLive;
+    window.editGeofenceName = editGeofenceName;
     initApp();
     setInterval(() => {
         console.log("🔄 Fallback refresh...");

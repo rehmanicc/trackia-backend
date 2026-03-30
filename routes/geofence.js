@@ -30,6 +30,24 @@ router.get("/", authMiddleware, async (req, res) => {
 });
 
 // ======================
+// UPDATE GEOFENCE NAME
+// ======================
+router.put("/:id", authMiddleware, async (req, res) => {
+
+  const { name } = req.body;
+
+  if (!name) {
+    return res.status(400).json({ error: "Name is required" });
+  }
+
+  await Geofence.updateOne(
+    { _id: req.params.id, userId: req.user.id },
+    { $set: { name } }
+  );
+
+  res.json({ success: true });
+});
+// ======================
 // CREATE GEOFENCE
 // ======================
 router.post("/", authMiddleware, async (req, res) => {

@@ -19,6 +19,10 @@ async function processPosition(position, io) {
         const geofenceId = f._id.toString();
 
         // 🔥 STEP 1: FAST BBOX CHECK
+        if (!f || !f.geometry || !f.geometry.coordinates) {
+            console.log("❌ Invalid geofence skipped:", f._id);
+            continue;
+        }
         const bbox = turf.bbox(f);
         const [minLng, minLat, maxLng, maxLat] = bbox;
 
@@ -30,8 +34,7 @@ async function processPosition(position, io) {
         }
 
         // 🔥 STEP 2: PRECISE CHECK
-        const inside = turf.booleanPointInPolygon(point, f);
-
+        const inside = turf.booleanPointInPolygon(point, f.geometry);
         // ================= STATE INIT =================
         if (!vehicleStates[deviceId]) {
             vehicleStates[deviceId] = {};
