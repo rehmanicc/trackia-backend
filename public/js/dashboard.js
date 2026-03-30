@@ -1140,6 +1140,7 @@ function updateVehicleList(positions) {
     positions.forEach(pos => {
 
         if (!allowedDevices[String(pos.deviceId)]) return;
+
         const isOnline = isVehicleOnline(pos.deviceTime);
 
         const div = document.createElement("div");
@@ -1147,10 +1148,20 @@ function updateVehicleList(positions) {
         div.style.padding = "6px";
 
         div.innerHTML = `
-            <b>Vehicle ${pos.deviceId}</b><br>
-            Status: ${isOnline ? "🟢 Online" : "🔴 Offline"}<br>
-            Speed: ${Math.round((pos.speed || 0) * 1.852)} km/h
-        `;
+        <b>Vehicle ${pos.deviceId}</b><br>
+        Status: ${isOnline ? "🟢 Online" : "🔴 Offline"}<br>
+        Speed: ${Math.round((pos.speed || 0) * 1.852)} km/h
+    `;
+
+        // ✅ CRITICAL FIX
+        div.style.cursor = "pointer";
+
+        div.onclick = () => {
+            selectedVehicleId = pos.deviceId;
+
+            console.log("✅ Selected Vehicle:", selectedVehicleId);
+            alert("Selected Vehicle: " + selectedVehicleId);
+        };
 
         container.appendChild(div);
     });
