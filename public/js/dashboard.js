@@ -1191,7 +1191,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     async function fetchAllowedDevices() {
         try {
-            const devices = await apiFetch("/api/traccar/devices");
+            const devices = await apiFetch("/api/devices");
 
             allowedDevices = {};
             console.log("📦 Devices from backend:", devices);

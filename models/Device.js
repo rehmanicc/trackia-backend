@@ -20,10 +20,10 @@ const deviceSchema = new mongoose.Schema({
         ref: "User"
     },
 
-    assignedTo: {
+    assignedTo: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: "User"
-    }
+    }]
 
 }, { timestamps: true });
 
