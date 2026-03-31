@@ -157,6 +157,7 @@ server.listen(PORT, () => {
 setInterval(() => {
   console.log("🔥 Server alive");
 }, 1000 * 60 * 5);
+
 const Alert = require("./models/Alert");
 
 app.get("/test-alert", async (req, res) => {
