@@ -26,10 +26,10 @@
 
             <nav>
                 <ul>
-                    <li onclick="openLive()">📡 Live Tracking</li>
-                    <li onclick="openAnalytics()">📊 Analytics</li>
-                    <button onclick="openDevices()">📦 Devices</button>
-                    <li onclick="openGeofence()">📍 Geofencing</li>
+                    <li onclick="setActiveMenu(this); openLive()">📡 Live Tracking</li>
+                    <li onclick="setActiveMenu(this); openAnalytics()">📊 Analytics</li>
+                    <li onclick="setActiveMenu(this); openDevices()">📦 Devices</li>
+                    <li onclick="setActiveMenu(this); openGeofence()">📍 Geofencing</li>
                     <li>⚙️ Settings</li>
                 </ul>
             </nav>

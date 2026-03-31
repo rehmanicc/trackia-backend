@@ -252,13 +252,10 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     function openGeofence() {
         currentMode = "geofence";
-
         document.querySelector(".header h2").innerText = "Geofencing";
-
-        document.querySelector(".vehicle-panel").style.display = "none";
+        document.querySelectorAll(".vehicle-panel").forEach(p => p.style.display = "none");
         document.getElementById("geofencePanel").style.display = "block";
-
-        map.addControl(drawControl); // enable drawing
+        map.addControl(drawControl);
     }
 
     function openLive() {
@@ -1416,13 +1413,7 @@ async function loadDevices() {
                         <th>Traccar ID</th>
                         <th>Assigned Users</th>
                         <th>Actions</th>
-                        <td>
-                            <button class="icon-btn assign" onclick="openAssign('${d._id}')">👤</button>
-                            <button class="icon-btn delete" onclick="deleteDevice('${d._id}')">🗑</button>
-                            <button class="icon-btn unassign" onclick="unassignDevice('${d._id}')">❌</button>
-                        </td>
-                    </tr>
-                    
+                    </tr>                   
                 </thead>
                 <tbody id="deviceTableBody"></tbody>
             </table>
@@ -1440,8 +1431,11 @@ async function loadDevices() {
                 <td>${d.traccarId}</td>
                 <td>${users || "-"}</td>
                 <td>
-                    <button onclick="openAssign('${d._id}')">👤</button>
-                    <button onclick="deleteDevice('${d._id}')">🗑</button>
+                    <td>
+                            <button class="icon-btn assign" onclick="openAssign('${d._id}')">👤</button>
+                            <button class="icon-btn delete" onclick="deleteDevice('${d._id}')">🗑</button>
+                            <button class="icon-btn unassign" onclick="unassignDevice('${d._id}')">❌</button>
+                        </td> 
                 </td>
             `;
 
@@ -1545,4 +1539,8 @@ async function submitAssign() {
 
     closeAssign();
     loadDevices();
+}
+function setActiveMenu(element) {
+    document.querySelectorAll(".sidebar li").forEach(li => li.classList.remove("active"));
+    element.classList.add("active");
 }

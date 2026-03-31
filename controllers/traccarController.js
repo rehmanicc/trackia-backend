@@ -9,15 +9,7 @@ const { processPosition } = require("../services/geofenceEngine");
 //Get positions API
 exports.getPositions = async (req, res) => {
   try {
-    const response = await axios.get(
-      `${process.env.TRACCAR_URL}/api/positions`,
-      {
-        auth: {
-          username: process.env.TRACCAR_EMAIL,
-          password: process.env.TRACCAR_PASSWORD,
-        },
-      }
-    );
+    const response = await traccarAPI.get("/api/positions");
 
     const positions = response.data;
 
