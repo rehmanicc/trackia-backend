@@ -3,6 +3,7 @@ const Position = require("./models/Position");
 const PositionArchive = require("./models/PositionsArchive");
 const Trip = require("./models/Trip");
 console.log("MONGO_URI:", process.env.MONGO_URI);
+const deviceRoutes = require("./routes/device");
 
 const express = require("express");
 const cors = require("cors");
