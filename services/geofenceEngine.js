@@ -1,6 +1,7 @@
 const turf = require("@turf/turf");
 const Geofence = require("../models/Geofence");
 const { saveGeofenceEvent } = require("./geofenceEventService");
+const { processPosition: processAlerts } = require("./alertService");
 // 🔥 In-memory state
 let vehicleStates = {};
 
@@ -99,6 +100,7 @@ async function processPosition(position, io) {
             }
         }
     }
+    await processAlerts(position, io);
 }
 // EMIT EVENT
 
@@ -113,16 +115,30 @@ async function emitEvent(io, deviceId, geofenceId, type, position) {
     };
 
     // ✅ 1. SAVE TO DB (FIXED)
+    const Alert = require("../models/Alert");
+
     await saveGeofenceEvent(event);
 
-    // ✅ 2. EMIT TO FRONTEND
+    // ✅ 2. CREATE ALERT (NEW SYSTEM)
+    const alertDoc = await Alert.create({
+        deviceId,
+        type: type === "enter" ? "GEOFENCE_ENTER" : "GEOFENCE_EXIT",
+        message: `Vehicle ${deviceId} ${type.toUpperCase()} geofence`,
+        metadata: {
+            geofenceId
+        }
+    });
+
+    // ✅ 3. EMIT ALERT (NEW SYSTEM)
+    io.emit("alert", alertDoc);
+
+    // ✅ 4. KEEP OLD EVENT (ONLY FOR UI VISUAL)
     io.emit("geofenceEvent", {
         deviceId,
         geofenceId,
         type,
         time: event.timestamp
     });
-
     console.log(`🚧 ${type.toUpperCase()} → Device ${deviceId} Geofence ${geofenceId}`);
 }
 

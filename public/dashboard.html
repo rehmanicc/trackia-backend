@@ -30,6 +30,7 @@
                     <li onclick="setActiveMenu(this); openAnalytics()">📊 Analytics</li>
                     <li onclick="setActiveMenu(this); openDevices()">📦 Devices</li>
                     <li onclick="setActiveMenu(this); openGeofence()">📍 Geofencing</li>
+                    <li onclick="openAlerts()"> 🚨 Alerts</li>
                     <li>⚙️ Settings</li>
                 </ul>
             </nav>
@@ -147,7 +148,23 @@
                     <button onclick="closeAssign()">Cancel</button>
 
                 </div>
+                <div id="alertPanel" class="vehicle-panel" style="display:none;">
+                    <h3>🚨 Alerts</h3>
 
+                    <div style="margin-bottom:10px;">
+                        <select id="alertTypeFilter">
+                            <option value="all">All</option>
+                            <option value="engine_on">Engine ON</option>
+                            <option value="engine_off">Engine OFF</option>
+                            <option value="geofence_enter">Geofence Enter</option>
+                            <option value="geofence_exit">Geofence Exit</option>
+                        </select>
+
+                        <input type="text" id="vehicleSearch" placeholder="Search vehicle">
+                    </div>
+
+                    <div id="alertList"></div>
+                </div>
                 <!-- MAP -->
                 <div id="map" class="map-container">
 

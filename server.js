@@ -60,6 +60,7 @@ const traccarRoutes = require("./routes/traccar");
 const geofenceRoutes = require("./routes/geofence");
 const tripRoutes = require("./routes/trips");
 const analyticsRoutes = require("./routes/analyticsRoutes");
+const alertRoutes = require("./routes/alertRoutes");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/geofence", geofenceRoutes);
@@ -68,6 +69,7 @@ app.use("/api/traccar", traccarRoutes);
 app.use(express.static("public"));
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/devices", deviceRoutes); 
+app.use("/api/alerts", alertRoutes);
 // ======================
 // DB CHECK ROUTE
 // ======================

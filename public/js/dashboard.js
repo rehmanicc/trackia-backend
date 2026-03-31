@@ -456,13 +456,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function initApp() {
-
+        await loadAlerts();
         await fetchAllowedDevices();
         await loadGeofences();
-        // ✅ LOAD INITIAL POSITIONS FIRST
         await loadInitialPositions();
-
-        // ✅ THEN CONNECT SOCKET
         socket = io("https://trackia-backend.onrender.com", {
             transports: ["polling", "websocket"],
             reconnectionAttempts: 5,
@@ -501,17 +498,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
         });
         socket.on("geofenceEvent", (event) => {
-
             const { deviceId, geofenceId, type } = event;
+            updateGeofenceVisual(geofenceId, type);
+        });
+        socket.on("alert", (alert) => {
+
+            console.log("🚨 ALERT RECEIVED:", alert);
+
+            showToast(alert.message, "error");
 
             addAlert(
-                deviceId,
-                geofenceId,
-                type,
-                `Vehicle ${deviceId} ${type.toUpperCase()} geofence`
+                alert.deviceId,
+                alert.metadata?.geofenceId || null,
+                alert.type.toLowerCase(),
+                alert.message
             );
-
-            updateGeofenceVisual(geofenceId, type);
         });
     }
 
@@ -740,11 +741,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 div.style.padding = "6px";
                 div.style.marginBottom = "3px";
 
-                // ✅ Use TYPE (not message)
-                if (a.type === "enter") {
+                if (a.type.includes("enter")) {
                     div.style.background = "#d4edda"; // green
-                } else {
+                }
+                else if (a.type.includes("exit")) {
                     div.style.background = "#f8d7da"; // red
+                }
+                else if (a.type.includes("engine_on")) {
+                    div.style.background = "#d1ecf1"; // blue
+                }
+                else if (a.type.includes("engine_off")) {
+                    div.style.background = "#fff3cd"; // yellow
                 }
 
                 div.innerHTML = `
@@ -1620,4 +1627,25 @@ async function submitAssign() {
 function setActiveMenu(element) {
     document.querySelectorAll(".sidebar li").forEach(li => li.classList.remove("active"));
     element.classList.add("active");
+}
+async function loadAlerts() {
+
+    try {
+        const res = await apiFetch("/api/alerts");
+        alerts = res || [];
+
+        renderAlerts();
+
+    } catch (err) {
+        console.error("❌ Failed to load alerts", err);
+    }
+}
+function openAlerts() {
+
+    document.querySelectorAll(".vehicle-panel")
+        .forEach(p => p.style.display = "none");
+
+    document.getElementById("alertPanel").style.display = "block";
+
+    loadAlerts();
 }
