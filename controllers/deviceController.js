@@ -1,5 +1,6 @@
 const Device = require("../models/Device");
 const traccarAPI = require("../services/traccarAPI");
+const Geofence = require("../models/Geofence");
 
 // CREATE DEVICE
 exports.createDevice = async (req, res) => {
@@ -84,8 +85,12 @@ exports.deleteDevice = async (req, res) => {
 
     await traccarAPI.delete(`/api/devices/${device.traccarId}`);
 
-    await device.deleteOne();
+      await Geofence.deleteMany({
+      deviceId: device.traccarId
+    });
 
+    // 🔥 2. Delete device from Mongo
+    await device.deleteOne();
     res.json({ message: "Device deleted" });
 
   } catch (err) {

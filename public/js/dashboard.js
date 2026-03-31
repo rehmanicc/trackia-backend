@@ -157,10 +157,12 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!markers[id] || !map.hasLayer(markers[id])) {
 
             markers[id] = L.marker([lat, lng], { icon }).addTo(map);
-            markers[id].on("click", () => {
+            markers[id].on("click", async () => {
                 selectedVehicleId = String(id);
 
                 highlightVehicleCard(selectedVehicleId);
+                await loadGeofences();
+                renderGeofenceList();
             });
 
         } else {
@@ -295,25 +297,42 @@ document.addEventListener("DOMContentLoaded", () => {
 
         container.innerHTML = "";
 
-        // group by vehicle
-        const grouped = {};
+        // 🔥 Loop through ALL devices
+        Object.values(allowedDevices).forEach(device => {
 
-        geofences.forEach(f => {
-            const key = f.deviceId || "unknown";
-            if (!grouped[key]) grouped[key] = [];
-            grouped[key].push(f);
-        });
+            const deviceId = device.traccarId;
 
-        Object.keys(grouped).forEach(deviceId => {
+            // 🔥 Get geofences for this device
+            const deviceGeofences = geofences.filter(
+                f => String(f.deviceId) === String(deviceId)
+            );
 
+            // 🚗 Device header
             const vehicleDiv = document.createElement("div");
             vehicleDiv.style.fontWeight = "bold";
             vehicleDiv.style.marginTop = "10px";
-            vehicleDiv.innerHTML = `🚗 Vehicle ${deviceId}`;
+            vehicleDiv.innerHTML = `🚗 ${device.name || "Vehicle " + deviceId}`;
 
             container.appendChild(vehicleDiv);
 
-            grouped[deviceId].forEach(f => {
+            // 🔥 If NO geofence → show message
+            if (deviceGeofences.length === 0) {
+                const empty = document.createElement("div");
+                empty.style.color = "#888";
+                empty.style.fontSize = "12px";
+                empty.style.marginBottom = "8px";
+                empty.innerText = "No geofences";
+                container.appendChild(empty);
+                return;
+            }
+            if (String(deviceId) === String(selectedVehicleId)) {
+                vehicleDiv.style.background = "#e6f0ff";
+                vehicleDiv.style.padding = "5px";
+                vehicleDiv.style.borderRadius = "5px";
+            }
+
+            // 🔥 Render geofences
+            deviceGeofences.forEach(f => {
 
                 const div = document.createElement("div");
                 div.className = "vehicle-card";
@@ -325,7 +344,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 </div>
             `;
 
-                div.onclick = () => {
+                div.onclick = async () => {
                     selectedGeofenceId = f._id;
 
                     Object.values(geofenceLayers).forEach(l => {
@@ -1355,10 +1374,12 @@ function updateVehicleList(positions) {
             </div>
         `;
 
-        div.onclick = () => {
+        div.onclick = async () => {
             selectedVehicleId = String(pos.deviceId);
             highlightVehicleCard(selectedVehicleId);
             focusOnVehicle(selectedVehicleId);
+            await loadGeofences();
+            renderGeofenceList();
         };
 
         container.appendChild(div);
@@ -1455,10 +1476,12 @@ async function loadDevices() {
                 <td>${users || "-"}</td>
                 <td>
                     <td>
+                    <div class="action-buttons">
                             <button class="icon-btn assign" onclick="openAssign('${d._id}')">👤</button>
                             <button class="icon-btn delete" onclick="deleteDevice('${d._id}')">🗑</button>
                             <button class="icon-btn unassign" onclick="unassignDevice('${d._id}')">❌</button>
-                        </td> 
+                       </div> 
+                            </td> 
                 </td>
             `;
 
