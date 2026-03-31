@@ -34,13 +34,16 @@ exports.getPositions = async (req, res) => {
     io.emit("positions", positions);
 
     // 🔥 RUN GEOFENCE ENGINE (NON-BLOCKING)
-    positions.forEach(p => {
-      processPosition({
-        deviceId: p.deviceId,
-        latitude: p.latitude,
-        longitude: p.longitude
-      }, io);
-    });
+  positions.forEach(p => {
+  processPosition({
+    deviceId: p.deviceId,
+    latitude: p.latitude,
+    longitude: p.longitude,
+    speed: p.speed,
+    attributes: p.attributes || {},
+    deviceTime: p.deviceTime
+  }, io);
+});
 
     res.json(positions);
 

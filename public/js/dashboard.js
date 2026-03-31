@@ -1,5 +1,6 @@
 let allowedDevices = {};
 let selectedVehicleId = null;
+let collapsedDevices = {};
 
 document.addEventListener("DOMContentLoaded", () => {
     // all your JS code here
@@ -311,11 +312,46 @@ document.addEventListener("DOMContentLoaded", () => {
             const vehicleDiv = document.createElement("div");
             vehicleDiv.style.fontWeight = "bold";
             vehicleDiv.style.marginTop = "10px";
-            vehicleDiv.innerHTML = `🚗 ${device.name || "Vehicle " + deviceId}`;
+            vehicleDiv.style.cursor = "pointer"; // 👈 important
+            vehicleDiv.style.fontWeight = "bold";
+            vehicleDiv.style.marginTop = "10px";
+            vehicleDiv.style.cursor = "pointer"; // 👈 important
+            vehicleDiv.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span>🚗 ${device.name || "Vehicle " + deviceId}</span>
+                    <button class="add-geo-btn">+ Add</button>
+                </div>
+            `;
+            vehicleDiv.querySelector(".add-geo-btn").onclick = (e) => {
+                e.stopPropagation();
+                selectedVehicleId = String(deviceId);
+                highlightVehicleCard(selectedVehicleId);
+                focusOnVehicle(selectedVehicleId);
+                openGeofence();
+                showToast(`Creating geofence for ${device.name}`, "success");
+            };
+            vehicleDiv.onclick = async () => {
+                collapsedDevices[deviceId] = !collapsedDevices[deviceId];
+                selectedVehicleId = String(deviceId);
+
+                highlightVehicleCard(selectedVehicleId);
+                focusOnVehicle(selectedVehicleId);
+
+                await loadGeofences();
+                renderGeofenceList();
+            };
 
             container.appendChild(vehicleDiv);
 
-            // 🔥 If NO geofence → show message
+
+            if (String(deviceId) === String(selectedVehicleId)) {
+                vehicleDiv.style.background = "#e6f0ff";
+                vehicleDiv.style.padding = "5px";
+                vehicleDiv.style.borderRadius = "5px";
+            }
+            if (collapsedDevices[deviceId]) {
+                return;
+            }
             if (deviceGeofences.length === 0) {
                 const empty = document.createElement("div");
                 empty.style.color = "#888";
@@ -324,11 +360,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 empty.innerText = "No geofences";
                 container.appendChild(empty);
                 return;
-            }
-            if (String(deviceId) === String(selectedVehicleId)) {
-                vehicleDiv.style.background = "#e6f0ff";
-                vehicleDiv.style.padding = "5px";
-                vehicleDiv.style.borderRadius = "5px";
             }
 
             // 🔥 Render geofences
