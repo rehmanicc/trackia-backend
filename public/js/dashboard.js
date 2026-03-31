@@ -1255,6 +1255,9 @@ document.addEventListener("DOMContentLoaded", () => {
     window.openGeofence = openGeofence;
     window.openLive = openLive;
     window.editGeofenceName = editGeofenceName;
+    window.openAddDeviceModal = openAddDeviceModal;
+    window.closeAddDeviceModal = closeAddDeviceModal;
+    window.submitNewDevice = submitNewDevice;
     initApp();
     setInterval(() => {
         console.log("🔄 Fallback refresh...");
