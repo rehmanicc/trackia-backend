@@ -80,6 +80,19 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
     }
+    function showToast(message, type = "success") {
+        const container = document.getElementById("toastContainer");
+
+        const toast = document.createElement("div");
+        toast.className = `toast ${type}`;
+        toast.innerText = message;
+
+        container.appendChild(toast);
+
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
     function logout() {
         localStorage.removeItem("token")
         window.location.href = "login.html"
@@ -127,11 +140,20 @@ document.addEventListener("DOMContentLoaded", () => {
         const lng = pos.longitude || pos.lon;
 
         if (!lat || !lng) return;
+        const device = allowedDevices[String(id)];
+        const status = device?.status || "offline";
+
+        let icon;
+
+        if (status === "online") {
+            icon = icons.moving; // or create separate "online" icon later
+        } else {
+            icon = icons.offline;
+        }
+
+        const speed = Math.round((pos.speed || 0) * 1.852);
 
 
-        const { state, speed } = getVehicleState(pos);
-
-        let icon = icons[state];
         if (!markers[id] || !map.hasLayer(markers[id])) {
 
             markers[id] = L.marker([lat, lng], { icon }).addTo(map);
@@ -1289,16 +1311,14 @@ function updateVehicleList(positions) {
 
         const device = allowedDevices[String(pos.deviceId)];
 
-        const { state, speed } = getVehicleState(pos);
-
-        let status = state;
+        const status = device?.status || "offline";
+        const speed = Math.round((pos.speed || 0) * 1.852);
 
         let statusColor = {
-            moving: "#10b981",
-            idle: "#f59e0b",
-            stopped: "#ef4444",
-            offline: "#6b7280"
-        }[state];
+            online: "#10b981",
+            offline: "#ef4444",
+            unknown: "#6b7280"
+        }[status] || "#6b7280";
 
         // ✅ COUNTING
         counts[status]++;

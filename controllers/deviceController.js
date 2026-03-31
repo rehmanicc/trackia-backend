@@ -39,23 +39,35 @@ exports.getDevices = async (req, res) => {
 
     let devices;
 
-    if (user.role === "owner") {
-      devices = await Device.find({ companyId: user.companyId });
-    }
-    else if (user.role === "admin") {
-      devices = await Device.find({ companyId: user.companyId });
-    }
-    else {
+    if (user.role === "owner" || user.role === "admin") {
+      devices = await Device.find({ companyId: user.companyId })
+        .populate("assignedTo", "name");
+    } else {
       devices = await Device.find({
         assignedTo: user.id,
         companyId: user.companyId
-      });
+      }).populate("assignedTo", "name");
     }
 
-    res.json(devices);
+    // 🔥 GET LIVE DEVICES FROM TRACCAR
+    const traccarRes = await traccarAPI.get("/api/devices");
+    const traccarDevices = traccarRes.data;
+
+    // 🔥 MERGE STATUS
+    const merged = devices.map(d => {
+      const live = traccarDevices.find(t => t.id === d.traccarId);
+
+      return {
+        ...d._doc,
+        status: live?.status || "offline",
+        lastUpdate: live?.lastUpdate || null
+      };
+    });
+
+    res.json(merged);
 
   } catch (err) {
-    console.error(err);
+    console.error("❌ getDevices error:", err.message);
     res.status(500).json({ error: err.message });
   }
 };
