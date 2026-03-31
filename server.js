@@ -66,6 +66,7 @@ app.use("/api/trips", tripRoutes);
 app.use("/api/traccar", traccarRoutes);
 app.use(express.static("public"));
 app.use("/api/analytics", analyticsRoutes);
+app.use("/api/devices", deviceRoutes); 
 // ======================
 // DB CHECK ROUTE
 // ======================
