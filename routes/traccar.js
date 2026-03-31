@@ -2,20 +2,14 @@ const express = require("express");
 const router = express.Router();
 const Device = require("../models/Device");
 const {
-    getDevices,
     getPositions,
     getRoute,
     sendCommand,
-    getTrips,
-    addDevice
+    getTrips
 } = require("../controllers/traccarController");
 
 const authMiddleware = require("../middleware/authMiddleware");
-router.post("/devices", authMiddleware, addDevice);
-// ======================
-// GET DEVICES (FILTERED)
-// ======================
-router.get("/devices", authMiddleware, getDevices);
+
 // ======================
 // ASSIGN DEVICE TO USER
 // ======================
