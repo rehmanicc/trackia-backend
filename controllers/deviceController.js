@@ -1,5 +1,5 @@
 const Device = require("../models/Device");
-const axios = require("axios");
+const traccarAPI = require("../services/traccarAPI");
 
 // CREATE DEVICE
 exports.createDevice = async (req, res) => {
@@ -12,16 +12,10 @@ exports.createDevice = async (req, res) => {
   }
   try {
 
-    const response = await axios.post(
-      `${process.env.TRACCAR_URL}/api/devices`,
-      { name, uniqueId },
-      {
-        auth: {
-          username: process.env.TRACCAR_EMAIL,
-          password: process.env.TRACCAR_PASSWORD
-        }
-      }
-    );
+    const response = await traccarAPI.post("/api/devices", {
+      name,
+      uniqueId
+    });
 
     // 2. Save in Mongo
     const device = await Device.create({
@@ -76,15 +70,7 @@ exports.deleteDevice = async (req, res) => {
       return res.status(403).json({ error: "Not allowed" });
     }
 
-    await axios.delete(
-      `${process.env.TRACCAR_URL}/api/devices/${device.traccarId}`,
-      {
-        auth: {
-          username: process.env.TRACCAR_EMAIL,
-          password: process.env.TRACCAR_PASSWORD
-        }
-      }
-    );
+    await traccarAPI.delete(`/api/devices/${device.traccarId}`);
 
     await device.deleteOne();
 

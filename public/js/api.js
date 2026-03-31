@@ -24,11 +24,12 @@ async function apiFetch(endpoint, options = {}) {
     return;
   }
 
-  if (!res.ok) {
-    const text = await res.text();
-    console.error("❌ API Error:", text);
-    throw new Error(text);
-  }
+ const text = await res.text();
 
-  return res.json();
+try {
+  return JSON.parse(text);
+} catch (e) {
+  console.error("❌ Non-JSON response:", text);
+  throw new Error("Server returned invalid response");
+}
 }

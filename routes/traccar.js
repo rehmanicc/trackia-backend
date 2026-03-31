@@ -38,8 +38,7 @@ router.post("/assign-device", authMiddleware, async (req, res) => {
             return res.status(403).json({ error: "Not allowed" });
         }
 
-        device.assignedTo = userId;
-
+        device.assignedTo.addToSet(userId);
         await device.save();
 
         res.json({ success: true, device });
