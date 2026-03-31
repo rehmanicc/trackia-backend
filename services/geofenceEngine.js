@@ -23,10 +23,10 @@ async function processPosition(position, io) {
             console.log("❌ Invalid geofence skipped:", f._id);
             continue;
         }
-       const bbox = turf.bbox({
-    type: "Feature",
-    geometry: f.geometry
-});
+        const bbox = turf.bbox({
+            type: "Feature",
+            geometry: f.geometry
+        });
         const [minLng, minLat, maxLng, maxLat] = bbox;
 
         if (

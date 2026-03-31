@@ -284,3 +284,16 @@ html, body {
     border-radius: 4px;
     font-size: 11px;
 }
+#devicePanel button {
+    margin-right: 5px;
+    padding: 5px 10px;
+    border: none;
+    background: #2563eb;
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#devicePanel button:hover {
+    opacity: 0.8;
+}

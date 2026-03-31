@@ -266,9 +266,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         document.querySelector(".header h2").innerText = "Live Tracking";
 
-        document.querySelector(".vehicle-panel").style.display = "block";
-        document.getElementById("geofencePanel").style.display = "none";
-
+        document.querySelectorAll(".vehicle-panel").forEach(p => p.style.display = "none");
+        document.querySelector(".vehicle-panel").style.display = "block"; 
         map.removeControl(drawControl); // disable drawing
     }
     function renderGeofenceList() {
@@ -445,44 +444,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
             updateGeofenceVisual(geofenceId, type);
         });
-    }
-    // ADD DEVICE
-    async function addDevice() {
-
-        // ✅ Role check
-        if (userRole !== "admin") {
-            alert("Only admin can add devices");
-            return;
-        }
-
-        const name = document.getElementById("vehicleName").value.trim();
-        const imei = document.getElementById("vehicleUniqueId").value.trim();
-
-        // ✅ Validation
-        if (!name || !imei) {
-            alert("Please fill all fields");
-            return;
-        }
-
-        try {
-            const res = await apiFetch("/api/traccar/devices", {
-                method: "POST",
-                body: JSON.stringify({
-                    name,
-                    uniqueId: imei
-                })
-            });
-
-            alert("Vehicle Added");
-
-            // ✅ Clear inputs
-            document.getElementById("vehicleName").value = "";
-            document.getElementById("vehicleUniqueId").value = "";
-
-        } catch (err) {
-            console.error(err);
-            alert("Failed to add vehicle");
-        }
     }
 
     // ROUTE HISTORY
@@ -1266,7 +1227,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     // INITIAL LOAD
     window.showRoute = showRoute;
-    window.addDevice = addDevice;
     window.startPlayback = startPlayback;
     window.logout = logout;
     window.togglePlayback = togglePlayback;
@@ -1431,4 +1391,111 @@ function focusOnVehicle(id) {
     });
 
     marker.openPopup?.();
+}
+function openDevices() {
+    document.querySelectorAll(".vehicle-panel").forEach(p => p.style.display = "none");
+    document.getElementById("devicePanel").style.display = "block";
+
+    loadDevices();
+}
+async function loadDevices() {
+    const container = document.getElementById("deviceList");
+
+    const devices = await apiFetch("/api/devices");
+
+    container.innerHTML = "";
+
+    devices.forEach(d => {
+
+        const div = document.createElement("div");
+        div.className = "vehicle-card";
+
+        div.innerHTML = `
+            <div style="display:flex; justify-content:space-between;">
+                <b>${d.name}</b>
+                <span>ID: ${d.traccarId}</span>
+            </div>
+
+            <div style="margin-top:5px;">
+                <button onclick="deleteDevice('${d._id}')">🗑 Delete</button>
+                <button onclick="openAssign('${d._id}')">👤 Assign</button>
+            </div>
+        `;
+
+        container.appendChild(div);
+    });
+}
+function openAddDeviceModal() {
+    document.getElementById("addDeviceModal").style.display = "block";
+}
+
+function closeAddDeviceModal() {
+    document.getElementById("addDeviceModal").style.display = "none";
+}
+
+async function submitNewDevice() {
+    const name = document.getElementById("deviceNameInput").value;
+    const uniqueId = document.getElementById("deviceUniqueInput").value;
+
+    if (!name || !uniqueId) {
+        alert("Fill all fields");
+        return;
+    }
+
+    await apiFetch("/api/devices", {
+        method: "POST",
+        body: JSON.stringify({ name, uniqueId })
+    });
+
+    alert("Device added");
+
+    closeAddDeviceModal();
+    loadDevices();
+}
+async function deleteDevice(id) {
+    if (!confirm("Delete this device?")) return;
+
+    await apiFetch(`/api/devices/${id}`, {
+        method: "DELETE"
+    });
+
+    alert("Deleted");
+    loadDevices();
+}
+let selectedDeviceForAssign = null;
+
+async function openAssign(deviceId) {
+    selectedDeviceForAssign = deviceId;
+
+    const users = await apiFetch("/api/users"); // your existing API
+
+    const select = document.getElementById("assignUserSelect");
+    select.innerHTML = "";
+
+    users.forEach(u => {
+        const opt = document.createElement("option");
+        opt.value = u._id;
+        opt.textContent = u.name;
+        select.appendChild(opt);
+    });
+
+    document.getElementById("assignModal").style.display = "block";
+}
+
+function closeAssign() {
+    document.getElementById("assignModal").style.display = "none";
+}
+
+async function submitAssign() {
+    const userId = document.getElementById("assignUserSelect").value;
+
+    await apiFetch(`/api/devices/${selectedDeviceForAssign}/assign`, {
+        method: "POST",
+        body: JSON.stringify({ userId })
+    });
+
+    alert("Assigned");
+
+    closeAssign();
+    loadDevices();
 }

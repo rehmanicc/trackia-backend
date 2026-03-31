@@ -28,7 +28,7 @@
                 <ul>
                     <li onclick="openLive()">📡 Live Tracking</li>
                     <li onclick="openAnalytics()">📊 Analytics</li>
-                    <li>📦 Fleet</li>
+                    <button onclick="openDevices()">📦 Devices</button>
                     <li onclick="openGeofence()">📍 Geofencing</li>
                     <li>⚙️ Settings</li>
                 </ul>
@@ -106,11 +106,43 @@
                 <div id="geofencePanel" class="vehicle-panel" style="display:none;">
 
                     <div style="padding:10px;">
-                        <button onclick="enableGeofenceDraw()">➕ Add Geofence</button>
+                        <button onclick="openGeofence()">➕ Add Geofence</button>
                         <button onclick="deleteSelectedGeofence()">🗑 Delete</button>
                     </div>
 
                     <div id="geofenceList"></div>
+
+                </div>
+                <div id="addDeviceModal"
+                    style="display:none; position:fixed; top:30%; left:40%; background:#fff; padding:20px; border:1px solid #ccc;">
+
+                    <h4>Add Device</h4>
+
+                    <input id="deviceNameInput" placeholder="Device Name"><br><br>
+                    <input id="deviceUniqueInput" placeholder="IMEI / Unique ID"><br><br>
+
+                    <button onclick="submitNewDevice()">Add</button>
+                    <button onclick="closeAddDeviceModal()">Cancel</button>
+
+                </div>
+                <div id="devicePanel" class="vehicle-panel" style="display:none;">
+
+                    <div style="padding:10px;">
+                        <button onclick="openAddDeviceModal()">➕ Add Device</button>
+                    </div>
+
+                    <div id="deviceList"></div>
+
+                </div>
+                <div id="assignModal"
+                    style="display:none; position:fixed; top:30%; left:40%; background:#fff; padding:20px; border:1px solid #ccc; z-index:1000;">
+
+                    <h4>Assign Device</h4>
+
+                    <select id="assignUserSelect"></select><br><br>
+
+                    <button onclick="submitAssign()">Assign</button>
+                    <button onclick="closeAssign()">Cancel</button>
 
                 </div>
 

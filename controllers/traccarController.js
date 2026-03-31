@@ -6,10 +6,6 @@ const PASSWORD = process.env.TRACCAR_PASSWORD;
 const traccarAPI = require("../services/traccarAPI");
 const { processPosition } = require("../services/geofenceEngine");
 
-// GET DEVICES
-const Device = require("../models/Device");
-
-
 //Get positions API
 exports.getPositions = async (req, res) => {
   try {
