@@ -284,16 +284,110 @@ html, body {
     border-radius: 4px;
     font-size: 11px;
 }
-#devicePanel button {
+.device-header {
+    margin-bottom: 10px;
+}
+
+.device-header input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+}
+
+.device-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+
+.device-table th {
+    background: #f9fafb;
+    font-size: 12px;
+    color: #374151;
+    text-transform: uppercase;
+}
+
+.device-table td {
+    font-size: 13px;
+    color: #111827;
+}
+
+.device-table tr:hover {
+    background: #f3f4f6;
+}
+
+.device-table button {
     margin-right: 5px;
-    padding: 5px 10px;
+    padding: 5px 8px;
     border: none;
-    background: #2563eb;
-    color: white;
     border-radius: 4px;
     cursor: pointer;
 }
 
-#devicePanel button:hover {
+.device-table button:hover {
     opacity: 0.8;
+}
+/* PRIMARY BUTTON (Add Device) */
+.primary-btn {
+    background: #2563eb;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.primary-btn:hover {
+    background: #1e40af;
+}
+
+/* ICON BUTTON BASE */
+.icon-btn {
+    border: none;
+    padding: 6px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-right: 5px;
+    transition: 0.2s;
+    font-size: 13px;
+}
+
+/* ASSIGN BUTTON */
+.icon-btn.assign {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+/* DELETE BUTTON */
+.icon-btn.delete {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+/* UNASSIGN BUTTON */
+.icon-btn.unassign {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.icon-btn:hover {
+    opacity: 0.8;
+}
+.error-box {
+    color: #b91c1c;
+    background: #fee2e2;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    margin: 10px;
+}
+.device-header {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
 }

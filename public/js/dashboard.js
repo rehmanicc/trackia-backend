@@ -267,7 +267,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.querySelector(".header h2").innerText = "Live Tracking";
 
         document.querySelectorAll(".vehicle-panel").forEach(p => p.style.display = "none");
-        document.querySelector(".vehicle-panel").style.display = "block"; 
+        document.querySelector(".vehicle-panel").style.display = "block";
         map.removeControl(drawControl); // disable drawing
     }
     function renderGeofenceList() {
@@ -1401,28 +1401,75 @@ function openDevices() {
 async function loadDevices() {
     const container = document.getElementById("deviceList");
 
-    const devices = await apiFetch("/api/devices");
+    try {
+        const devices = await apiFetch("/api/devices");
 
-    container.innerHTML = "";
-
-    devices.forEach(d => {
-
-        const div = document.createElement("div");
-        div.className = "vehicle-card";
-
-        div.innerHTML = `
-            <div style="display:flex; justify-content:space-between;">
-                <b>${d.name}</b>
-                <span>ID: ${d.traccarId}</span>
+        container.innerHTML = `
+            <div class="device-header">
+                <input type="text" id="deviceSearch" placeholder="Search devices..." oninput="filterDevices()">
             </div>
 
-            <div style="margin-top:5px;">
-                <button onclick="deleteDevice('${d._id}')">🗑 Delete</button>
-                <button onclick="openAssign('${d._id}')">👤 Assign</button>
-            </div>
+            <table class="device-table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Traccar ID</th>
+                        <th>Assigned Users</th>
+                        <th>Actions</th>
+                        <td>
+                            <button class="icon-btn assign" onclick="openAssign('${d._id}')">👤</button>
+                            <button class="icon-btn delete" onclick="deleteDevice('${d._id}')">🗑</button>
+                            <button class="icon-btn unassign" onclick="unassignDevice('${d._id}')">❌</button>
+                        </td>
+                    </tr>
+                    
+                </thead>
+                <tbody id="deviceTableBody"></tbody>
+            </table>
         `;
 
-        container.appendChild(div);
+        const tbody = document.getElementById("deviceTableBody");
+
+        devices.forEach(d => {
+            const users = (d.assignedTo || []).map(u => u.name || "User").join(", ");
+
+            const row = document.createElement("tr");
+
+            row.innerHTML = `
+                <td>${d.name}</td>
+                <td>${d.traccarId}</td>
+                <td>${users || "-"}</td>
+                <td>
+                    <button onclick="openAssign('${d._id}')">👤</button>
+                    <button onclick="deleteDevice('${d._id}')">🗑</button>
+                </td>
+            `;
+
+            tbody.appendChild(row);
+        });
+
+    } catch (err) {
+        container.innerHTML = "<p style='color:red'>Failed to load devices</p>";
+    }
+}
+async function unassignDevice(deviceId) {
+    const userId = document.getElementById("assignUserSelect").value;
+
+    await apiFetch(`/api/devices/${deviceId}/unassign`, {
+        method: "POST",
+        body: JSON.stringify({ userId })
+    });
+
+    alert("Unassigned");
+    loadDevices();
+}
+function filterDevices() {
+    const search = document.getElementById("deviceSearch").value.toLowerCase();
+    const rows = document.querySelectorAll("#deviceTableBody tr");
+
+    rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        row.style.display = text.includes(search) ? "" : "none";
     });
 }
 function openAddDeviceModal() {
