@@ -16,6 +16,11 @@ import {
     updateMarker,
     getMap
 } from "./modules/mapModule.js";
+import {
+    initAlertModule,
+    loadInitialAlerts
+} from "./modules/alertModule.js";
+
 document.addEventListener("DOMContentLoaded", () => {
     // all your JS code here
 
@@ -366,7 +371,6 @@ document.addEventListener("DOMContentLoaded", () => {
     async function initApp() {
         initAlertModule();
         await loadInitialAlerts();
-        await loadAlerts();
         await fetchAllowedDevices();
         await loadGeofences();
         await loadInitialPositions();
