@@ -22,7 +22,30 @@ const icons = {
         iconAnchor: [20, 20]
     })
 };
+function smoothMove(marker, newLatLng, duration = 1000) {
 
+    const start = marker.getLatLng();
+    const end = L.latLng(newLatLng);
+
+    let startTime = null;
+
+    function animate(time) {
+        if (!startTime) startTime = time;
+
+        const progress = Math.min((time - startTime) / duration, 1);
+
+        const lat = start.lat + (end.lat - start.lat) * progress;
+        const lng = start.lng + (end.lng - start.lng) * progress;
+
+        marker.setLatLng([lat, lng]);
+
+        if (progress < 1) {
+            requestAnimationFrame(animate);
+        }
+    }
+
+    requestAnimationFrame(animate);
+}
 export function initMap() {
 
     map = L.map("map", {
@@ -56,8 +79,7 @@ export function updateMarker(id, pos, device) {
     if (!markers[id]) {
         markers[id] = L.marker([lat, lng], { icon }).addTo(map);
     } else {
-        markers[id].setLatLng([lat, lng]);
-        markers[id].setIcon(icon);
+        smoothMove(markers[id], [lat, lng]); markers[id].setIcon(icon);
     }
 
     if (!markers[id]._tooltip) {
