@@ -43,6 +43,7 @@ mongoose.connect(process.env.MONGO_URI)
 // MIDDLEWARE
 // ======================
 app.use(express.json());
+app.use(express.static(path.join(__dirname, "public")));
 // ======================
 // TEST ROUTE
 // ======================
@@ -66,7 +67,6 @@ app.use("/api/auth", authRoutes);
 app.use("/api/geofence", geofenceRoutes);
 app.use("/api/trips", tripRoutes);
 app.use("/api/traccar", traccarRoutes);
-app.use(express.static("public"));
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/devices", deviceRoutes); 
 app.use("/api/alerts", alertRoutes);
