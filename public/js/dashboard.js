@@ -119,7 +119,13 @@ document.addEventListener("DOMContentLoaded", () => {
     let map = initMap().setView([31.2698, 72.3181], 12)
     initPlayback({
         map: map,
-        apiRequest: apiRequest
+        apiRequest: apiRequest,
+        startIcon: startIcon,
+        endIcon: endIcon,
+        onlineIcon: onlineIcon,
+        detectStops: detectStops,
+        renderStops: renderStops,
+        renderTripSummary: renderTripSummary
     });
 
     setTimeout(() => {
@@ -726,39 +732,6 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("sumStops").innerText = totalStops;
         document.getElementById("sumIdle").innerText = idleTime.toFixed(1);
     }
-    // Put this INSIDE your DOMContentLoaded function, at the end
-    const slider = document.getElementById("timeSlider");
-
-    slider.addEventListener("input", function () {
-
-        // Stop smooth playback temporarily if dragging
-        if (isPlaying) stopAutoPlayback();
-        startTime = null;
-        // Get playback index from slider
-        const value = parseFloat(this.value);
-        playbackIndex = Math.floor(value); // segment index
-        const t = value - playbackIndex;   // progress within segment
-
-        // Get points
-        const startPoint = playbackData[playbackIndex];
-        const endPoint = playbackData[playbackIndex + 1] || startPoint;
-
-        if (!startPoint || !playbackMarker) return;
-
-        // Interpolate position & rotation
-        const lat = startPoint.lat + (endPoint.lat - startPoint.lat) * t;
-        const lng = startPoint.lng + (endPoint.lng - startPoint.lng) * t;
-
-        const deltaAngle = ((endPoint.course - startPoint.course + 540) % 360) - 180;
-        const angle = startPoint.course + deltaAngle * t;
-
-        playbackMarker.setLatLng([lat, lng]);
-        playbackMarker.setRotationAngle(angle);
-
-        // Update time label
-        const currentTime = new Date(startPoint.time.getTime() + t * (endPoint.time - startPoint.time));
-        document.getElementById("timeLabel").innerText = currentTime.toLocaleTimeString();
-    });
     async function fetchAllowedDevices() {
         try {
             const devices = await apiRequest("/api/devices");
