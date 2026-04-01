@@ -11,10 +11,23 @@ let stopMarkers = [];
 let isPlaybackMode = false;
 let map;
 let apiRequest;
+let smoothAnimationId = null;
+let startTime = null;
+
+let startIcon, endIcon, onlineIcon;
+let detectStops, renderStops, renderTripSummary;
 
 export function initPlayback(deps) {
     map = deps.map;
     apiRequest = deps.apiRequest;
+
+    startIcon = deps.startIcon;
+    endIcon = deps.endIcon;
+    onlineIcon = deps.onlineIcon;
+
+    detectStops = deps.detectStops;
+    renderStops = deps.renderStops;
+    renderTripSummary = deps.renderTripSummary;
 }
 function startAutoPlayback() {
     if (isPlaying) return;
@@ -200,7 +213,17 @@ export async function startPlayback(deviceId, date) {
     const slider = document.getElementById("timeSlider");
     slider.max = playbackData.length - 1;
     slider.value = 0;
+    slider.oninput = function () {
+        playbackIndex = Math.floor(this.value);
 
+        const point = playbackData[playbackIndex];
+        if (!point) return;
+
+        playbackMarker.setLatLng([point.lat, point.lng]);
+
+        const timeLabel = document.getElementById("timeLabel");
+        timeLabel.innerText = new Date(point.time).toLocaleTimeString();
+    };
     // ✅ Remove old marker
     if (playbackMarker) {
         map.removeLayer(playbackMarker);
@@ -222,6 +245,7 @@ export async function startPlayback(deviceId, date) {
 
     // ✅ Move map
     map.setView(playbackPoints[0], 15);
+    startAutoPlayback();
 }
 
 function clearPlayback() {

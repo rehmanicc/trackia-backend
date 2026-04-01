@@ -14,7 +14,8 @@ import { apiRequest } from "./services/apiService.js";
 import {
     initMap,
     updateMarker,
-    getMap
+    getMap,
+    icons
 } from "./modules/mapModule.js";
 import {
     initAlertModule,
@@ -122,7 +123,7 @@ document.addEventListener("DOMContentLoaded", () => {
         apiRequest: apiRequest,
         startIcon: startIcon,
         endIcon: endIcon,
-        onlineIcon: onlineIcon,
+        onlineIcon: icons.moving,
         detectStops: detectStops,
         renderStops: renderStops,
         renderTripSummary: renderTripSummary
@@ -549,10 +550,6 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }, 5000);
     }
-
-    //playback
-    let smoothAnimationId = null; // store requestAnimationFrame ID
-    let startTime = null;
 
     const speedSlider = document.getElementById("speedSlider");
     const speedLabel = document.getElementById("speedLabel");
