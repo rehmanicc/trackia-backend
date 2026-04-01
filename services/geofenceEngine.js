@@ -1,8 +1,7 @@
 const turf = require("@turf/turf");
 const Geofence = require("../models/Geofence");
 const { saveGeofenceEvent } = require("./geofenceEventService");
-const { processPosition: processAlerts } = require("./alertService");
-// 🔥 In-memory state
+const alertService = require("../alert/alertService");
 let vehicleStates = {};
 
 // MAIN ENGINE
@@ -100,8 +99,7 @@ async function processPosition(position, io) {
             }
         }
     }
-    await processAlerts(position, io);
-}
+await alertService.processPosition(position, io);}
 // EMIT EVENT
 
 async function emitEvent(io, deviceId, geofenceId, type, position) {

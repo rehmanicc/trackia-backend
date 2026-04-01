@@ -1,7 +1,19 @@
 let allowedDevices = {};
 let selectedVehicleId = null;
 let collapsedDevices = {};
-
+import {
+    initSocket,
+    onPositions,
+    onGeofence,
+    onAlert,
+    getSocket
+} from "./services/socketService.js";
+import { apiRequest } from "./services/apiService.js";
+import {
+    initMap,
+    updateMarker,
+    getMap
+} from "./modules/mapModule.js";
 document.addEventListener("DOMContentLoaded", () => {
     // all your JS code here
 
@@ -10,13 +22,11 @@ document.addEventListener("DOMContentLoaded", () => {
     let isPlaying = false;
     let playbackIndex = 0;
     let playbackPoints = [];
-
     let autoFollow = true;
     let startMarker = null;
     let endMarker = null;
     let routeLine = null;
     let stopMarkers = [];
-    let lastAlertTime = {};
     let isPlaybackMode = false;
     let lastPositions = {};
     let geofenceLayers = {};
@@ -81,46 +91,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
     }
-    function showToast(message, type = "success") {
-        const container = document.getElementById("toastContainer");
 
-        const toast = document.createElement("div");
-        toast.className = `toast ${type}`;
-        toast.innerText = message;
-
-        container.appendChild(toast);
-
-        setTimeout(() => {
-            toast.remove();
-        }, 3000);
-    }
     function logout() {
         localStorage.removeItem("token")
         window.location.href = "login.html"
     }
-
-    const icons = {
-        moving: L.icon({
-            iconUrl: "/icons/carg.png",
-            iconSize: [40, 40],
-            iconAnchor: [20, 20]
-        }),
-        idle: L.icon({
-            iconUrl: "/icons/caridle.png",
-            iconSize: [40, 40],
-            iconAnchor: [20, 20]
-        }),
-        stopped: L.icon({
-            iconUrl: "/icons/carr.png",
-            iconSize: [40, 40],
-            iconAnchor: [20, 20]
-        }),
-        offline: L.icon({
-            iconUrl: "/icons/cargrey.png",
-            iconSize: [40, 40],
-            iconAnchor: [20, 20]
-        })
-    };
     const startIcon = L.icon({
         iconUrl: "https://maps.google.com/mapfiles/ms/icons/green-dot.png",
         iconSize: [32, 32],
@@ -132,67 +107,12 @@ document.addEventListener("DOMContentLoaded", () => {
         iconSize: [32, 32],
         iconAnchor: [16, 32]
     });
-    let markers = {}
     let geofences = []
-    let alerts = []
-    function updateMarker(id, pos) {
-
-        const lat = pos.latitude || pos.lat;
-        const lng = pos.longitude || pos.lon;
-
-        if (!lat || !lng) return;
-        const device = allowedDevices[String(id)];
-        const status = device?.status || "offline";
-
-        let icon;
-
-        if (status === "online") {
-            icon = icons.moving; // or create separate "online" icon later
-        } else {
-            icon = icons.offline;
-        }
-
-        const speed = Math.round((pos.speed || 0) * 1.852);
-
-
-        if (!markers[id] || !map.hasLayer(markers[id])) {
-
-            markers[id] = L.marker([lat, lng], { icon }).addTo(map);
-            markers[id].on("click", async () => {
-                selectedVehicleId = String(id);
-
-                highlightVehicleCard(selectedVehicleId);
-                await loadGeofences();
-                renderGeofenceList();
-            });
-
-        } else {
-            markers[id].setLatLng([lat, lng]);
-            markers[id].setIcon(icon);
-        }
-        if (!markers[id]._tooltip) {
-            markers[id].bindTooltip(
-                `${speed} km/h`,
-                {
-                    permanent: true,
-                    direction: "top",
-                    offset: [0, -20],
-                    className: "speed-label"
-                }
-            );
-        } else {
-            markers[id].setTooltipContent(`${speed} km/h`);
-        };
-    }
 
     setTimeout(() => {
         localStorage.removeItem("vehicleStates");
     }, 1000 * 60 * 60 * 24);
-    const map = L.map("map", {
-        rotate: true,
-        touchRotate: true,
-        bearing: 0
-    }).setView([31.2698, 72.3181], 12)
+    map = initMap().setView([31.2698, 72.3181], 12)
     map.on("dragstart", function () {
         autoFollow = false;
     });
@@ -255,13 +175,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         console.log("📤 Sending geofence:", payload);
 
-        await apiFetch("/api/geofence", {
+        await apiRequest("/api/geofence", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + localStorage.getItem("token")
-
-            },
             body: JSON.stringify(payload)
         });
 
@@ -297,17 +212,11 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!container) return;
 
         container.innerHTML = "";
-
-        // 🔥 Loop through ALL devices
         Object.values(allowedDevices).forEach(device => {
-
             const deviceId = device.traccarId;
-
-            // 🔥 Get geofences for this device
             const deviceGeofences = geofences.filter(
                 f => String(f.deviceId) === String(deviceId)
             );
-
             // 🚗 Device header
             const vehicleDiv = document.createElement("div");
             vehicleDiv.style.fontWeight = "bold";
@@ -328,7 +237,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 highlightVehicleCard(selectedVehicleId);
                 focusOnVehicle(selectedVehicleId);
                 openGeofence();
-                showToast(`Creating geofence for ${device.name}`, "success");
+                window.alertUI.showToast(`Creating geofence for ${device.name}`, "success");
             };
             vehicleDiv.onclick = async () => {
                 collapsedDevices[deviceId] = !collapsedDevices[deviceId];
@@ -401,7 +310,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const newName = prompt("Enter new name:");
         if (!newName) return;
 
-        await apiFetch(`/api/geofence/${id}`, {
+        await apiRequest(`/api/geofence/${id}`, {
             method: "PUT",
             headers: {
                 "Content-Type": "application/json"
@@ -418,7 +327,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         if (!confirm("Delete this geofence?")) return;
 
-        await apiFetch(`/api/geofence/${selectedGeofenceId}`, {
+        await apiRequest(`/api/geofence/${selectedGeofenceId}`, {
             method: "DELETE"
         });
 
@@ -428,7 +337,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let socket;
     async function loadInitialPositions() {
         try {
-            const positions = await apiFetch("/api/traccar/positions");
+            const positions = await apiRequest("/api/traccar/positions");
 
             console.log("📦 Initial positions:", positions);
 
@@ -444,7 +353,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 lastPositions[id] = pos;
 
                 // ✅ USE CENTRAL FUNCTION
-                updateMarker(id, pos);
+                updateMarker(id, pos, allowedDevices[id]);
             });
 
             // ✅ Update sidebar also
@@ -456,31 +365,27 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function initApp() {
+        initAlertModule();
+        await loadInitialAlerts();
         await loadAlerts();
         await fetchAllowedDevices();
         await loadGeofences();
         await loadInitialPositions();
-        socket = io("https://trackia-backend.onrender.com", {
-            transports: ["polling", "websocket"],
-            reconnectionAttempts: 5,
-            reconnectionDelay: 2000,
-            auth: {
-                token: localStorage.getItem("token")
-            }
-        });
-        socket.on("connect", () => {
-            console.log("✅ Socket connected:", socket.id);
-        });
+        const token = localStorage.getItem("token");
 
-        socket.on("positions", (positions) => {
+        // INIT
+        initSocket(token);
+
+        // POSITIONS
+        onPositions((positions) => {
 
             if (isPlaybackMode) return;
 
-            const filteredPositions = positions.filter(pos =>
+            const filtered = positions.filter(pos =>
                 allowedDevices[String(pos.deviceId)]
             );
 
-            filteredPositions.forEach((pos) => {
+            filtered.forEach((pos) => {
 
                 const id = String(pos.deviceId);
 
@@ -489,32 +394,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 if (!lat || !lng) return;
 
-                console.log("📡 Positions:", filteredPositions);
                 lastPositions[id] = pos;
                 updateMarker(id, pos);
-
             });
-            updateVehicleList(Object.values(lastPositions));
 
+            updateVehicleList(Object.values(lastPositions));
         });
-        socket.on("geofenceEvent", (event) => {
-            const { deviceId, geofenceId, type } = event;
+
+        // GEOFENCE
+        onGeofence(({ geofenceId, type }) => {
             updateGeofenceVisual(geofenceId, type);
         });
-        socket.on("alert", (alert) => {
 
-            console.log("🚨 ALERT RECEIVED:", alert);
-
-            showToast(alert.message, "error");
-
-            addAlert(
-                alert.deviceId,
-                alert.metadata?.geofenceId || null,
-                alert.type.toLowerCase(),
-                alert.message
-            );
-        });
     }
+
+
+
 
     // ROUTE HISTORY
     async function showRoute() {
@@ -531,7 +426,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         from = new Date(from).toISOString();
         to = new Date(to).toISOString();
-        const data = await apiFetch(`/api/traccar/route?deviceId=${deviceId}&from=${from}&to=${to}`);
+        const data = await apiRequest(`/api/traccar/route?deviceId=${deviceId}&from=${from}&to=${to}`);
         console.log("Route Data:", data);
 
         // ❌ If no data → stop here
@@ -577,7 +472,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 url += `?deviceId=${selectedVehicleId}`;
             }
 
-            const fences = await apiFetch(url);
+            const fences = await apiRequest(url);
             if (!fences) return;
 
             geofences = fences;
@@ -604,57 +499,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     drawnItems.addLayer(l);
                 });
-
-            }); // ✅ THIS WAS MISSING
-
+            });
         } catch (err) {
             console.error("❌ Error loading geofences:", err);
         }
         renderGeofenceList();
     }
-    function addAlert(deviceId, geofenceId, type, message) {
-        if (!allowedDevices[deviceId]) return;
-        deviceId = String(deviceId);
-        geofenceId = String(geofenceId);
-        type = type.toLowerCase().trim();
 
-        const key = `${deviceId}_${geofenceId}_${type}`;
-        const now = Date.now();
-
-        console.log("ALERT KEY:", key);
-
-        // ✅ 1. HARD DUPLICATE CHECK (latest alert)
-        const last = alerts[0];
-        if (
-            last &&
-            last.deviceId == deviceId &&
-            last.geofenceId == geofenceId &&
-            last.type === type
-        ) {
-            console.log("BLOCKED (same as last alert)");
-            return;
-        }
-
-        // ✅ 2. TIME-BASED BLOCK
-        if (lastAlertTime[key] && (now - lastAlertTime[key] < 20000)) {
-            console.log("BLOCKED (cooldown)");
-            return;
-        }
-
-        lastAlertTime[key] = now;
-
-        alerts.unshift({
-            deviceId,
-            geofenceId,
-            type,
-            message,
-            time: new Date()
-        });
-
-        if (alerts.length > 50) alerts.pop();
-
-        renderAlerts();
-    }
     function updateGeofenceVisual(geofenceId, type) {
 
         const layer = geofenceLayers[geofenceId];
@@ -685,85 +536,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
         }, 5000);
     }
-    function renderAlerts() {
 
-        const container = document.getElementById("alertList");
-        container.innerHTML = "";
-
-        // 🔹 Get filter values
-        const typeFilter = document.getElementById("alertTypeFilter")?.value || "all";
-        const search = document.getElementById("vehicleSearch")?.value || "";
-
-        // 🔹 APPLY FILTERS
-        let filteredAlerts = alerts;
-
-        // Filter by type
-        if (typeFilter !== "all") {
-            filteredAlerts = filteredAlerts.filter(a => a.type === typeFilter);
-        }
-
-        // Search by vehicle ID
-        if (search) {
-            filteredAlerts = filteredAlerts.filter(a =>
-                a.deviceId.toString().includes(search)
-            );
-        }
-
-        // 🔹 GROUP BY VEHICLE
-        const grouped = {};
-
-        filteredAlerts.forEach(a => {
-            if (!grouped[a.deviceId]) {
-                grouped[a.deviceId] = [];
-            }
-            grouped[a.deviceId].push(a);
-        });
-
-        // 🔹 RENDER GROUPS
-        Object.keys(grouped).forEach(deviceId => {
-
-            // 🚗 Vehicle header
-            const header = document.createElement("div");
-            header.style.background = "#eee";
-            header.style.padding = "6px";
-            header.style.fontWeight = "bold";
-            header.style.borderBottom = "1px solid #ccc";
-
-            header.innerHTML = `🚗 Vehicle ${deviceId}`;
-            container.appendChild(header);
-
-            // 🔹 Alerts under this vehicle
-            grouped[deviceId].forEach(a => {
-
-                const div = document.createElement("div");
-
-                div.style.borderBottom = "1px solid #ddd";
-                div.style.padding = "6px";
-                div.style.marginBottom = "3px";
-
-                if (a.type.includes("enter")) {
-                    div.style.background = "#d4edda"; // green
-                }
-                else if (a.type.includes("exit")) {
-                    div.style.background = "#f8d7da"; // red
-                }
-                else if (a.type.includes("engine_on")) {
-                    div.style.background = "#d1ecf1"; // blue
-                }
-                else if (a.type.includes("engine_off")) {
-                    div.style.background = "#fff3cd"; // yellow
-                }
-
-                div.innerHTML = `
-                ${a.message}<br>
-                <small>${a.time.toLocaleTimeString()}</small>
-            `;
-
-                container.appendChild(div);
-            });
-
-        });
-    }
     //playback
     let smoothAnimationId = null; // store requestAnimationFrame ID
     let startTime = null;
@@ -897,9 +670,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const from = date + "T00:00:00Z";
         const to = date + "T23:59:59Z";
 
-        const url = `${BASE_URL}/api/traccar/route?deviceId=${deviceId}&from=${from}&to=${to}`;
-        // ✅ 3. Fetch data
-        const data = await apiFetch(`/api/traccar/route?deviceId=${deviceId}&from=${from}&to=${to}`);
+        const data = await apiRequest(`/api/traccar/route?deviceId=${deviceId}&from=${from}&to=${to}`);
         if (!data) return;
 
         if (!data || data.length < 2) {
@@ -1228,8 +999,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     async function fetchAllowedDevices() {
         try {
-            const devices = await apiFetch("/api/devices");
-
+            const devices = await apiRequest("/api/devices");
             allowedDevices = {};
             console.log("📦 Devices from backend:", devices);
             devices.forEach(device => {
@@ -1256,16 +1026,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         try {
-            const data = await apiFetch("/api/auth/register", {
+            const data = await apiRequest("/api/auth/register", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": "Bearer " + localStorage.getItem("token")
-                },
                 body: JSON.stringify({ name, email, password, role })
             });
-
-            // ✅ success (apiFetch only returns if success)
             alert(data.message || "User created successfully");
 
             // clear form
@@ -1283,7 +1047,7 @@ document.addEventListener("DOMContentLoaded", () => {
     //command function
     async function sendCommand(deviceId, type) {
         try {
-            const data = await apiFetch("/api/traccar/command", {
+            const data = await apiRequest("/api/traccar/command", {
                 method: "POST",
                 body: JSON.stringify({ deviceId, type })
             });
@@ -1306,7 +1070,6 @@ document.addEventListener("DOMContentLoaded", () => {
     window.startPlayback = startPlayback;
     window.logout = logout;
     window.togglePlayback = togglePlayback;
-    window.addAlert = addAlert;
     window.createUser = createUser;
     window.deleteSelectedGeofence = deleteSelectedGeofence;
     window.openGeofence = openGeofence;
@@ -1318,10 +1081,11 @@ document.addEventListener("DOMContentLoaded", () => {
     initApp();
     setInterval(() => {
         console.log("🔄 Fallback refresh...");
-        if (!socket || !socket.connected) {
+        const sock = getSocket();
+
+        if (!sock || !sock.connected) {
             loadInitialPositions();
         }
-
     }, 30000);
 });
 function smoothMove(marker, newLatLng, duration = 1000) {
@@ -1481,8 +1245,7 @@ async function loadDevices() {
     const container = document.getElementById("deviceList");
 
     try {
-        const devices = await apiFetch("/api/devices");
-
+        const devices = await apiRequest("/api/devices");
         container.innerHTML = `
             <div class="device-header">
                 <input type="text" id="deviceSearch" placeholder="Search devices..." oninput="filterDevices()">
@@ -1512,16 +1275,14 @@ async function loadDevices() {
                 <td>${d.name}</td>
                 <td>${d.traccarId}</td>
                 <td>${users || "-"}</td>
-                <td>
-                    <td>
-                    <div class="action-buttons">
+                                   <td>
+                        <div class="action-buttons">
                             <button class="icon-btn assign" onclick="openAssign('${d._id}')">👤</button>
                             <button class="icon-btn delete" onclick="deleteDevice('${d._id}')">🗑</button>
                             <button class="icon-btn unassign" onclick="unassignDevice('${d._id}')">❌</button>
-                       </div> 
-                            </td> 
-                </td>
-            `;
+                        </div> 
+                    </td> 
+                `;
 
             tbody.appendChild(row);
         });
@@ -1533,7 +1294,7 @@ async function loadDevices() {
 async function unassignDevice(deviceId) {
     const userId = document.getElementById("assignUserSelect").value;
 
-    await apiFetch(`/api/devices/${deviceId}/unassign`, {
+    await apiRequest(`/api/devices/${deviceId}/unassign`, {
         method: "POST",
         body: JSON.stringify({ userId })
     });
@@ -1567,7 +1328,7 @@ async function submitNewDevice() {
         return;
     }
 
-    await apiFetch("/api/devices", {
+    await apiRequest("/api/devices", {
         method: "POST",
         body: JSON.stringify({ name, uniqueId })
     });
@@ -1580,7 +1341,7 @@ async function submitNewDevice() {
 async function deleteDevice(id) {
     if (!confirm("Delete this device?")) return;
 
-    await apiFetch(`/api/devices/${id}`, {
+    await apiRequest(`/api/devices/${id}`, {
         method: "DELETE"
     });
 
@@ -1592,7 +1353,7 @@ let selectedDeviceForAssign = null;
 async function openAssign(deviceId) {
     selectedDeviceForAssign = deviceId;
 
-    const users = await apiFetch("/api/users"); // your existing API
+    const users = await apiRequest("/api/users"); // your existing API
 
     const select = document.getElementById("assignUserSelect");
     select.innerHTML = "";
@@ -1614,7 +1375,7 @@ function closeAssign() {
 async function submitAssign() {
     const userId = document.getElementById("assignUserSelect").value;
 
-    await apiFetch(`/api/devices/${selectedDeviceForAssign}/assign`, {
+    await apiRequest(`/api/devices/${selectedDeviceForAssign}/assign`, {
         method: "POST",
         body: JSON.stringify({ userId })
     });
@@ -1628,18 +1389,7 @@ function setActiveMenu(element) {
     document.querySelectorAll(".sidebar li").forEach(li => li.classList.remove("active"));
     element.classList.add("active");
 }
-async function loadAlerts() {
 
-    try {
-        const res = await apiFetch("/api/alerts");
-        alerts = res || [];
-
-        renderAlerts();
-
-    } catch (err) {
-        console.error("❌ Failed to load alerts", err);
-    }
-}
 function openAlerts() {
 
     document.querySelectorAll(".vehicle-panel")
