@@ -1,5 +1,5 @@
-import { onAlert } from "../services/socketService.js";
-import { apiRequest } from "../services/apiService.js";
+import { onAlert } from "/js/services/socketService.js";
+import { apiRequest } from "/js/services/apiService.js";
 
 export function initAlertModule() {
 

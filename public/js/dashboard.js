@@ -7,13 +7,15 @@ import {
     onGeofence,
     onAlert,
     getSocket
-} from "./js/services/socketService.js";
-import { apiRequest } from "./js/services/apiService.js";
+} from "./services/socketService.js";
+
+import { apiRequest } from "./services/apiService.js";
+
 import {
     initMap,
     updateMarker,
     getMap
-} from "./js/modules/mapModule.js";
+} from "./modules/mapModule.js";
 document.addEventListener("DOMContentLoaded", () => {
     // all your JS code here
 
@@ -112,7 +114,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => {
         localStorage.removeItem("vehicleStates");
     }, 1000 * 60 * 60 * 24);
-    map = initMap().setView([31.2698, 72.3181], 12)
+    let map = initMap().setView([31.2698, 72.3181], 12)
     map.on("dragstart", function () {
         autoFollow = false;
     });
