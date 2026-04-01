@@ -77,7 +77,7 @@ async function processPosition(position, io) {
 
             const alertDoc = await Alert.create({
                 deviceId,
-                type: "EXIT_FENCE",
+                type: "GEOFENCE_EXIT",
                 message: `Vehicle ${deviceId} exited geofence`,
                 metadata: { geofenceId: prevState.fenceId } // ✅ IMPORTANT
             });
@@ -90,7 +90,7 @@ async function processPosition(position, io) {
 
             const alertDoc = await Alert.create({
                 deviceId,
-                type: "ENTER_FENCE",
+                type: "GEOFENCE_ENTER",
                 message: `Vehicle ${deviceId} entered geofence`,
                 metadata: { geofenceId: currentFenceId }
             });

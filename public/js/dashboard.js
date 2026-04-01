@@ -293,7 +293,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 div.onclick = async () => {
                     selectedGeofenceId = f._id;
 
-                  
+
                     Object.values(geofenceLayers).forEach(l => {
                         if (l && typeof l.setStyle === "function") {
                             l.setStyle({ color: "#3388ff" });
@@ -302,7 +302,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     const layer = geofenceLayers[f._id];
 
-                  
+
                     if (layer && typeof layer.setStyle === "function") {
                         layer.setStyle({
                             color: "orange",
