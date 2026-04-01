@@ -20,6 +20,8 @@ import {
     initAlertModule,
     loadInitialAlerts
 } from "./modules/alertModule.js";
+import { getMarkers } from "./modules/mapModule.js";
+
 
 document.addEventListener("DOMContentLoaded", () => {
     // all your JS code here
@@ -291,20 +293,27 @@ document.addEventListener("DOMContentLoaded", () => {
                 div.onclick = async () => {
                     selectedGeofenceId = f._id;
 
+                  
                     Object.values(geofenceLayers).forEach(l => {
-                        l.setStyle({ color: "#3388ff" });
+                        if (l && typeof l.setStyle === "function") {
+                            l.setStyle({ color: "#3388ff" });
+                        }
                     });
 
-                    if (geofenceLayers[f._id]) {
-                        geofenceLayers[f._id].setStyle({
+                    const layer = geofenceLayers[f._id];
+
+                  
+                    if (layer && typeof layer.setStyle === "function") {
+                        layer.setStyle({
                             color: "orange",
                             weight: 3
                         });
 
-                        map.fitBounds(geofenceLayers[f._id].getBounds());
+                        if (typeof layer.getBounds === "function") {
+                            map.fitBounds(layer.getBounds());
+                        }
                     }
                 };
-
                 container.appendChild(div);
             });
         });
@@ -1081,6 +1090,12 @@ document.addEventListener("DOMContentLoaded", () => {
     window.openAddDeviceModal = openAddDeviceModal;
     window.closeAddDeviceModal = closeAddDeviceModal;
     window.submitNewDevice = submitNewDevice;
+    window.setActiveMenu = setActiveMenu;
+    window.setActiveMenu = setActiveMenu;
+    window.openAlerts = openAlerts;
+    window.openDevices = openDevices;
+    window.loadGeofences = loadGeofences;
+    window.renderGeofenceList = renderGeofenceList;
     initApp();
     setInterval(() => {
         console.log("🔄 Fallback refresh...");
@@ -1224,10 +1239,12 @@ function highlightVehicleCard(id) {
         }
     });
 }
-
 function focusOnVehicle(id) {
+    const markers = getMarkers();
+    const map = getMap(); // ✅ FIX
+
     const marker = markers[id];
-    if (!marker) return;
+    if (!marker || !map) return;
 
     const latlng = marker.getLatLng();
 
@@ -1400,5 +1417,5 @@ function openAlerts() {
 
     document.getElementById("alertPanel").style.display = "block";
 
-    loadAlerts();
+    loadInitialAlerts();
 }

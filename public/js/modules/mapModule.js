@@ -1,6 +1,5 @@
 let map;
-let markers = {};
-
+const markers = {};
 const icons = {
     moving: L.icon({
         iconUrl: "/icons/carg.png",
@@ -75,4 +74,9 @@ export function updateMarker(id, pos, device) {
 
 export function getMap() {
     return map;
+}
+
+
+export function getMarkers() {
+    return markers;
 }
