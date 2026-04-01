@@ -7,13 +7,13 @@ import {
     onGeofence,
     onAlert,
     getSocket
-} from "./services/socketService.js";
-import { apiRequest } from "./services/apiService.js";
+} from "./js/services/socketService.js";
+import { apiRequest } from "./js/services/apiService.js";
 import {
     initMap,
     updateMarker,
     getMap
-} from "./modules/mapModule.js";
+} from "./js/modules/mapModule.js";
 document.addEventListener("DOMContentLoaded", () => {
     // all your JS code here
 
@@ -116,9 +116,6 @@ document.addEventListener("DOMContentLoaded", () => {
     map.on("dragstart", function () {
         autoFollow = false;
     });
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        maxZoom: 19
-    }).addTo(map);
     setTimeout(() => {
         try {
             map.removeControl(drawControl);
