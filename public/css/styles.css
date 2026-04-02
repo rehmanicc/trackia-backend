@@ -319,6 +319,51 @@ body {
     border-radius: 4px;
     font-size: 11px;
 }
+/* 🔥 ALERT PANEL UPGRADE */
+.alert-item {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.alert-item:hover {
+    background: #f9fafb;
+}
+
+.alert-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.alert-title {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.alert-time {
+    font-size: 11px;
+    color: gray;
+}
+
+.alert-message {
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+/* COLORS */
+.alert-engine {
+    border-left: 4px solid #10b981;
+}
+
+.alert-geofence {
+    border-left: 4px solid #3b82f6;
+}
+
+.alert-battery {
+    border-left: 4px solid #ef4444;
+}
 
 .device-header {
     margin-bottom: 10px;

@@ -77,12 +77,20 @@ function renderAlerts() {
     });
 }
 function showToast(message, type = "success") {
-    const container = document.getElementById("toastContainer");
+
+    let container = document.getElementById("toastContainer");
+
+    // ✅ AUTO CREATE CONTAINER IF MISSING
+    if (!container) {
+        container = document.createElement("div");
+        container.id = "toastContainer";
+        document.body.appendChild(container);
+    }
 
     const toast = document.createElement("div");
     toast.className = `toast ${type}`;
     toast.innerText = message;
-
+    toast.style.marginTop = "10px";
     container.appendChild(toast);
 
     setTimeout(() => {
