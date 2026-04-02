@@ -877,6 +877,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const sock = getSocket();
 
         if (!sock || !sock.connected) {
+            console.warn("⚠️ Socket offline, fallback running");
             loadInitialPositions();
         }
     }, 30000);

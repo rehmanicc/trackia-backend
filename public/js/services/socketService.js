@@ -6,9 +6,11 @@ export function initSocket(token) {
     }
 
     socket = io("https://trackia-backend.onrender.com", {
-        transports: ["polling", "websocket"],
-        reconnectionAttempts: 5,
-        reconnectionDelay: 2000,
+        transports: ["websocket"],
+        reconnection: true,
+        reconnectionAttempts: Infinity,
+        reconnectionDelay: 1000,
+        timeout: 20000,
         auth: { token }
     });
 
@@ -22,6 +24,16 @@ export function initSocket(token) {
 
     return socket;
 }
+socket.on("reconnect", () => {
+    console.log("🔄 Reconnected");
+
+    // reload latest positions after reconnect
+    fetch("/api/traccar/positions")
+        .then(res => res.json())
+        .then(data => {
+            console.log("♻️ Reload after reconnect");
+        });
+});
 
 export function onPositions(cb) {
     socket?.on("positions", cb);
