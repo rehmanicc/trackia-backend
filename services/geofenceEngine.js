@@ -1,8 +1,8 @@
 const turf = require("@turf/turf");
 const Geofence = require("../models/Geofence");
 const { saveGeofenceEvent } = require("./geofenceEventService");
-const { createAlert } = require("./alertService");
-const { detectAlerts } = require("./alertRules");
+const { createAlert } = require("./alert/alertService");
+const { detectAlerts } = require("./alert/alertRules");
 let vehicleStates = {};
 
 // MAIN ENGINE
