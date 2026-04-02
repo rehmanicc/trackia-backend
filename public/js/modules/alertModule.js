@@ -1,21 +1,20 @@
 import { onAlert } from "/js/services/socketService.js";
 import { apiRequest } from "/js/services/apiService.js";
 
+let alertList = [];
+
 export function initAlertModule() {
 
-    // 🔴 SOCKET HANDLING MOVED HERE
+    loadInitialAlerts();
+
     onAlert((alert) => {
 
         console.log("🚨 ALERT RECEIVED:", alert);
 
-        window.alertUI.showToast(alert.message, "error");
+        alertList.unshift(alert);
 
-        window.alertManager.addAlert(
-            alert.deviceId,
-            alert.metadata?.geofenceId || null,
-            alert.type.toLowerCase(),
-            alert.message
-        );
+        window.alertUI.renderAlerts(alertList);
+        window.alertUI.showToast(alert.message, "error");
     });
 }
 
@@ -24,15 +23,9 @@ export async function loadInitialAlerts() {
     try {
         const data = await apiRequest("/api/alerts");
 
-        window.alertManager.setAlerts(
-            data.map(a => ({
-                deviceId: a.deviceId,
-                geofenceId: a.metadata?.geofenceId || null,
-                type: a.type.toLowerCase(),
-                message: a.message,
-                time: new Date(a.timestamp)
-            }))
-        );
+        alertList = data;
+
+        window.alertUI.renderAlerts(alertList);
 
     } catch (err) {
         console.error("❌ Failed to load alerts", err);

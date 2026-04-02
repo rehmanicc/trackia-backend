@@ -1,7 +1,8 @@
 const turf = require("@turf/turf");
 const Geofence = require("../models/Geofence");
 const { saveGeofenceEvent } = require("./geofenceEventService");
-const alertService = require("./alert/alertService");
+const { createAlert } = require("./alertService");
+const { detectAlerts } = require("./alertRules");
 let vehicleStates = {};
 
 // MAIN ENGINE
@@ -87,7 +88,7 @@ async function processPosition(position, io) {
                 state.lastUpdate = Date.now();
                 state.enterCount = 0;
 
-                emitEvent(io, deviceId, geofenceId, "enter", {
+                 await emitEvent(io, deviceId, geofenceId, "enter", {
                     lat: latitude,
                     lng: longitude
                 });
@@ -107,14 +108,23 @@ async function processPosition(position, io) {
                 state.lastUpdate = Date.now();
                 state.exitCount = 0;
 
-                emitEvent(io, deviceId, geofenceId, "exit", {
+                await emitEvent(io, deviceId, geofenceId, "exit", {
                     lat: latitude,
                     lng: longitude
                 });
             }
         }
     }
-    await alertService.processPosition(position, io);
+    const alerts = detectAlerts(position);
+
+    for (const alert of alerts) {
+        await createAlert({
+            deviceId: position.deviceId,
+            type: alert.type,
+            message: alert.message,
+            metadata: alert.metadata || {}
+        }, io);
+    }
 }
 // EMIT EVENT
 
@@ -128,24 +138,15 @@ async function emitEvent(io, deviceId, geofenceId, type, position) {
         position
     };
 
-    // ✅ 1. SAVE TO DB (FIXED)
-    const Alert = require("../models/Alert");
-
     await saveGeofenceEvent(event);
-
-    // ✅ 2. CREATE ALERT (NEW SYSTEM)
-    const alertDoc = await Alert.create({
+    await createAlert({
         deviceId,
-        type: type === "enter" ? "GEOFENCE_ENTER" : "GEOFENCE_EXIT",
+        type: type === "enter" ? "ENTER_FENCE" : "EXIT_FENCE",
         message: `Vehicle ${deviceId} ${type.toUpperCase()} geofence`,
         metadata: {
             geofenceId
         }
-    });
-
-    // ✅ 3. EMIT ALERT (NEW SYSTEM)
-    io.emit("alert", alertDoc);
-
+    }, io);
     // ✅ 4. KEEP OLD EVENT (ONLY FOR UI VISUAL)
     io.emit("geofenceEvent", {
         deviceId,

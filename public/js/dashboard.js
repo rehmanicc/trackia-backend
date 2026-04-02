@@ -30,7 +30,7 @@ import {
 
 
 document.addEventListener("DOMContentLoaded", () => {
-    // all your JS code here
+   initAlertModule();
 
 
     let lastPositions = {};

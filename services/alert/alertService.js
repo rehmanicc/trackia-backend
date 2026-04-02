@@ -1,41 +1,26 @@
 const Alert = require("../../models/Alert");
-const { detectAlerts } = require("./alertRules");
-
 // 🔥 Prevent duplicate spam
-const lastAlertTime = {};
-const deviceFenceState = {};
 
 const COOLDOWN = 15000; // 15 seconds
 
-async function processPosition(position, io) {
-    const deviceId = String(position.deviceId);
-    const alerts = detectAlerts(position);
-
-    for (const alert of alerts) {
-
-        const key = `${deviceId}_${alert.type}`;
-        const now = Date.now();
-
-        // ✅ COOLDOWN CHECK
-        if (lastAlertTime[key] && (now - lastAlertTime[key] < COOLDOWN)) {
-            continue;
-        }
-
-        lastAlertTime[key] = now;
-
-        // ✅ SAVE TO DB
+async function createAlert(alertData, io) {
+    try {
         const alertDoc = await Alert.create({
-            deviceId: position.deviceId,
-            type: alert.type,
-            message: alert.message,
-            metadata: alert.metadata || {}
+            deviceId: alertData.deviceId,
+            type: alertData.type,
+            message: alertData.message,
+            metadata: alertData.metadata || {}
         });
 
-        // ✅ EMIT REAL-TIME ALERT
         io.emit("alert", alertDoc);
 
-        console.log("🚨 ALERT:", alert.type, position.deviceId);
+        console.log("🚨 ALERT:", alertData.type, alertData.deviceId);
+
+        return alertDoc;
+
+    } catch (error) {
+        console.error("Alert creation failed:", error);
     }
 }
 
-module.exports = { processPosition };
+module.exports = { createAlert };
