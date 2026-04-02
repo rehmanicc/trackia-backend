@@ -940,15 +940,16 @@ function updateVehicleList(positions) {
             </div>
             </div>
 
-            <div class="vehicle-body">
+            <div class="vehicle-body" style="display:flex; justify-content:space-between; align-items:center;"><div>
             <div>Speed: <b>${speed} km/h</b></div>
             <div>Last update: ${minutesAgo} min ago</div>
             </div>
 
-            <!-- ✅ NEW PLAYBACK BUTTON -->
-            <button class="playback-btn" onclick="openPlaybackModal('${pos.deviceId}')">
-            ▶ Playback
-            </button>
+            <!-- ▶ Playback inline -->
+            <button class="playback-btn" 
+            onclick="openPlaybackModal('${pos.deviceId}')"
+            style="background:none; border:none; color:##006400; cursor:pointer; font-weight:bold;">
+            ▶ Playback  </button>
         `;
 
         div.onclick = async () => {

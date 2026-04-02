@@ -69,10 +69,7 @@ function startAutoPlayback() {
 
         playbackMarker.setLatLng([lat, lng]);
         playbackMarker.setRotationAngle(angle);
-        if (autoFollow) {
-            map.setBearing(angle);
-        }
-        //section for Auto Follow map
+        
         if (autoFollow) {
             const mapSize = map.getSize();
 
