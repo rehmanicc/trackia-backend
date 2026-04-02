@@ -7,7 +7,7 @@ let vehicleStates = {};
 
 // MAIN ENGINE
 async function processPosition(position, io) {
-
+console.log("📍 Processing position:", position.deviceId, position.latitude, position.longitude);
     const deviceId = String(position.deviceId);
     const { latitude, longitude } = position;
     const point = turf.point([longitude, latitude]);
