@@ -5,7 +5,7 @@ const geofenceSchema = new mongoose.Schema({
     type: String, // ✅ FIX TYPE
     geometry: Object, // ✅ ADD THIS
     userId: mongoose.Schema.Types.ObjectId,
-    deviceId: Number
+    deviceId: String
 }, { timestamps: true });
 
 module.exports = mongoose.model("Geofence", geofenceSchema);

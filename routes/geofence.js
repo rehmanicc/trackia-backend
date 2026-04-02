@@ -16,7 +16,7 @@ router.get("/", authMiddleware, async (req, res) => {
 
     // ✅ FIX: handle null safely
     if (deviceId && deviceId !== "null") {
-      query.deviceId = Number(deviceId);
+      query.deviceId = String(deviceId);
     }
 
     const geofences = await Geofence.find(query);

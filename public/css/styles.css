@@ -143,6 +143,7 @@ body {
     padding: 10px;
     border-radius: 10px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    z-index: 10000 !important; 
 }
 
 #playbackRow {
@@ -296,7 +297,13 @@ body {
 .map-container {
     flex: 1;
     height: 100%;
-    /* 🔥 REQUIRED */
+    position: relative;
+    z-index: 1;
+}
+.leaflet-pane,
+.leaflet-top,
+.leaflet-bottom {
+    z-index: 400 !important;
 }
 
 #map {

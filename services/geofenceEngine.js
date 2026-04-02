@@ -7,8 +7,8 @@ let vehicleStates = {};
 // MAIN ENGINE
 async function processPosition(position, io) {
 
-    const { deviceId, latitude, longitude } = position;
-
+    const deviceId = String(position.deviceId);
+    const { latitude, longitude } = position;
     const point = turf.point([longitude, latitude]);
 
     // 🔥 Get geofences for this device
@@ -37,8 +37,23 @@ async function processPosition(position, io) {
         }
 
         // 🔥 STEP 2: PRECISE CHECK
-        const inside = turf.booleanPointInPolygon(point, f.geometry);
-        // ================= STATE INIT =================
+        let inside = false;
+
+        if (f.type === "Polygon") {
+            inside = turf.booleanPointInPolygon(point, f.geometry);
+        }
+        else if (f.type === "Point") {
+            const [lng, lat] = f.geometry.coordinates;
+            const radius = f.geometry.radius || 100;
+
+            const distance = turf.distance(
+                [longitude, latitude],
+                [lng, lat],
+                { units: "meters" }
+            );
+
+            inside = distance <= radius;
+        }        // ================= STATE INIT =================
         if (!vehicleStates[deviceId]) {
             vehicleStates[deviceId] = {};
         }
@@ -99,7 +114,8 @@ async function processPosition(position, io) {
             }
         }
     }
-await alertService.processPosition(position, io);}
+    await alertService.processPosition(position, io);
+}
 // EMIT EVENT
 
 async function emitEvent(io, deviceId, geofenceId, type, position) {
