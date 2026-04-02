@@ -1,6 +1,9 @@
 let socket = null;
-
 export function initSocket(token) {
+
+    if (socket) {
+        return socket; // ✅ PREVENT DUPLICATE CONNECTIONS
+    }
 
     socket = io("https://trackia-backend.onrender.com", {
         transports: ["polling", "websocket"],
@@ -16,6 +19,8 @@ export function initSocket(token) {
     socket.on("disconnect", () => {
         console.warn("⚠️ Socket disconnected");
     });
+
+    return socket;
 }
 
 export function onPositions(cb) {

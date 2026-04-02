@@ -43,8 +43,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     if (!token) {
-        alert("Please login first")
-        window.location.href = "login.html"
+        alert("Please login first");
+        window.location.href = "login.html";
+        return;
     }
 
     let payload = null;
@@ -382,16 +383,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function initApp() {
+        const token = localStorage.getItem("token");
+        initSocket(token);
         initAlertModule();
         await loadInitialAlerts();
         await fetchAllowedDevices();
         await loadGeofences();
         await loadInitialPositions();
-        const token = localStorage.getItem("token");
-
-        // INIT
-        initSocket(token);
-
         // POSITIONS
         onPositions((positions) => {
 
