@@ -30,7 +30,7 @@ import {
 
 
 document.addEventListener("DOMContentLoaded", () => {
-   initAlertModule();
+    initAlertModule();
 
 
     let lastPositions = {};
@@ -392,7 +392,7 @@ document.addEventListener("DOMContentLoaded", () => {
         await loadInitialPositions();
         // POSITIONS
         onPositions((positions) => {
-
+            console.log("📡 FRONTEND POSITIONS:", positions);
             const filtered = positions.filter(pos =>
                 allowedDevices[String(pos.deviceId)]
             );
@@ -408,6 +408,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 lastPositions[id] = pos;
                 updateMarker(id, pos);
+                console.log("📍 Updating marker:", id, pos.latitude, pos.longitude);
             });
 
             updateVehicleList(Object.values(lastPositions));

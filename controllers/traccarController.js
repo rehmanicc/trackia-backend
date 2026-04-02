@@ -29,21 +29,24 @@ exports.getPositions = async (req, res) => {
       // ignore duplicates
     }
 
-    // ✅ SOCKET EMIT
     const io = require("../socket").getIO();
+
+    // 🔥 FIRST: process geofence + alerts
+    for (const p of positions) {
+      await processPosition({
+        deviceId: p.deviceId,
+        latitude: p.latitude,
+        longitude: p.longitude,
+        speed: p.speed,
+        attributes: p.attributes || {},
+        deviceTime: p.deviceTime
+      }, io);
+    }
+
+    // 🔥 THEN: emit positions to frontend
     io.emit("positions", positions);
 
-    // 🔥 RUN GEOFENCE ENGINE (NON-BLOCKING)
-  positions.forEach(p => {
-  processPosition({
-    deviceId: p.deviceId,
-    latitude: p.latitude,
-    longitude: p.longitude,
-    speed: p.speed,
-    attributes: p.attributes || {},
-    deviceTime: p.deviceTime
-  }, io);
-});
+    console.log("📡 EMITTING POSITIONS:", positions.length);
 
     res.json(positions);
 
