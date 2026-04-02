@@ -66,7 +66,6 @@ async function processPosition(position, io) {
                 enterCount: 0,
                 exitCount: 0
             };
-            continue;
         }
 
         const state = vehicleStates[deviceId][geofenceId];
@@ -75,44 +74,24 @@ async function processPosition(position, io) {
         const CONFIRM_COUNT = 3;
         const COOLDOWN = 10000;
 
-        // ================= ENTER =================
-        if (inside) {
-            state.enterCount++;
-            state.exitCount = 0;
+        // SIMPLE DETECTION (DEBUG MODE)
 
-            if (!previous && state.enterCount >= CONFIRM_COUNT) {
+        if (inside && !previous) {
+            state.inside = true;
 
-                if (Date.now() - state.lastUpdate < COOLDOWN) continue;
-
-                state.inside = true;
-                state.lastUpdate = Date.now();
-                state.enterCount = 0;
-
-                await emitEvent(io, deviceId, geofenceId, "enter", {
-                    lat: latitude,
-                    lng: longitude
-                });
-            }
+            await emitEvent(io, deviceId, geofenceId, "enter", {
+                lat: latitude,
+                lng: longitude
+            });
         }
 
-        // ================= EXIT =================
-        else {
-            state.exitCount++;
-            state.enterCount = 0;
+        if (!inside && previous) {
+            state.inside = false;
 
-            if (previous && state.exitCount >= CONFIRM_COUNT) {
-
-                if (Date.now() - state.lastUpdate < COOLDOWN) continue;
-
-                state.inside = false;
-                state.lastUpdate = Date.now();
-                state.exitCount = 0;
-
-                await emitEvent(io, deviceId, geofenceId, "exit", {
-                    lat: latitude,
-                    lng: longitude
-                });
-            }
+            await emitEvent(io, deviceId, geofenceId, "exit", {
+                lat: latitude,
+                lng: longitude
+            });
         }
     }
     const alerts = detectAlerts(position);
