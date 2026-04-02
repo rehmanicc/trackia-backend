@@ -18,33 +18,45 @@ export function initSocket(token) {
         console.log("✅ Socket connected:", socket.id);
     });
 
-    socket.on("disconnect", () => {
-        console.warn("⚠️ Socket disconnected");
+    socket.on("disconnect", (reason) => {
+        console.warn("⚠️ Socket disconnected:", reason);
+    });
+
+    socket.on("reconnect", () => {
+        console.log("🔄 Reconnected");
+
+        fetch("/api/traccar/positions")
+            .then(res => res.json())
+            .then(data => {
+                console.log("♻️ Reload after reconnect");
+            });
     });
 
     return socket;
 }
-socket.on("reconnect", () => {
-    console.log("🔄 Reconnected");
-
-    // reload latest positions after reconnect
-    fetch("/api/traccar/positions")
-        .then(res => res.json())
-        .then(data => {
-            console.log("♻️ Reload after reconnect");
-        });
-});
-
 export function onPositions(cb) {
-    socket?.on("positions", cb);
+
+    if (!socket) {
+        console.error("❌ Socket not initialized");
+        return;
+    }
+    socket.on("positions", cb);
 }
 
 export function onGeofence(cb) {
-    socket?.on("geofenceEvent", cb);
+    if (!socket) {
+        console.error("❌ Socket not initialized");
+        return;
+    }
+    socket.on("geofenceEvent", cb);
 }
 
 export function onAlert(cb) {
-    socket?.on("alert", cb);
+    if (!socket) {
+        console.error("❌ Socket not initialized");
+        return;
+    }
+    socket.on("alert", cb);
 }
 
 export function getSocket() {

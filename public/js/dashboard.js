@@ -30,9 +30,6 @@ import {
 
 
 document.addEventListener("DOMContentLoaded", () => {
-    initAlertModule();
-
-
     let lastPositions = {};
     let geofenceLayers = {};
     const token = localStorage.getItem("token")
@@ -203,6 +200,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     function openGeofence() {
         currentMode = "geofence";
+        localStorage.setItem("activePanel", "geofence");
         document.querySelector(".header h2").innerText = "Geofencing";
         document.querySelectorAll(".vehicle-panel").forEach(p => p.style.display = "none");
         document.getElementById("geofencePanel").style.display = "block";
@@ -211,7 +209,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function openLive() {
         currentMode = "live";
-
+        localStorage.setItem("activePanel", "live");
         document.querySelector(".header h2").innerText = "Live Tracking";
 
         document.querySelectorAll(".vehicle-panel").forEach(p => p.style.display = "none");
@@ -352,7 +350,6 @@ document.addEventListener("DOMContentLoaded", () => {
         selectedGeofenceId = null;
         await loadGeofences();
     }
-    let socket;
     async function loadInitialPositions() {
         try {
             const positions = await apiRequest("/api/traccar/positions");
@@ -381,10 +378,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         updateVehicleList(Object.values(lastPositions));
     }
-
     async function initApp() {
         const token = localStorage.getItem("token");
-        initSocket(token);
+        const socket = initSocket(token);
         initAlertModule();
         await loadInitialAlerts();
         await fetchAllowedDevices();
@@ -419,6 +415,12 @@ document.addEventListener("DOMContentLoaded", () => {
             updateGeofenceVisual(geofenceId, type);
         });
 
+        const savedPanel = localStorage.getItem("activePanel");
+
+        if (savedPanel === "geofence") openGeofence();
+        else if (savedPanel === "alerts") openAlerts();
+        else if (savedPanel === "devices") openDevices();
+        else openLive(); // default
     }
 
 
@@ -1014,6 +1016,7 @@ function focusOnVehicle(id) {
     marker.openPopup?.();
 }
 function openDevices() {
+    localStorage.setItem("activePanel", "geofence");
     document.querySelectorAll(".vehicle-panel").forEach(p => p.style.display = "none");
     document.getElementById("devicePanel").style.display = "block";
 
@@ -1169,7 +1172,7 @@ function setActiveMenu(element) {
 }
 
 function openAlerts() {
-
+    localStorage.setItem("activePanel", "geofence");
     document.querySelectorAll(".vehicle-panel")
         .forEach(p => p.style.display = "none");
 

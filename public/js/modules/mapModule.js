@@ -24,6 +24,9 @@ const icons = {
 };
 function smoothMove(marker, newLatLng, duration = 1000) {
 
+    if (marker._animFrame) {
+        cancelAnimationFrame(marker._animFrame);
+    }
     const start = marker.getLatLng();
     const end = L.latLng(newLatLng);
 
@@ -77,9 +80,29 @@ export function updateMarker(id, pos, device) {
     const speed = Math.round((pos.speed || 0) * 1.852);
 
     if (!markers[id]) {
+
         markers[id] = L.marker([lat, lng], { icon }).addTo(map);
+
     } else {
-        smoothMove(markers[id], [lat, lng]); markers[id].setIcon(icon);
+
+        const marker = markers[id];
+        const distance = map.distance(marker.getLatLng(), [lat, lng]);
+
+        if (distance > 500) {
+            marker.setLatLng([lat, lng]); // jump directly
+        } else {
+
+            const now = Date.now();
+            const last = marker._lastUpdate || now;
+
+            const duration = Math.min(now - last, 3000);
+
+            marker._lastUpdate = now;
+
+            smoothMove(marker, [lat, lng], duration);
+        }
+
+        marker.setIcon(icon);
     }
 
     if (!markers[id]._tooltip) {
