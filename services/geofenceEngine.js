@@ -70,6 +70,7 @@ async function processPosition(position, io) {
 
         const state = vehicleStates[deviceId][geofenceId];
         const previous = state.inside;
+        console.log("📊 inside:", inside, "| previous:", previous);
 
         const CONFIRM_COUNT = 3;
         const COOLDOWN = 10000;
