@@ -7,14 +7,14 @@ let vehicleStates = {};
 
 // MAIN ENGINE
 async function processPosition(position, io) {
-console.log("📍 Processing position:", position.deviceId, position.latitude, position.longitude);
+    console.log("📍 Processing position:", position.deviceId, position.latitude, position.longitude);
     const deviceId = String(position.deviceId);
     const { latitude, longitude } = position;
     const point = turf.point([longitude, latitude]);
 
     // 🔥 Get geofences for this device
     const geofences = await Geofence.find({ deviceId });
-
+    console.log("🧱 Geofences found:", geofences.length, "for device:", deviceId);
     for (const f of geofences) {
 
         const geofenceId = f._id.toString();
@@ -88,7 +88,7 @@ console.log("📍 Processing position:", position.deviceId, position.latitude, p
                 state.lastUpdate = Date.now();
                 state.enterCount = 0;
 
-                 await emitEvent(io, deviceId, geofenceId, "enter", {
+                await emitEvent(io, deviceId, geofenceId, "enter", {
                     lat: latitude,
                     lng: longitude
                 });
