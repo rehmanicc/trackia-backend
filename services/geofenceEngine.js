@@ -54,14 +54,27 @@ async function processPosition(position, io) {
             );
 
             inside = distance <= radius;
-        }        // ================= STATE INIT =================
+        }
+        else if (f.type === "Circle" || f.geometry.radius) {
+            const [lng, lat] = f.geometry.coordinates;
+            const radius = f.geometry.radius;
+
+            const distance = turf.distance(
+                [longitude, latitude],
+                [lng, lat],
+                { units: "meters" }
+            );
+
+            inside = distance <= radius;
+        }
+        // ================= STATE INIT =================
         if (!vehicleStates[deviceId]) {
             vehicleStates[deviceId] = {};
         }
 
         if (!vehicleStates[deviceId][geofenceId]) {
             vehicleStates[deviceId][geofenceId] = {
-                inside,
+                inside: false,
                 lastUpdate: Date.now(),
                 enterCount: 0,
                 exitCount: 0
@@ -70,8 +83,14 @@ async function processPosition(position, io) {
 
         const state = vehicleStates[deviceId][geofenceId];
         const previous = state.inside;
-        console.log("📊 inside:", inside, "| previous:", previous);
-
+        console.log("📊 GEOFENCE CHECK:", {
+            deviceId,
+            geofenceId,
+            inside,
+            previous,
+            lat: latitude,
+            lng: longitude
+        });
         const CONFIRM_COUNT = 3;
         const COOLDOWN = 10000;
 
@@ -121,7 +140,7 @@ async function emitEvent(io, deviceId, geofenceId, type, position) {
     await saveGeofenceEvent(event);
     await createAlert({
         deviceId,
-        type: type === "enter" ? "ENTER_FENCE" : "EXIT_FENCE",
+        type: type === "enter" ? "GEOFENCE_ENTER" : "GEOFENCE_EXIT",
         message: `Vehicle ${deviceId} ${type.toUpperCase()} geofence`,
         metadata: {
             geofenceId

@@ -181,7 +181,7 @@ document.addEventListener("DOMContentLoaded", () => {
             name, // ✅ important
             type: geojson.geometry.type, // Polygon / Circle
             geometry: geojson.geometry, // actual shape
-            deviceId: Number(selectedVehicleId)
+            deviceId: String(selectedVehicleId)
         };
 
         console.log("📤 Sending geofence:", payload);
