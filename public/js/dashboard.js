@@ -887,6 +887,7 @@ document.addEventListener("DOMContentLoaded", () => {
     window.openPlaybackModal = openPlaybackModal;
     window.closePlaybackModal = closePlaybackModal;
     window.confirmPlayback = confirmPlayback;
+    window.openAnalytics = openAnalytics;
     initApp();
     setInterval(() => {
         console.log("🔄 Fallback refresh...");

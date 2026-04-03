@@ -100,7 +100,7 @@ exports.getTripAnalytics = async (req, res) => {
         }
 
         const positions = await Position.find({
-            deviceId: String(deviceId),
+            deviceId: Number(deviceId),
             deviceTime: {
                 $gte: new Date(start),
                 $lte: new Date(end)
