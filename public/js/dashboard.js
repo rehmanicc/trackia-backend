@@ -366,8 +366,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (!lat || !lng) return;
 
                 lastPositions[id] = pos;
-
-                // ✅ USE CENTRAL FUNCTION
                 updateMarker(id, pos, allowedDevices[id]);
             });
 
@@ -420,6 +418,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (savedPanel === "geofence") openGeofence();
         else if (savedPanel === "alerts") openAlerts();
         else if (savedPanel === "devices") openDevices();
+        if (savedPanel === "analytics") openAnalytics();
         else openLive(); // default
     }
 
@@ -796,7 +795,23 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
     function openAnalytics() {
-        window.open("/analytics.html", "_blank");
+
+        localStorage.setItem("activePanel", "analytics");
+        document.querySelectorAll(".vehicle-panel")
+            .forEach(p => p.style.display = "none");
+        document.getElementById("devicePanel").style.display = "block";
+        document.getElementById("analyticsPanel").style.display = "none";
+    }
+    let selectedDeviceId = null;
+
+    function selectDeviceForAnalytics(deviceId) {
+        selectedDeviceId = deviceId;
+
+        document.getElementById("analyticsModal").style.display = "block";
+    }
+
+    function closeAnalyticsModal() {
+        document.getElementById("analyticsModal").style.display = "none";
     }
     let selectedPlaybackDevice = null;
 
@@ -863,7 +878,6 @@ document.addEventListener("DOMContentLoaded", () => {
     window.openAddDeviceModal = openAddDeviceModal;
     window.closeAddDeviceModal = closeAddDeviceModal;
     window.submitNewDevice = submitNewDevice;
-    window.setActiveMenu = setActiveMenu;
     window.setActiveMenu = setActiveMenu;
     window.openAlerts = openAlerts;
     window.openDevices = openDevices;
@@ -955,6 +969,10 @@ function updateVehicleList(positions) {
         `;
 
         div.onclick = async () => {
+            if (localStorage.getItem("activePanel") === "analytics") {
+                selectDeviceForAnalytics(pos.deviceId);
+                return;
+            }
             selectedVehicleId = String(pos.deviceId);
             highlightVehicleCard(selectedVehicleId);
             focusOnVehicle(selectedVehicleId);

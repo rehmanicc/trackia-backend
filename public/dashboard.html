@@ -28,7 +28,7 @@
             <nav>
                 <ul>
                     <li onclick="setActiveMenu(this); openLive()">📡 Live Tracking</li>
-                    <li onclick="setActiveMenu(this); openAnalytics()">📊 Analytics</li>
+                    <li onclick="setActiveMenu(this); openAnalytics()">📊 Trip Analytics</li>
                     <li onclick="setActiveMenu(this); openDevices()">📦 Devices</li>
                     <li onclick="setActiveMenu(this); openGeofence()">📍 Geofencing</li>
                     <li onclick="openAlerts()"> 🚨 Alerts</li>
@@ -166,6 +166,12 @@
 
                     <div id="alertList"></div>
                 </div>
+                <div id="analyticsPanel" class="analytics-panel" style="display:none;">
+                    <div>Avg Speed: <span id="avgSpeed">0</span> km/h</div>
+                    <div>Max Speed: <span id="maxSpeed">0</span> km/h</div>
+                    <div>Stops: <span id="stops">0</span></div>
+                    <div>Fuel Used: <span id="fuel">0</span> L</div>
+                </div>
                 <!-- MAP -->
                 <div id="map" class="map-container">
 
@@ -200,6 +206,24 @@
                     <button onclick="confirmPlayback()">Start</button>
                     <button onclick="closePlaybackModal()">Cancel</button>
                 </div>
+            </div>
+        </div>
+        <div id="analyticsModal" class="modal" style="display:none;">
+            <div class="modal-content">
+                <h3>Select Time Range</h3>
+
+                <label>Start:</label>
+                <input type="datetime-local" id="startTime">
+
+                <label>End:</label>
+                <input type="datetime-local" id="endTime">
+
+                <label>Mileage (km per liter):</label>
+                <input type="number" id="mileage" placeholder="e.g. 12">
+
+                <br><br>
+                <button onclick="fetchTrip()">Generate</button>
+                <button onclick="closeAnalyticsModal()">Cancel</button>
             </div>
         </div>
 

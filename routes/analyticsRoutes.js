@@ -7,5 +7,6 @@ const controller = require("../controllers/analyticsController");
 router.get("/report", controller.getReport);
 router.get("/top-geofences", controller.getTopGeofences);
 router.get("/device-summary", controller.getDeviceSummary);
+router.get("/trip/:deviceId", controller.getTripAnalytics);
 router.get("/daily", controller.getDailyReport);
 module.exports = router;

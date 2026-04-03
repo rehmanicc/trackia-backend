@@ -2,6 +2,9 @@ let deviceMap = {};
 let geofenceMap = {};
 let dailyChart, geoChart, deviceChart;
 const API_BASE = "https://your-backend.onrender.com";
+import { getMap } from "./modules/mapModule.js";
+
+const map = getMap();
 async function loadAnalytics(query = "") {
 
     const res = await fetch(`${API_BASE}/api/analytics/report?${query}`);
@@ -25,7 +28,21 @@ async function loadAnalytics(query = "") {
         tbody.innerHTML += row;
     });
 }
+function openAnalytics() {
 
+    activePanel = "analytics";
+    localStorage.setItem("activePanel", activePanel);
+
+    // Hide all panels
+    document.querySelectorAll(".vehicle-panel")
+        .forEach(p => p.style.display = "none");
+
+    // Show device panel
+    document.getElementById("devicePanel").style.display = "block";
+
+    // Hide analytics panel initially
+    document.getElementById("analyticsPanel").style.display = "none";
+}
 async function loadDailyChart(query = "") {
 
     const res = await fetch(`${API_BASE}/api/analytics/daily?${query}`);
@@ -71,7 +88,7 @@ async function loadDevices(query = "") {
 
         const option = document.createElement("option"); // ✅ FIRST create
 
-        const id = d.traccarId; 
+        const id = d.traccarId;
         const name = d.name || d.uniqueId;
 
         deviceMap[id] = name;
@@ -126,9 +143,9 @@ function getFilters() {
 
     if (from) params.append("from", from);
     if (to) params.append("to", to);
-if (deviceId && deviceId !== "null" && deviceId !== "") {
-    params.append("deviceId", deviceId);
-}    if (geofenceId) params.append("geofenceId", geofenceId);
+    if (deviceId && deviceId !== "null" && deviceId !== "") {
+        params.append("deviceId", deviceId);
+    } if (geofenceId) params.append("geofenceId", geofenceId);
 
     return params.toString();
 }
@@ -147,6 +164,30 @@ async function init() {
     await loadDevices();
     await loadGeofences();
     await applyFilters();
+}
+async function fetchTrip() {
+
+    const start = document.getElementById("startTime").value;
+    const end = document.getElementById("endTime").value;
+    const mileage = document.getElementById("mileage").value;
+
+    if (!start || !end) {
+        alert("Select start and end time");
+        return;
+    }
+
+    const res = await fetch(`/api/analytics/trip/${selectedDeviceId}?start=${start}&end=${end}`);
+    const data = await res.json();
+
+    if (!data.positions || data.positions.length === 0) {
+        alert("No trip data found");
+        return;
+    }
+
+    drawTrip(data.positions);
+    showAnalytics(data.stats, mileage);
+
+    closeAnalyticsModal();
 }
 
 init();
