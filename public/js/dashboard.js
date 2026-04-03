@@ -1016,7 +1016,7 @@ function focusOnVehicle(id) {
     marker.openPopup?.();
 }
 function openDevices() {
-    localStorage.setItem("activePanel", "geofence");
+    localStorage.setItem("activePanel", "devices");
     document.querySelectorAll(".vehicle-panel").forEach(p => p.style.display = "none");
     document.getElementById("devicePanel").style.display = "block";
 
@@ -1172,7 +1172,7 @@ function setActiveMenu(element) {
 }
 
 function openAlerts() {
-    localStorage.setItem("activePanel", "geofence");
+    localStorage.setItem("activePanel", "alerts");
     document.querySelectorAll(".vehicle-panel")
         .forEach(p => p.style.display = "none");
 

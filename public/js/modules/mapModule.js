@@ -86,10 +86,11 @@ export function updateMarker(id, pos, device) {
     } else {
 
         const marker = markers[id];
+
         const distance = map.distance(marker.getLatLng(), [lat, lng]);
 
         if (distance > 500) {
-            marker.setLatLng([lat, lng]); // jump directly
+            marker.setLatLng([lat, lng]);
         } else {
 
             const now = Date.now();
@@ -98,6 +99,16 @@ export function updateMarker(id, pos, device) {
             const duration = Math.min(now - last, 3000);
 
             marker._lastUpdate = now;
+
+            // 🔥 ADD THIS
+            const prev = marker.getLatLng();
+
+            const angle = Math.atan2(
+                lng - prev.lng,
+                lat - prev.lat
+            ) * (180 / Math.PI);
+
+            marker.setRotationAngle(angle);
 
             smoothMove(marker, [lat, lng], duration);
         }
