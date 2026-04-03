@@ -1,13 +1,23 @@
 let deviceMap = {};
 let geofenceMap = {};
 let dailyChart, geoChart, deviceChart;
-const API_BASE = "https://your-backend.onrender.com";
+const token = localStorage.getItem("token");
+const API_BASE = "https://trackia-backend.onrender.com";
 import { getMap } from "./modules/mapModule.js";
 
 const map = getMap();
 async function loadAnalytics(query = "") {
 
-    const res = await fetch(`${API_BASE}/api/analytics/report?${query}`);
+    const res = await fetch(`${API_BASE}/api/analytics/report?${query}`, {
+        headers: {
+            "Authorization": `Bearer ${token}`
+        }
+    });
+    if (!res.ok) {
+        const err = await res.text();
+        console.error("❌ API error:", err);
+        return;
+    }
     const data = await res.json();
 
     document.getElementById("totalVisits").innerText = data.totalVisits;
@@ -45,7 +55,14 @@ function openAnalytics() {
 }
 async function loadDailyChart(query = "") {
 
-    const res = await fetch(`${API_BASE}/api/analytics/daily?${query}`);
+    const res = await fetch(`${API_BASE}/api/analytics/daily?${query}`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) {
+        const err = await res.text();
+        console.error("❌ API error:", err);
+        return;
+    }
     const data = await res.json();
     if (dailyChart) dailyChart.destroy();
     dailyChart = new Chart(document.getElementById("dailyChart"), {
@@ -62,7 +79,14 @@ async function loadDailyChart(query = "") {
 
 async function loadGeofenceChart(query = "") {
 
-    const res = await fetch(`${API_BASE}/api/analytics/top-geofences?${query}`);
+    const res = await fetch(`${API_BASE}/api/analytics/top-geofences?${query}`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) {
+        const err = await res.text();
+        console.error("❌ API error:", err);
+        return;
+    }
     const data = await res.json();
     if (geoChart) geoChart.destroy();
 
@@ -77,46 +101,17 @@ async function loadGeofenceChart(query = "") {
         }
     });
 }
-async function loadDevices(query = "") {
 
-    const res = await fetch("${API_BASE}/api/traccar/devices");
-    const devices = await res.json();
-
-    const select = document.getElementById("deviceSelect");
-
-    devices.forEach(d => {
-
-        const option = document.createElement("option"); // ✅ FIRST create
-
-        const id = d.traccarId;
-        const name = d.name || d.uniqueId;
-
-        deviceMap[id] = name;
-
-        option.value = id;
-        option.text = name;
-
-        select.appendChild(option);
-    });
-}
-async function loadGeofences(query = "") {
-
-    const res = await fetch("${API_BASE}/api/geofence");
-    const geofences = await res.json();
-
-    const select = document.getElementById("geofenceSelect");
-
-    geofences.forEach(g => {
-        const option = document.createElement("option");
-        geofenceMap[g._id] = g.name;
-        option.value = g._id;
-        option.text = g.name;
-        select.appendChild(option);
-    });
-}
 async function loadDeviceChart(query = "") {
 
-    const res = await fetch(`${API_BASE}/api/analytics/device-summary?${query}`);
+    const res = await fetch(`${API_BASE}/api/analytics/device-summary?${query}`, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) {
+        const err = await res.text();
+        console.error("❌ API error:", err);
+        return;
+    }
     const data = await res.json();
 
     if (deviceChart) deviceChart.destroy();
@@ -133,19 +128,13 @@ async function loadDeviceChart(query = "") {
     });
 }
 function getFilters() {
-
-    const from = document.getElementById("fromDate").value;
-    const to = document.getElementById("toDate").value;
-    const deviceId = document.getElementById("deviceSelect").value;
-    const geofenceId = document.getElementById("geofenceSelect").value;
+    const fromEl = document.getElementById("fromDate");
+    const toEl = document.getElementById("toDate");
 
     const params = new URLSearchParams();
 
-    if (from) params.append("from", from);
-    if (to) params.append("to", to);
-    if (deviceId && deviceId !== "null" && deviceId !== "") {
-        params.append("deviceId", deviceId);
-    } if (geofenceId) params.append("geofenceId", geofenceId);
+    if (fromEl && fromEl.value) params.append("from", fromEl.value);
+    if (toEl && toEl.value) params.append("to", toEl.value);
 
     return params.toString();
 }
@@ -161,8 +150,6 @@ async function applyFilters() {
     document.body.style.opacity = 1;
 }
 async function init() {
-    await loadDevices();
-    await loadGeofences();
     await applyFilters();
 }
 async function fetchTrip() {
@@ -176,7 +163,17 @@ async function fetchTrip() {
         return;
     }
 
-    const res = await fetch(`/api/analytics/trip/${selectedDeviceId}?start=${start}&end=${end}`);
+    const res = await fetch(
+        `${API_BASE}/api/analytics/trip/${selectedDeviceId}?start=${start}&end=${end}`,
+        {
+            headers: { Authorization: `Bearer ${token}` }
+        }
+    );
+    if (!res.ok) {
+        const err = await res.text();
+        console.error("❌ API error:", err);
+        return;
+    }
     const data = await res.json();
 
     if (!data.positions || data.positions.length === 0) {
@@ -189,5 +186,5 @@ async function fetchTrip() {
 
     closeAnalyticsModal();
 }
-
+window.fetchTrip = fetchTrip;
 init();

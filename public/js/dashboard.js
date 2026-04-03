@@ -27,8 +27,6 @@ import {
     startPlayback,
     togglePlayback
 } from "./modules/playbackModule.js";
-
-
 document.addEventListener("DOMContentLoaded", () => {
     let lastPositions = {};
     let geofenceLayers = {};
@@ -797,9 +795,11 @@ document.addEventListener("DOMContentLoaded", () => {
     function openAnalytics() {
 
         localStorage.setItem("activePanel", "analytics");
+
         document.querySelectorAll(".vehicle-panel")
             .forEach(p => p.style.display = "none");
-        document.getElementById("devicePanel").style.display = "block";
+        document.querySelector(".vehicle-panel").style.display = "block";
+        document.querySelector(".header h2").innerText = "Trip Analytics";
         document.getElementById("analyticsPanel").style.display = "none";
     }
     let selectedDeviceId = null;
@@ -888,6 +888,8 @@ document.addEventListener("DOMContentLoaded", () => {
     window.closePlaybackModal = closePlaybackModal;
     window.confirmPlayback = confirmPlayback;
     window.openAnalytics = openAnalytics;
+    window.selectDeviceForAnalytics = selectDeviceForAnalytics;
+    window.closeAnalyticsModal = closeAnalyticsModal;
     initApp();
     setInterval(() => {
         console.log("🔄 Fallback refresh...");
@@ -946,29 +948,43 @@ function updateVehicleList(positions) {
         div.className = "vehicle-card";
         div.dataset.id = pos.deviceId;
 
+        // ✅ Detect mode
+        const isAnalytics = localStorage.getItem("activePanel") === "analytics";
+
+        // ✅ Create button OUTSIDE HTML
+        const actionButton = isAnalytics
+            ? `<button 
+        onclick="selectDeviceForAnalytics('${pos.deviceId}')"
+        style="background:none; border:none; color:#2563eb; cursor:pointer; font-weight:bold;">
+        📊 Trip Details
+       </button>`
+            : `<button 
+        onclick="openPlaybackModal('${pos.deviceId}')"
+        style="background:none; border:none; color:#16a34a; cursor:pointer; font-weight:bold;">
+        ▶ Playback
+       </button>`;
+
+        // ✅ NOW use inside HTML
         div.innerHTML = `
-            <div class="vehicle-header">
-                <div class="vehicle-name">
-                🚗 ${device.name || "Vehicle " + pos.deviceId}
-                </div>
+    <div class="vehicle-header">
+        <div class="vehicle-name">
+            🚗 ${device.name || "Vehicle " + pos.deviceId}
+        </div>
 
-            <div class="status-badge" style="background:${statusColor}">
+        <div class="status-badge" style="background:${statusColor}">
             ${status}
-            </div>
-            </div>
+        </div>
+    </div>
 
-            <div class="vehicle-body" style="display:flex; justify-content:space-between; align-items:center;"><div>
+    <div class="vehicle-body" style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
             <div>Speed: <b>${speed} km/h</b></div>
             <div>Last update: ${minutesAgo} min ago</div>
-            </div>
+        </div>
 
-            <!-- ▶ Playback inline -->
-            <button class="playback-btn" 
-            onclick="openPlaybackModal('${pos.deviceId}')"
-            style="background:none; border:none; color:##006400; cursor:pointer; font-weight:bold;">
-            ▶ Playback  </button>
-        `;
-
+        ${actionButton}
+    </div>
+`;
         div.onclick = async () => {
             if (localStorage.getItem("activePanel") === "analytics") {
                 selectDeviceForAnalytics(pos.deviceId);
@@ -1047,7 +1063,7 @@ async function loadDevices() {
     try {
         const devices = await apiRequest("/api/devices");
         container.innerHTML = `
-            <div class="device-header">
+            < div class="device-header" >
                 <input type="text" id="deviceSearch" placeholder="Search devices..." oninput="filterDevices()">
             </div>
 
@@ -1072,7 +1088,7 @@ async function loadDevices() {
             const row = document.createElement("tr");
 
             row.innerHTML = `
-                <td>${d.name}</td>
+            < td > ${d.name}</td >
                 <td>${d.traccarId}</td>
                 <td>${users || "-"}</td>
                                    <td>
@@ -1081,8 +1097,8 @@ async function loadDevices() {
                             <button class="icon-btn delete" onclick="deleteDevice('${d._id}')">🗑</button>
                             <button class="icon-btn unassign" onclick="unassignDevice('${d._id}')">❌</button>
                         </div> 
-                    </td> 
-                `;
+                    </td>
+        `;
 
             tbody.appendChild(row);
         });
@@ -1094,7 +1110,7 @@ async function loadDevices() {
 async function unassignDevice(deviceId) {
     const userId = document.getElementById("assignUserSelect").value;
 
-    await apiRequest(`/api/devices/${deviceId}/unassign`, {
+    await apiRequest(`/ api / devices / ${deviceId}/unassign`, {
         method: "POST",
         body: JSON.stringify({ userId })
     });
