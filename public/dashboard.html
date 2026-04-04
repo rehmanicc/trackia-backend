@@ -175,11 +175,33 @@
 
                     <div id="alertList"></div>
                 </div>
-                <div id="analyticsPanel" class="analytics-panel" style="display:none;">
-                    <div>Avg Speed: <span id="avgSpeed">0</span> km/h</div>
-                    <div>Max Speed: <span id="maxSpeed">0</span> km/h</div>
-                    <div>Stops: <span id="stops">0</span></div>
-                    <div>Fuel Used: <span id="fuel">0</span> L</div>
+                <div id="tripStatsPanel" class="trip-stats-bar" style="display:none;">
+
+                    <div class="trip-card distance">
+                        <span id="tripDistance">0</span>
+                        <p>Distance (km)</p>
+                    </div>
+
+                    <div class="trip-card avg-speed">
+                        <span id="tripAvgSpeed">0</span>
+                        <p>Avg Speed</p>
+                    </div>
+
+                    <div class="trip-card max-speed">
+                        <span id="tripMaxSpeed">0</span>
+                        <p>Max Speed</p>
+                    </div>
+
+                    <div class="trip-card stops">
+                        <span id="tripStops">0</span>
+                        <p>Stops</p>
+                    </div>
+
+                    <div class="trip-card fuel">
+                        <span id="tripFuel">0</span>
+                        <p>Fuel (L)</p>
+                    </div>
+
                 </div>
                 <!-- MAP -->
                 <div id="map" class="map-container">

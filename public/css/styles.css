@@ -549,6 +549,49 @@ body {
     background: rgba(0,0,0,0.5);
     z-index: 2000;
 }
+/* 🔥 Trip Stats Bar */
+.trip-stats-bar {
+    display: flex;
+    gap: 15px;
+    padding: 10px 15px;
+    margin: 10px 15px;
+}
+
+/* 🔥 Individual Cards */
+.trip-card {
+    flex: 1;
+    background: #fff;
+    border-radius: 10px;
+    padding: 12px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    transition: 0.2s ease;
+}
+
+.trip-card:hover {
+    transform: translateY(-2px);
+}
+
+/* 🔥 Numbers */
+.trip-card span {
+    font-size: 20px;
+    font-weight: bold;
+    display: block;
+}
+
+/* 🔥 Labels */
+.trip-card p {
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: #666;
+}
+
+/* 🎨 Colors (match your theme) */
+.trip-card.distance { border-left: 4px solid #3b82f6; }
+.trip-card.avg-speed { border-left: 4px solid #10b981; }
+.trip-card.max-speed { border-left: 4px solid #f59e0b; }
+.trip-card.stops { border-left: 4px solid #ef4444; }
+.trip-card.fuel { border-left: 4px solid #8b5cf6; }
 
 .modal-content {
     background: white;
