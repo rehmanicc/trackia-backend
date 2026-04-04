@@ -22,27 +22,49 @@ const icons = {
         iconAnchor: [20, 20]
     })
 };
-function smoothMove(marker, newLatLng, duration = 1000) {
+function isValidLatLng(lat, lng) {
+    return (
+        typeof lat === "number" &&
+        typeof lng === "number" &&
+        !isNaN(lat) &&
+        !isNaN(lng) &&
+        lat >= -90 && lat <= 90 &&
+        lng >= -180 && lng <= 180
+    );
+}
+function smoothMove(marker, target, duration = 1000) {
 
-    if (marker._animFrame) {
-        cancelAnimationFrame(marker._animFrame);
-    }
+    if (!marker || !target) return;
+
     const start = marker.getLatLng();
-    const end = L.latLng(newLatLng);
 
-    let startTime = null;
+    if (
+        !start ||
+        isNaN(start.lat) || isNaN(start.lng) ||
+        isNaN(target.lat) || isNaN(target.lng)
+    ) {
+        console.warn("⚠️ Invalid animation → fallback");
+        marker.setLatLng([target.lat, target.lng]);
+        return;
+    }
+
+    const startTime = performance.now();
 
     function animate(time) {
-        if (!startTime) startTime = time;
+        const t = Math.min((time - startTime) / duration, 1);
 
-        const progress = Math.min((time - startTime) / duration, 1);
+        const lat = start.lat + (target.lat - start.lat) * t;
+        const lng = start.lng + (target.lng - start.lng) * t;
 
-        const lat = start.lat + (end.lat - start.lat) * progress;
-        const lng = start.lng + (end.lng - start.lng) * progress;
+        // 🔥 FINAL GUARD (MOST IMPORTANT)
+        if (isNaN(lat) || isNaN(lng)) {
+            console.warn("❌ Animation NaN → stop");
+            return;
+        }
 
         marker.setLatLng([lat, lng]);
 
-        if (progress < 1) {
+        if (t < 1) {
             requestAnimationFrame(animate);
         }
     }
@@ -91,35 +113,46 @@ export function updateMarker(id, pos, device) {
 
         const marker = markers[id];
 
-        const distance = map.distance(marker.getLatLng(), [lat, lng]);
+        const prev = marker.getLatLng();
+
+        // 🔥 FULL VALIDATION (THIS IS THE KEY FIX)
+        if (
+            !prev ||
+            isNaN(prev.lat) || isNaN(prev.lng) ||
+            isNaN(lat) || isNaN(lng)
+        ) {
+            console.warn("⚠️ Invalid prev/new position → direct set");
+            marker.setLatLng([lat, lng]);
+            return;
+        }
+
+        const distance = map.distance(prev, [lat, lng]);
 
         if (distance > 500) {
             marker.setLatLng([lat, lng]);
-        } else {
-
-            const now = Date.now();
-            const last = marker._lastUpdate || now;
-
-            const duration = Math.min(now - last, 3000);
-
-            marker._lastUpdate = now;
-
-            const prev = marker.getLatLng();
-
-            const angle = Math.atan2(
-                lng - prev.lng,
-                lat - prev.lat
-            ) * (180 / Math.PI);
-
-            marker.setRotationAngle(angle);
-
-            // 🔥 EXTRA SAFETY FOR ANIMATION
-            if (!isNaN(lat) && !isNaN(lng)) {
-                smoothMove(marker, [lat, lng], duration);
-            }
+            return;
         }
 
-        marker.setIcon(icon);
+        const now = Date.now();
+        const last = marker._lastUpdate || now;
+        const duration = Math.min(now - last, 3000);
+        marker._lastUpdate = now;
+
+        // 🔥 SAFE ANGLE CALCULATION
+        const angle = Math.atan2(
+            lng - prev.lng,
+            lat - prev.lat
+        ) * (180 / Math.PI);
+
+        if (!isNaN(angle)) {
+            marker.setRotationAngle(angle);
+        }
+
+        // 🔥 SAFE ANIMATION CALL
+        smoothMove(marker, {
+            lat: lat,
+            lng: lng
+        }, duration);
     }
 
     if (!markers[id]._tooltip) {
