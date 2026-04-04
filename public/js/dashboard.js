@@ -359,10 +359,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 const id = String(pos.deviceId);
 
-                const lat = pos.latitude || pos.lat;
-                const lng = pos.longitude || pos.lon;
+                const lat = Number(pos.latitude ?? pos.lat);
+                const lng = Number(pos.longitude ?? pos.lon);
 
-                if (!lat || !lng) return;
+                if (isNaN(lat) || isNaN(lng)) {
+                    console.warn("⚠️ Invalid initial position skipped:", pos);
+                    return;
+                }
 
                 lastPositions[id] = pos;
                 updateMarker(id, pos, allowedDevices[id]);
@@ -394,10 +397,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 const id = String(pos.deviceId);
 
-                const lat = pos.latitude || pos.lat;
-                const lng = pos.longitude || pos.lon;
+                const lat = Number(pos.latitude ?? pos.lat);
+                const lng = Number(pos.longitude ?? pos.lon);
 
-                if (!lat || !lng) return;
+                if (isNaN(lat) || isNaN(lng)) {
+                    console.warn("⚠️ Invalid realtime position skipped:", pos);
+                    return;
+                }
 
                 lastPositions[id] = pos;
                 updateMarker(id, pos);
@@ -806,24 +812,24 @@ document.addEventListener("DOMContentLoaded", () => {
     let selectedDeviceId = null;
 
     function selectDeviceForAnalytics(deviceId) {
-    window.selectedDeviceId = deviceId;
+        window.selectedDeviceId = deviceId;
 
-    document.getElementById("analyticsModal").style.display = "block";
+        document.getElementById("analyticsModal").style.display = "block";
 
-    // load analytics
-    if (window.loadAnalytics) {
-        window.loadAnalytics(`deviceId=${deviceId}`);
+        // load analytics
+        if (window.loadAnalytics) {
+            window.loadAnalytics(`deviceId=${deviceId}`);
+        }
+        if (window.loadDailyChart) {
+            window.loadDailyChart(`deviceId=${deviceId}`);
+        }
+        if (window.loadGeofenceChart) {
+            window.loadGeofenceChart(`deviceId=${deviceId}`);
+        }
+        if (window.loadDeviceChart) {
+            window.loadDeviceChart(`deviceId=${deviceId}`);
+        }
     }
-    if (window.loadDailyChart) {
-        window.loadDailyChart(`deviceId=${deviceId}`);
-    }
-    if (window.loadGeofenceChart) {
-        window.loadGeofenceChart(`deviceId=${deviceId}`);
-    }
-    if (window.loadDeviceChart) {
-        window.loadDeviceChart(`deviceId=${deviceId}`);
-    }
-}
 
     function closeAnalyticsModal() {
         document.getElementById("analyticsModal").style.display = "none";

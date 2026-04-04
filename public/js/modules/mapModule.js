@@ -66,10 +66,14 @@ export function initMap() {
 
 export function updateMarker(id, pos, device) {
 
-    const lat = pos.latitude || pos.lat;
-    const lng = pos.longitude || pos.lon;
+    const lat = Number(pos.latitude ?? pos.lat);
+    const lng = Number(pos.longitude ?? pos.lon);
 
-    if (!lat || !lng) return;
+    // 🔥 FINAL PROTECTION
+    if (isNaN(lat) || isNaN(lng)) {
+        console.warn("🚫 Skipping invalid marker:", pos);
+        return;
+    }
 
     const status = device?.status || "offline";
 
@@ -100,7 +104,6 @@ export function updateMarker(id, pos, device) {
 
             marker._lastUpdate = now;
 
-            // 🔥 ADD THIS
             const prev = marker.getLatLng();
 
             const angle = Math.atan2(
@@ -110,7 +113,10 @@ export function updateMarker(id, pos, device) {
 
             marker.setRotationAngle(angle);
 
-            smoothMove(marker, [lat, lng], duration);
+            // 🔥 EXTRA SAFETY FOR ANIMATION
+            if (!isNaN(lat) && !isNaN(lng)) {
+                smoothMove(marker, [lat, lng], duration);
+            }
         }
 
         marker.setIcon(icon);
