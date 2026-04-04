@@ -3,7 +3,7 @@ let geofenceMap = {};
 let dailyChart, geoChart, deviceChart;
 const token = localStorage.getItem("token");
 const API_BASE = "https://trackia-backend.onrender.com";
-import { getMap } from "./modules/mapModule.js";
+import { getMap, drawTrip } from "./modules/mapModule.js";
 
 const map = getMap();
 async function loadAnalytics(query = "") {

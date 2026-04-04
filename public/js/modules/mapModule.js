@@ -133,7 +133,61 @@ export function updateMarker(id, pos, device) {
         markers[id].setTooltipContent(`${speed} km/h`);
     }
 }
+let tripLayer = null;
 
+export function drawTrip(positions) {
+    if (!map || !positions || positions.length === 0) return;
+
+    // 🔥 Clean previous trip
+    if (tripLayer) {
+        map.removeLayer(tripLayer);
+    }
+
+    const validPoints = positions
+        .map(p => {
+            const lat = Number(p.latitude ?? p.lat);
+            const lng = Number(p.longitude ?? p.lon);
+
+            if (isNaN(lat) || isNaN(lng)) return null;
+            return [lat, lng];
+        })
+        .filter(p => p !== null);
+
+    if (validPoints.length === 0) {
+        console.warn("⚠️ No valid trip points");
+        return;
+    }
+
+    // 🔵 Polyline
+    const polyline = L.polyline(validPoints, {
+        color: "blue",
+        weight: 4
+    });
+
+    // 🟢 Start Marker
+    const startMarker = L.marker(validPoints[0], {
+        icon: L.icon({
+            iconUrl: "https://maps.google.com/mapfiles/ms/icons/green-dot.png",
+            iconSize: [32, 32],
+            iconAnchor: [16, 32]
+        })
+    }).bindPopup("Start");
+
+    // 🔴 End Marker
+    const endMarker = L.marker(validPoints[validPoints.length - 1], {
+        icon: L.icon({
+            iconUrl: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+            iconSize: [32, 32],
+            iconAnchor: [16, 32]
+        })
+    }).bindPopup("End");
+
+    // 📦 Group
+    tripLayer = L.layerGroup([polyline, startMarker, endMarker]).addTo(map);
+
+    // 🔍 Fit bounds
+    map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
+}
 export function getMap() {
     return map;
 }
