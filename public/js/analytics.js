@@ -203,5 +203,34 @@ async function fetchTrip() {
 
     closeAnalyticsModal();
 }
+function showAnalytics(stats, mileage) {
+    if (!stats) return;
+
+    // Optional mileage input
+    const mileageValue = Number(mileage || 0);
+
+    // Convert speed from knots → km/h (if needed)
+    const avgSpeed = stats.avgSpeed ? (stats.avgSpeed * 1.852).toFixed(1) : 0;
+    const maxSpeed = stats.maxSpeed ? (stats.maxSpeed * 1.852).toFixed(1) : 0;
+
+    // Distance already in KM (your backend uses Haversine)
+    const distance = stats.distance ? stats.distance.toFixed(2) : 0;
+
+    // Fuel estimation (optional logic)
+    let fuelUsed = 0;
+    if (mileageValue > 0) {
+        fuelUsed = (distance / mileageValue).toFixed(2);
+    }
+
+    // 🎯 Update UI (make sure these IDs exist in HTML)
+    document.getElementById("tripDistance").innerText = distance + " km";
+    document.getElementById("tripAvgSpeed").innerText = avgSpeed + " km/h";
+    document.getElementById("tripMaxSpeed").innerText = maxSpeed + " km/h";
+    document.getElementById("tripStops").innerText = stats.stops || 0;
+
+    if (document.getElementById("tripFuel")) {
+        document.getElementById("tripFuel").innerText = fuelUsed + " L";
+    }
+}
 window.fetchTrip = fetchTrip;
 init();

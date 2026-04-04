@@ -2,6 +2,7 @@ let allowedDevices = {};
 let selectedVehicleId = null;
 let collapsedDevices = {};
 window.selectedDeviceId = null;
+let lastPositions = {};
 import {
     initSocket,
     onPositions,
@@ -28,8 +29,51 @@ import {
     startPlayback,
     togglePlayback
 } from "./modules/playbackModule.js";
+function switchPanel(panel) {
+
+    // Save state
+    localStorage.setItem("activePanel", panel);
+
+    // Hide everything
+    document.querySelectorAll(".vehicle-panel")
+        .forEach(p => p.style.display = "none");
+
+    // Hide analytics stats
+    const stats = document.getElementById("tripStatsPanel");
+    if (stats) stats.style.display = "none";
+
+    // Reset header
+    document.querySelector(".header h2").innerText = "";
+
+    // Switch
+    if (panel === "live") {
+        document.querySelector(".vehicle-panel").style.display = "block";
+        document.querySelector(".header h2").innerText = "Live Tracking";
+    }
+
+    if (panel === "analytics") {
+        document.querySelector(".vehicle-panel").style.display = "block";
+        document.querySelector(".header h2").innerText = "Trip Analytics";
+        if (stats) stats.style.display = "block";
+    }
+
+    if (panel === "geofence") {
+        document.getElementById("geofencePanel").style.display = "block";
+        document.querySelector(".header h2").innerText = "Geofencing";
+    }
+
+    if (panel === "alerts") {
+        document.getElementById("alertPanel").style.display = "block";
+        document.querySelector(".header h2").innerText = "Alerts";
+    }
+
+    if (panel === "devices") {
+        document.getElementById("devicePanel").style.display = "block";
+        document.querySelector(".header h2").innerText = "Devices";
+    }
+}
 document.addEventListener("DOMContentLoaded", () => {
-    let lastPositions = {};
+
     let geofenceLayers = {};
     const token = localStorage.getItem("token")
     let geofenceBBoxes = {};
@@ -207,13 +251,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function openLive() {
-        currentMode = "live";
-        localStorage.setItem("activePanel", "live");
-        document.querySelector(".header h2").innerText = "Live Tracking";
-
-        document.querySelectorAll(".vehicle-panel").forEach(p => p.style.display = "none");
-        document.querySelector(".vehicle-panel").style.display = "block";
-        map.removeControl(drawControl); // disable drawing
+        switchPanel("live");
+        updateVehicleList(Object.values(lastPositions));
     }
     function renderGeofenceList() {
         const container = document.getElementById("geofenceList");
@@ -418,13 +457,24 @@ document.addEventListener("DOMContentLoaded", () => {
             updateGeofenceVisual(geofenceId, type);
         });
 
-        const savedPanel = localStorage.getItem("activePanel");
+        const savedPanel = localStorage.getItem("activePanel") || "live";
 
-        if (savedPanel === "geofence") openGeofence();
-        else if (savedPanel === "alerts") openAlerts();
-        else if (savedPanel === "devices") openDevices();
-        if (savedPanel === "analytics") openAnalytics();
-        else openLive(); // default
+        switch (savedPanel) {
+            case "geofence":
+                openGeofence();
+                break;
+            case "alerts":
+                openAlerts();
+                break;
+            case "devices":
+                openDevices();
+                break;
+            case "analytics":
+                openAnalytics();
+                break;
+            default:
+                openLive();
+        } // default
     }
 
 
@@ -800,14 +850,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
     function openAnalytics() {
-
-        localStorage.setItem("activePanel", "analytics");
-
-        document.querySelectorAll(".vehicle-panel")
-            .forEach(p => p.style.display = "none");
-        document.querySelector(".vehicle-panel").style.display = "block";
-        document.querySelector(".header h2").innerText = "Trip Analytics";
-        document.getElementById("analyticsPanel").style.display = "none";
+        switchPanel("analytics");
+        updateVehicleList(Object.values(lastPositions));
     }
     let selectedDeviceId = null;
 
@@ -815,7 +859,6 @@ document.addEventListener("DOMContentLoaded", () => {
         window.selectedDeviceId = deviceId;
 
         document.getElementById("analyticsModal").style.display = "block";
-
         // load analytics
         if (window.loadAnalytics) {
             window.loadAnalytics(`deviceId=${deviceId}`);
@@ -928,14 +971,16 @@ const endInput = document.getElementById("endTime");
 
 if (startInput && endInput) {
 
-    startInput.addEventListener("change", () => {
-        setTimeout(() => {
-            startInput.blur(); // close picker
+    if (startInput && endInput) {
 
-            // move to end time automatically
-            endInput.focus();
-        }, 100);
-    });
+        startInput.addEventListener("change", () => {
+            endInput.showPicker?.(); // 🔥 opens next picker (modern browsers)
+        });
+
+        endInput.addEventListener("change", () => {
+            document.activeElement.blur(); // close cleanly
+        });
+    }
 
     endInput.addEventListener("change", () => {
         setTimeout(() => {
@@ -991,8 +1036,8 @@ function updateVehicleList(positions) {
         div.dataset.id = pos.deviceId;
 
         // ✅ Detect mode
-        const isAnalytics = localStorage.getItem("activePanel") === "analytics";
-
+        const activePanel = localStorage.getItem("activePanel") || "live";
+        const isAnalytics = activePanel === "analytics";
         // ✅ Create button OUTSIDE HTML
         const actionButton = isAnalytics
             ? `<button 
