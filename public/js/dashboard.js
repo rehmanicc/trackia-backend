@@ -1,6 +1,7 @@
 let allowedDevices = {};
 let selectedVehicleId = null;
 let collapsedDevices = {};
+window.selectedDeviceId = null;
 import {
     initSocket,
     onPositions,
@@ -805,10 +806,24 @@ document.addEventListener("DOMContentLoaded", () => {
     let selectedDeviceId = null;
 
     function selectDeviceForAnalytics(deviceId) {
-        selectedDeviceId = deviceId;
+    window.selectedDeviceId = deviceId;
 
-        document.getElementById("analyticsModal").style.display = "block";
+    document.getElementById("analyticsModal").style.display = "block";
+
+    // load analytics
+    if (window.loadAnalytics) {
+        window.loadAnalytics(`deviceId=${deviceId}`);
     }
+    if (window.loadDailyChart) {
+        window.loadDailyChart(`deviceId=${deviceId}`);
+    }
+    if (window.loadGeofenceChart) {
+        window.loadGeofenceChart(`deviceId=${deviceId}`);
+    }
+    if (window.loadDeviceChart) {
+        window.loadDeviceChart(`deviceId=${deviceId}`);
+    }
+}
 
     function closeAnalyticsModal() {
         document.getElementById("analyticsModal").style.display = "none";
@@ -901,6 +916,27 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }, 30000);
 });
+// 🔥 DATETIME UX IMPROVEMENT
+const startInput = document.getElementById("startTime");
+const endInput = document.getElementById("endTime");
+
+if (startInput && endInput) {
+
+    startInput.addEventListener("change", () => {
+        setTimeout(() => {
+            startInput.blur(); // close picker
+
+            // move to end time automatically
+            endInput.focus();
+        }, 100);
+    });
+
+    endInput.addEventListener("change", () => {
+        setTimeout(() => {
+            endInput.blur(); // close picker
+        }, 100);
+    });
+}
 function updateVehicleList(positions) {
 
     const container = document.getElementById("vehicleList");

@@ -20,9 +20,18 @@ async function loadAnalytics(query = "") {
     }
     const data = await res.json();
 
-    document.getElementById("totalVisits").innerText = data.totalVisits;
-    document.getElementById("totalTime").innerText = data.totalTimeMinutes;
+    const totalVisitsEl = document.getElementById("totalVisits");
+    const totalTimeEl = document.getElementById("totalTime");
     const tbody = document.querySelector("#sessionTable tbody");
+
+    if (!totalVisitsEl || !totalTimeEl || !tbody) {
+        console.warn("⚠️ Analytics UI not ready, skipping render");
+        return;
+    }
+
+    totalVisitsEl.innerText = data.totalVisits;
+    totalTimeEl.innerText = data.totalTimeMinutes;
+
     tbody.innerHTML = "";
 
     data.sessions.forEach(s => {
@@ -144,15 +153,23 @@ async function applyFilters() {
     document.body.style.opacity = 0.5;
 
     await loadAnalytics(query);
-    await loadDailyChart(query);
-    await loadGeofenceChart(query);
-    await loadDeviceChart(query);
+    if (typeof Chart !== "undefined") {
+        await loadDailyChart(query);
+        await loadGeofenceChart(query);
+        await loadDeviceChart(query);
+    } else {
+        console.warn("⚠️ Chart.js not loaded yet");
+    }
     document.body.style.opacity = 1;
 }
 async function init() {
-    await applyFilters();
+    console.log("✅ Analytics module ready");
 }
 async function fetchTrip() {
+    if (!window.selectedDeviceId) {
+        alert("Please select a vehicle first");
+        return;
+    }
 
     const start = document.getElementById("startTime").value;
     const end = document.getElementById("endTime").value;
@@ -164,7 +181,7 @@ async function fetchTrip() {
     }
 
     const res = await fetch(
-        `${API_BASE}/api/analytics/trip/${selectedDeviceId}?start=${start}&end=${end}`,
+        `${API_BASE}/api/analytics/trip/${window.selectedDeviceId}?start=${start}&end=${end}`,
         {
             headers: { Authorization: `Bearer ${token}` }
         }
