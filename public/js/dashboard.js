@@ -36,7 +36,14 @@ function switchPanel(panel) {
 
     // Hide everything
     document.querySelectorAll(".vehicle-panel")
-        .forEach(p => p.style.display = "none");
+        .forEach(p => {
+            p.style.display = "none";
+            p.style.width = "";           // 🔥 reset width
+        });
+
+    // 🔥 Reset map (IMPORTANT)
+    const map = document.getElementById("map");
+    map.style.display = "block";
 
     // Hide analytics stats
     const stats = document.getElementById("tripStatsPanel");
@@ -45,16 +52,22 @@ function switchPanel(panel) {
     // Reset header
     document.querySelector(".header h2").innerText = "";
 
-    // Switch
+    // ===== SWITCH =====
+
     if (panel === "live") {
-        document.querySelector(".vehicle-panel").style.display = "block";
+        document.getElementById("vehicleList")
+            .closest(".vehicle-panel").style.display = "block";
+
         document.querySelector(".header h2").innerText = "Live Tracking";
     }
 
     if (panel === "analytics") {
-        document.querySelector(".vehicle-panel").style.display = "block";
+        document.getElementById("vehicleList")
+            .closest(".vehicle-panel").style.display = "block";   // ✅ FIXED
+
         document.querySelector(".header h2").innerText = "Trip Analytics";
-        if (stats) stats.style.display = "block";
+
+        if (stats) stats.style.display = "flex";                  // ✅ keep flex
     }
 
     if (panel === "geofence") {
@@ -68,7 +81,13 @@ function switchPanel(panel) {
     }
 
     if (panel === "devices") {
-        document.getElementById("devicePanel").style.display = "block";
+        const devicePanel = document.getElementById("devicePanel");
+
+        devicePanel.style.display = "block";
+        devicePanel.style.width = "100%";   // 🔥 FULL WIDTH
+
+        map.style.display = "none";         // 🔥 HIDE MAP
+
         document.querySelector(".header h2").innerText = "Devices";
     }
 }
@@ -1139,8 +1158,20 @@ function focusOnVehicle(id) {
 }
 function openDevices() {
     localStorage.setItem("activePanel", "devices");
-    document.querySelectorAll(".vehicle-panel").forEach(p => p.style.display = "none");
-    document.getElementById("devicePanel").style.display = "block";
+
+    
+    document.querySelectorAll(".vehicle-panel")
+        .forEach(p => p.style.display = "none");
+
+        document.getElementById("devicePanel").style.display = "block";
+
+        const map = document.getElementById("map");
+    if (map) map.style.display = "block";
+    
+    const stats = document.getElementById("tripStatsPanel");
+    if (stats) stats.style.display = "none";
+    
+    document.querySelector(".header h2").innerText = "Devices";
 
     loadDevices();
 }
@@ -1150,22 +1181,22 @@ async function loadDevices() {
     try {
         const devices = await apiRequest("/api/devices");
         container.innerHTML = `
-            < div class="device-header" >
-                <input type="text" id="deviceSearch" placeholder="Search devices..." oninput="filterDevices()">
-            </div>
+    <div class="device-header">
+        <input type="text" id="deviceSearch" placeholder="Search devices..." oninput="filterDevices()">
+    </div>
 
-            <table class="device-table">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Traccar ID</th>
-                        <th>Assigned Users</th>
-                        <th>Actions</th>
-                    </tr>                   
-                </thead>
-                <tbody id="deviceTableBody"></tbody>
-            </table>
-        `;
+    <table class="device-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Traccar ID</th>
+                <th>Assigned Users</th>
+                <th>Actions</th>
+            </tr>                   
+        </thead>
+        <tbody id="deviceTableBody"></tbody>
+    </table>
+`;
 
         const tbody = document.getElementById("deviceTableBody");
 
@@ -1175,17 +1206,17 @@ async function loadDevices() {
             const row = document.createElement("tr");
 
             row.innerHTML = `
-            < td > ${d.name}</td >
-                <td>${d.traccarId}</td>
-                <td>${users || "-"}</td>
-                                   <td>
-                        <div class="action-buttons">
-                            <button class="icon-btn assign" onclick="openAssign('${d._id}')">👤</button>
-                            <button class="icon-btn delete" onclick="deleteDevice('${d._id}')">🗑</button>
-                            <button class="icon-btn unassign" onclick="unassignDevice('${d._id}')">❌</button>
-                        </div> 
-                    </td>
-        `;
+    <td>${d.name}</td>
+    <td>${d.traccarId}</td>
+    <td>${users || "-"}</td>
+    <td>
+        <div class="action-buttons">
+            <button class="icon-btn assign" onclick="openAssign('${d._id}')">👤</button>
+            <button class="icon-btn delete" onclick="deleteDevice('${d._id}')">🗑</button>
+            <button class="icon-btn unassign" onclick="unassignDevice('${d._id}')">❌</button>
+        </div> 
+    </td>
+`;
 
             tbody.appendChild(row);
         });
