@@ -10,7 +10,8 @@ import {
     onAlert,
     getSocket
 } from "./services/socketService.js";
-
+import { getState, setState, subscribe } from "./state/uiState.js";
+import { createVehicleCard } from "./components/vehicleCard.js";
 import { apiRequest } from "./services/apiService.js";
 
 import {
@@ -200,11 +201,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     function openGeofence() {
         currentMode = "geofence";
-        localStorage.setItem("activePanel", "geofence");
-        document.querySelector(".header h2").innerText = "Geofencing";
-        document.querySelectorAll(".vehicle-panel")
-            .forEach(p => p.classList.remove("active"));
-        document.getElementById("geofencePanel").classList.add("active");
+        setState({ activePanel: "geofence", mode: "geofence" }); document.querySelector(".header h2").innerText = "Geofencing";
         map.addControl(drawControl);
     }
 
@@ -220,14 +217,9 @@ document.addEventListener("DOMContentLoaded", () => {
             );
             // 🚗 Device header
             const vehicleDiv = document.createElement("div");
-            vehicleDiv.style.fontWeight = "bold";
-            vehicleDiv.style.marginTop = "10px";
-            vehicleDiv.style.cursor = "pointer"; // 👈 important
-            vehicleDiv.style.fontWeight = "bold";
-            vehicleDiv.style.marginTop = "10px";
-            vehicleDiv.style.cursor = "pointer"; // 👈 important
+            vehicleDiv.className = "geo-device";
             vehicleDiv.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div class="flex-between">
                     <span>🚗 ${device.name || "Vehicle " + deviceId}</span>
                     <button class="add-geo-btn">+ Add</button>
                 </div>
@@ -255,18 +247,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
             if (String(deviceId) === String(selectedVehicleId)) {
-                vehicleDiv.style.background = "#e6f0ff";
-                vehicleDiv.style.padding = "5px";
-                vehicleDiv.style.borderRadius = "5px";
+                vehicleDiv.classList.add("active");
             }
             if (collapsedDevices[deviceId]) {
                 return;
             }
             if (deviceGeofences.length === 0) {
                 const empty = document.createElement("div");
-                empty.style.color = "#888";
-                empty.style.fontSize = "12px";
-                empty.style.marginBottom = "8px";
+                empty.className = "geo-empty";
                 empty.innerText = "No geofences";
                 container.appendChild(empty);
                 return;
@@ -411,13 +399,9 @@ document.addEventListener("DOMContentLoaded", () => {
             updateGeofenceVisual(geofenceId, type);
         });
 
-        const savedPanel = localStorage.getItem("activePanel") || "live";
-
-        switchPanel(savedPanel);
+        const savedPanel = getState().activePanel;
+        setState({ activePanel: savedPanel });
     }
-
-
-
 
     // ROUTE HISTORY
     async function showRoute() {
@@ -946,13 +930,12 @@ function updateVehicleList(positions) {
         const status = device?.status || "offline";
         const speed = Math.round((pos.speed || 0) * 1.852);
 
-        let statusColor = {
-            online: "#10b981",
-            offline: "#ef4444",
-            unknown: "#6b7280"
-        }[status] || "#6b7280";
+        let statusClass = {
+            online: "status-online",
+            offline: "status-offline",
+            unknown: "status-unknown"
+        }[status] || "status-unknown";
 
-        // ✅ COUNTING
         counts[status]++;
 
         // 🔍 FILTERS
@@ -967,8 +950,7 @@ function updateVehicleList(positions) {
         div.className = "vehicle-card";
         div.dataset.id = pos.deviceId;
 
-        // ✅ Detect mode
-        const activePanel = localStorage.getItem("activePanel") || "live";
+        const activePanel = getState().activePanel;
         const isAnalytics = activePanel === "analytics";
         // ✅ Create button OUTSIDE HTML
         const actionButton = isAnalytics
@@ -983,28 +965,14 @@ function updateVehicleList(positions) {
             </button>`;
 
         // ✅ NOW use inside HTML
-        div.innerHTML = `
-    <div class="vehicle-header">
-        <div class="vehicle-name">
-            🚗 ${device.name || "Vehicle " + pos.deviceId}
-        </div>
-
-        <div class="status-badge" style="background:${statusColor}">
-            ${status}
-        </div>
-    </div>
-
-    <div class="vehicle-body">
-        <div>
-            <div>Speed: <b>${speed} km/h</b></div>
-            <div>Last update: ${minutesAgo} min ago</div>
-        </div>
-
-        ${actionButton}
-    </div>
-`;
+        div.innerHTML = createVehicleCard({
+            pos,
+            device,
+            isAnalytics,
+            statusClass
+        });
         div.onclick = async () => {
-            if (localStorage.getItem("activePanel") === "analytics") {
+            if (getState().activePanel === "analytics") {
                 selectDeviceForAnalytics(pos.deviceId);
                 return;
             }
@@ -1069,9 +1037,6 @@ function focusOnVehicle(id) {
     marker.openPopup?.();
 }
 function switchPanel(panel) {
-
-    // Save state
-    localStorage.setItem("activePanel", panel);
 
     // Reset all panels
     document.querySelectorAll(".vehicle-panel")

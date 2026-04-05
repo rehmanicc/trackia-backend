@@ -686,3 +686,41 @@ body {
     justify-content: space-between;
     align-items: center;
 }
+/* 🔥 STATUS COLORS (Step 3) */
+.status-online {
+    background: #10b981;
+}
+
+.status-offline {
+    background: #ef4444;
+}
+
+.status-unknown {
+    background: #6b7280;
+}
+/* 🔥 GEOFENCE LIST UI */
+.geo-device {
+    font-weight: bold;
+    margin-top: 10px;
+    cursor: pointer;
+}
+
+.geo-device.active {
+    background: #e6f0ff;
+    padding: 5px;
+    border-radius: 5px;
+}
+
+/* 🔥 GEOFENCE EMPTY TEXT */
+.geo-empty {
+    color: #888;
+    font-size: 12px;
+    margin-bottom: 8px;
+}
+
+/* 🔥 FLEX UTIL (reuse everywhere) */
+.flex-between {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
