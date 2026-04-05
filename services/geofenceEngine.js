@@ -137,16 +137,17 @@ async function emitEvent(io, deviceId, geofenceId, type, position) {
         position
     };
 
-    await saveGeofenceEvent(event);
+    const saved = await saveGeofenceEvent(event);
+
+    
+    if (!saved) return;
+
     await createAlert({
         deviceId,
         type: type === "enter" ? "GEOFENCE_ENTER" : "GEOFENCE_EXIT",
         message: `Vehicle ${deviceId} ${type.toUpperCase()} geofence`,
-        metadata: {
-            geofenceId
-        }
+        metadata: { geofenceId }
     }, io);
-    // ✅ 4. KEEP OLD EVENT (ONLY FOR UI VISUAL)
     io.emit("geofenceEvent", {
         deviceId,
         geofenceId,
