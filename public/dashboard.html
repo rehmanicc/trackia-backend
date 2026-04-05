@@ -37,10 +37,7 @@
                     <li onclick="setActiveMenu(this); switchPanel('users')">⚙️ User Rights</li>
                 </ul>
             </nav>
-
-            <div class="user">
-                <button onclick="logout()">Logout</button>
-            </div>
+           
         </aside>
 
 
@@ -54,8 +51,25 @@
                     <p>Real-time fleet monitoring</p>
                 </div>
 
-                <div class="status">
-                    🟢 Live Updates Active
+                <div id="authSection" style="display:flex; align-items:center; gap:10px;">
+
+                    <!-- LOGIN FORM -->
+                    <div id="loginSection">
+                        <input id="loginEmail" placeholder="Login ID" style="width:120px;">
+                        <input id="loginPassword" type="password" placeholder="Password" style="width:120px;">
+                        <button onclick="handleLogin()" class="btn btn-primary">
+                            Login
+                        </button>
+                    </div>
+
+                    <!-- LOGGED IN -->
+                    <div id="loggedInSection" style="display:none; align-items:center; gap:10px;">
+                        <span>🟢 Live Updates Active</span>
+                        <button onclick="logout()" class="btn btn-logout">
+                            Logout
+                        </button>
+                    </div>
+
                 </div>
             </header>
 

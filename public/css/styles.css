@@ -753,3 +753,41 @@ body {
   grid-template-columns: repeat(3, 1fr);
   gap: 5px;
 }
+/* 🔘 BUTTON BASE */
+.btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+/*LOGOUT BUTTON section */
+.btn-logout {
+  background: #ff4d4d;
+  color: white;
+}
+
+.btn-logout:hover {
+  background: #e60000;
+}
+
+/* 🔵 PRIMARY BUTTON */
+.btn-primary {
+  background: #007bff;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #0056b3;
+}
+
+
+.btn-success {
+  background: #28a745;
+  color: white;
+}
+
+.btn-success:hover {
+  background: #1e7e34;
+}

@@ -51,10 +51,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
+    const loginSection = document.getElementById("loginSection");
+    const loggedInSection = document.getElementById("loggedInSection");
+
     if (!token) {
-        alert("Please login first");
-        window.location.href = "login.html";
+
+        loginSection.style.display = "flex";
+        loggedInSection.style.display = "none";
         return;
+    } else {
+        // ✅ User logged in
+        loginSection.style.display = "none";
+        loggedInSection.style.display = "flex";
     }
 
     let payload = null;
@@ -108,8 +116,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function logout() {
-        localStorage.removeItem("token")
-        window.location.href = "login.html"
+        localStorage.removeItem("token");
+        document.getElementById("loginSection").style.display = "flex";
+        document.getElementById("loggedInSection").style.display = "none";
+        location.reload();
     }
     const startIcon = L.icon({
         iconUrl: "https://maps.google.com/mapfiles/ms/icons/green-dot.png",
