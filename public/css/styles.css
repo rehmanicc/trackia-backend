@@ -741,3 +741,15 @@ body {
 .alert-card.read {
     opacity: 0.6;
 }
+.user-permission-card {
+  border: 1px solid #ccc;
+  padding: 10px;
+  margin-bottom: 10px;
+  background: #fff;
+}
+
+.permission-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+}

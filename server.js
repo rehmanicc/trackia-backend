@@ -64,7 +64,7 @@ const geofenceRoutes = require("./routes/geofence");
 const tripRoutes = require("./routes/trips");
 const analyticsRoutes = require("./routes/analyticsRoutes");
 const alertRoutes = require("./routes/alertRoutes");
-
+const userRoutes = require("./routes/user");
 app.use("/api/auth", authRoutes);
 app.use("/api/geofence", geofenceRoutes);
 app.use("/api/trips", tripRoutes);

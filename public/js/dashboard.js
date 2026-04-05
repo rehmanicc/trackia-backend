@@ -3,6 +3,17 @@ let selectedVehicleId = null;
 let collapsedDevices = {};
 window.selectedDeviceId = null;
 let lastPositions = {};
+const ALL_PERMISSIONS = [
+    "VIEW_DEVICE",
+    "SEND_COMMAND",
+    "EDIT_DEVICE",
+    "EDIT_SPEED",
+    "EDIT_FUEL",
+    "GEOFENCE_VIEW",
+    "GEOFENCE_CREATE",
+    "GEOFENCE_EDIT",
+    "GEOFENCE_DELETE"
+];
 import {
     initSocket,
     onPositions,
@@ -13,7 +24,7 @@ import {
 import { getState, setState, subscribe } from "./state/uiState.js";
 import { createVehicleCard } from "./components/vehicleCard.js";
 import { apiRequest } from "./services/apiService.js";
-
+import { hasPermission } from "./components/permissions.js";
 import {
     initMap,
     updateMarker,
@@ -1097,6 +1108,18 @@ function switchPanel(panel) {
 
         loadInitialAlerts(); // 🔥 moved here
     }
+    if (panel === "users") {
+        const map = document.getElementById("map");
+        if (map) map.style.display = "none";
+        const stats = document.querySelector(".stats-bar");
+        if (stats) stats.style.display = "none";
+
+        const tripStats = document.getElementById("tripStatsPanel");
+        if (tripStats) tripStats.style.display = "none";
+        document.getElementById("userPanel").classList.add("active");
+        document.querySelector(".header h2").innerText = "User Rights";
+        loadUserPermissions();
+    }
 }
 
 async function loadDevices() {
@@ -1246,4 +1269,60 @@ async function submitAssign() {
 function setActiveMenu(element) {
     document.querySelectorAll(".sidebar li").forEach(li => li.classList.remove("active"));
     element.classList.add("active");
+}
+let permissionChanges = {};
+async function loadUserPermissions() {
+
+    const users = await apiRequest("/api/users");
+
+    const container = document.getElementById("userPermissionList");
+    container.innerHTML = "";
+
+    users.forEach(user => {
+
+        const div = document.createElement("div");
+        div.className = "user-permission-card";
+
+        div.innerHTML = `
+      <h4>${user.name} (${user.role})</h4>
+      <div class="permission-grid">
+        ${ALL_PERMISSIONS.map(p => `
+          <label>
+            <input type="checkbox"
+              ${user.permissions.includes(p) ? "checked" : ""}
+              onchange="togglePermission('${user._id}', '${p}', this.checked)">
+            ${p}
+          </label>
+        `).join("")}
+      </div>
+      <button onclick="savePermissions('${user._id}')">Save</button>
+    `;
+
+        container.appendChild(div);
+    });
+}
+function togglePermission(userId, permission, isChecked) {
+
+    if (!permissionChanges[userId]) {
+        permissionChanges[userId] = new Set();
+    }
+
+    if (isChecked) {
+        permissionChanges[userId].add(permission);
+    } else {
+        permissionChanges[userId].delete(permission);
+    }
+}
+async function savePermissions(userId) {
+
+    const perms = Array.from(permissionChanges[userId] || []);
+
+    await apiRequest(`/api/auth/permissions/${userId}`, {
+        method: "PUT",
+        body: JSON.stringify({ permissions: perms })
+    });
+
+    alert("Permissions updated");
+
+    loadUserPermissions(); // reload UI
 }

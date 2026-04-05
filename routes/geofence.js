@@ -2,11 +2,15 @@ const express = require("express");
 const router = express.Router();
 const Geofence = require("../models/Geofence");
 const authMiddleware = require("../middleware/authMiddleware");
-
+const checkPermission = require("../middleware/checkPermission");
+const PERMISSIONS = require("../config/permissions");
 // ======================
 // GET GEOFENCES (PER USER + DEVICE)
 // ======================
-router.get("/", authMiddleware, async (req, res) => {
+router.get("/",
+  authMiddleware,
+  checkPermission(PERMISSIONS.GEOFENCE_VIEW),
+  async (req, res) => {
   try {
     const { deviceId } = req.query;
 
@@ -32,7 +36,10 @@ router.get("/", authMiddleware, async (req, res) => {
 // ======================
 // UPDATE GEOFENCE NAME
 // ======================
-router.put("/:id", authMiddleware, async (req, res) => {
+router.put("/:id",
+  authMiddleware,
+  checkPermission(PERMISSIONS.GEOFENCE_EDIT),
+  async (req, res) => {
 
   const { name } = req.body;
 
@@ -50,8 +57,10 @@ router.put("/:id", authMiddleware, async (req, res) => {
 // ======================
 // CREATE GEOFENCE
 // ======================
-router.post("/", authMiddleware, async (req, res) => {
-
+router.post("/",
+  authMiddleware,
+  checkPermission(PERMISSIONS.GEOFENCE_CREATE),
+  async (req, res) => {
   const userId = req.user.id;
   const deviceId = req.body.deviceId;
 
@@ -90,7 +99,10 @@ router.post("/", authMiddleware, async (req, res) => {
 // ======================
 // DELETE GEOFENCE
 // ======================
-router.delete("/:id", authMiddleware, async (req, res) => {
+router.delete("/:id",
+  authMiddleware,
+  checkPermission(PERMISSIONS.GEOFENCE_DELETE),
+  async (req, res) => {
 
   await Geofence.deleteOne({
     _id: req.params.id,

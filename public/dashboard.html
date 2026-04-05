@@ -34,7 +34,7 @@
                     <li onclick="setActiveMenu(this); switchPanel('devices')">📦 Device Management</li>
                     <li onclick="setActiveMenu(this); switchPanel('geofence')">📍 Geofencing</li>
                     <li onclick="setActiveMenu(this); switchPanel('alerts')"> 🚨 Alerts</li>
-                    <li>⚙️ Settings</li>
+                    <li onclick="setActiveMenu(this); switchPanel('users')">⚙️ User Rights</li>
                 </ul>
             </nav>
 
@@ -143,6 +143,13 @@
                     </div>
 
                     <div id="geofenceList"></div>
+
+                </div>
+                <div id="userPanel" class="vehicle-panel">
+
+                    <h3 style="padding:10px;">👤 User Permissions</h3>
+
+                    <div id="userPermissionList" style="padding:10px;"></div>
 
                 </div>
                 <div id="modalOverlay"></div>
