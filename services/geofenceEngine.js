@@ -4,7 +4,19 @@ const { saveGeofenceEvent } = require("./geofenceEventService");
 const { createAlert } = require("./alert/alertService");
 const { detectAlerts } = require("./alert/alertRules");
 let vehicleStates = {};
+const GeofenceEvent = require("../models/GeofenceEvent");
 
+async function getLastState(deviceId, geofenceId) {
+
+    const lastEvent = await GeofenceEvent.findOne({
+        deviceId,
+        geofenceId
+    }).sort({ timestamp: -1 });
+
+    if (!lastEvent) return false;
+
+    return lastEvent.type === "ENTER";
+}
 // MAIN ENGINE
 async function processPosition(position, io) {
     console.log("📍 Processing position:", position.deviceId, position.latitude, position.longitude);
@@ -73,12 +85,21 @@ async function processPosition(position, io) {
         }
 
         if (!vehicleStates[deviceId][geofenceId]) {
+
+            const lastInside = await getLastState(deviceId, geofenceId);
+
             vehicleStates[deviceId][geofenceId] = {
-                inside: false,
+                inside: lastInside,
                 lastUpdate: Date.now(),
                 enterCount: 0,
                 exitCount: 0
             };
+
+            console.log("♻️ Restored state:", {
+                deviceId,
+                geofenceId,
+                inside: lastInside
+            });
         }
 
         const state = vehicleStates[deviceId][geofenceId];
@@ -139,7 +160,7 @@ async function emitEvent(io, deviceId, geofenceId, type, position) {
 
     const saved = await saveGeofenceEvent(event);
 
-    
+
     if (!saved) return;
 
     await createAlert({
