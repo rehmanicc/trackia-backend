@@ -55,7 +55,6 @@ exports.getPositions = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
 //get routs
 exports.getRoute = async (req, res) => {
   try {

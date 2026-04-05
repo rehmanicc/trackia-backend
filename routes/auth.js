@@ -99,4 +99,21 @@ router.post("/login", async (req, res) => {
 
 });
 
+router.put("/permissions/:userId", authMiddleware, async (req, res) => {
+  const { permissions } = req.body;
+
+  // only admin allowed
+  if (req.user.role !== "admin") {
+    return res.status(403).json({ error: "Only admin allowed" });
+  }
+
+  const user = await User.findById(req.params.userId);
+
+  if (!user) return res.status(404).json({ error: "User not found" });
+
+  user.permissions = permissions;
+  await user.save();
+
+  res.json({ message: "Permissions updated", user });
+});
 module.exports = router;

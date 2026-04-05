@@ -16,10 +16,13 @@ type: String,
 enum: ["owner","admin","user"],
 default: "user"
 },
-
 companyId: {
 type: mongoose.Schema.Types.ObjectId,
 ref: "Company"
+},
+permissions: {
+  type: [String],
+  default: []
 }
 
 });

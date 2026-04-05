@@ -13,6 +13,10 @@ const authMiddleware = require("../middleware/authMiddleware");
 // ======================
 // ASSIGN DEVICE TO USER
 // ======================
+const checkPermission = require("../middleware/checkPermission");
+const PERMISSIONS = require("../config/permissions");
+
+
 router.post("/assign-device", authMiddleware, async (req, res) => {
 
     if (req.user.role !== "admin") {
@@ -59,23 +63,23 @@ console.log("Traccar routes loaded");
 // ======================
 router.get("/positions", authMiddleware, getPositions);
 
-
 // ======================
 // ROUTE HISTORY
 // ======================
 router.get("/route", authMiddleware, getRoute);
-
 
 // ======================
 // TRIPS
 // ======================
 router.get("/trips", authMiddleware, getTrips);
 
-
 // ======================
 // COMMAND
 // ======================
-router.post("/command", authMiddleware, sendCommand);
-
+router.post("/command",
+    authMiddleware,
+    checkPermission(PERMISSIONS.SEND_COMMAND),
+    sendCommand
+);
 
 module.exports = router;
