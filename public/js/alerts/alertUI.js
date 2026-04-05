@@ -26,13 +26,12 @@ function renderAlerts(alerts = []) {
             div.style.background = "#fff3cd";
         }
 
-        div.className = "alert-card " + (a.read ? "read" : "unread");
-
-        div.innerHTML = `
-    ${a.message}<br>
-    <small>${new Date(a.timestamp).toLocaleTimeString()}</small>
-    <button onclick="markAlertRead('${a.timestamp}')">✔</button>
-`;
+        div.className = "alert-card " + (a.read === true ? "read" : "unread");
+            div.innerHTML = `
+            ${a.message}<br>
+            <small>${new Date(a.timestamp).toLocaleTimeString()}</small>
+        `;
+        div.onclick = () => markAlertRead(a.timestamp);
 
         container.appendChild(div);
     });

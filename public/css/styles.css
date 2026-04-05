@@ -724,3 +724,20 @@ body {
     justify-content: space-between;
     align-items: center;
 }
+.alert-card {
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.alert-card:hover {
+    transform: scale(1.01);
+}
+
+.alert-card.unread {
+    border-left: 4px solid #28a745;
+    background: #e9f7ef;
+}
+
+.alert-card.read {
+    opacity: 0.6;
+}
