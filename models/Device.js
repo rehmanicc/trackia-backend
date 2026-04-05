@@ -19,7 +19,14 @@ const deviceSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "User"
     },
-
+    speedLimit: {
+        type: Number,
+        default: 70
+    },
+    fuelEfficiency: {
+        type: Number,
+        default: 12
+    },
     assignedTo: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: "User"

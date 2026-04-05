@@ -706,6 +706,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("sumSpeed").innerText = avgSpeed.toFixed(1);
         document.getElementById("sumStops").innerText = totalStops;
         document.getElementById("sumIdle").innerText = idleTime.toFixed(1);
+        document.getElementById("sumFuel").innerText = fuelUsed.toFixed(2);
     }
     async function fetchAllowedDevices() {
         try {

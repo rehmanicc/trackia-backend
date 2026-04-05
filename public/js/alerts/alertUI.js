@@ -25,9 +25,12 @@ function renderAlerts(alerts = []) {
         else if (a.type.includes("ENGINE_OFF")) {
             div.style.background = "#fff3cd";
         }
+        else if (a.type.includes("OVERSPEED")) {
+            div.style.background = "#f5c6cb"; // light red
+        }
 
         div.className = "alert-card " + (a.read === true ? "read" : "unread");
-            div.innerHTML = `
+        div.innerHTML = `
             ${a.message}<br>
             <small>${new Date(a.timestamp).toLocaleTimeString()}</small>
         `;

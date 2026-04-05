@@ -1,7 +1,7 @@
 // controllers/analyticsController.js
 
 const analyticsService = require("../services/analyticsService");
-
+const Device = require("../models/Device");
 exports.getReport = async (req, res) => {
 
     try {
@@ -110,7 +110,10 @@ exports.getTripAnalytics = async (req, res) => {
         if (!positions.length) {
             return res.json({ positions: [], stats: {} });
         }
-
+        const device = await Device.findOne(
+            { traccarId: Number(deviceId) },
+            { fuelEfficiency: 1 }
+        );
         let totalDistance = 0;
         let maxSpeed = 0;
         let stops = 0;
@@ -142,14 +145,21 @@ exports.getTripAnalytics = async (req, res) => {
             (new Date(end) - new Date(start)) / (1000 * 60 * 60);
 
         const avgSpeed = totalDistance / (timeHours || 1);
+        const fuelEfficiency = device?.fuelEfficiency || 12;
 
+        const fuelUsed =
+            fuelEfficiency > 0
+                ? totalDistance / fuelEfficiency
+                : 0;
         res.json({
             positions,
             stats: {
                 distance: totalDistance,
                 avgSpeed,
                 maxSpeed,
-                stops
+                stops,
+                fuelUsed,
+                fuelEfficiency
             }
         });
 

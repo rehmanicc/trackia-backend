@@ -61,7 +61,43 @@ function detectAlerts(position) {
     if (attributes.batteryLevel > 0) {
         state.batteryConnected = true;
     }
+    // ================= OVERSPEED =================
 
+    // Default limit
+    const DEFAULT_LIMIT = 60;
+
+    const speedLimit =
+        position.deviceConfig?.speedLimit ||
+        attributes.speedLimit ||
+        DEFAULT_LIMIT;
+    const speedKmh = speed * 1.852;
+
+    // init state
+    if (!state.lastOverspeedTime) {
+        state.lastOverspeedTime = 0;
+    }
+
+    // cooldown (prevent spam)
+    const COOLDOWN = 15000; // 15 sec
+
+    if (speedKmh > speedLimit) {
+
+        const now = Date.now();
+
+        if (now - state.lastOverspeedTime > COOLDOWN) {
+
+            alerts.push({
+                type: "OVERSPEED",
+                message: `Vehicle ${deviceId} Overspeed (${Math.round(speedKmh)} km/h)`,
+                metadata: {
+                    speed: Math.round(speedKmh),
+                    limit: speedLimit
+                }
+            });
+
+            state.lastOverspeedTime = now;
+        }
+    }
     return alerts;
 }
 

@@ -15,7 +15,8 @@ const alertSchema = new mongoose.Schema({
             "ENGINE_OFF",
             "BATTERY_DISCONNECTED",
             "GEOFENCE_ENTER",
-            "GEOFENCE_EXIT"
+            "GEOFENCE_EXIT",
+            "OVERSPEED"
         ],
         required: true,
         index: true

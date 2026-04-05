@@ -5,6 +5,7 @@ const { createAlert } = require("./alert/alertService");
 const { detectAlerts } = require("./alert/alertRules");
 let vehicleStates = {};
 const GeofenceEvent = require("../models/GeofenceEvent");
+const Device = require("../models/Device");
 
 async function getLastState(deviceId, geofenceId) {
 
@@ -20,12 +21,17 @@ async function getLastState(deviceId, geofenceId) {
 // MAIN ENGINE
 async function processPosition(position, io) {
     console.log("📍 Processing position:", position.deviceId, position.latitude, position.longitude);
+    const device = await Device.findOne(
+        { traccarId: position.deviceId },
+        { speedLimit: 1 }
+    );
     const deviceId = String(position.deviceId);
     const { latitude, longitude } = position;
     const point = turf.point([longitude, latitude]);
-
-    // 🔥 Get geofences for this device
     const geofences = await Geofence.find({ deviceId });
+    position.deviceConfig = {
+        speedLimit: device?.speedLimit || 60
+    };
     console.log("🧱 Geofences found:", geofences.length, "for device:", deviceId);
     for (const f of geofences) {
 

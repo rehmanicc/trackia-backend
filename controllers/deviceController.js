@@ -4,7 +4,7 @@ const Geofence = require("../models/Geofence");
 
 // CREATE DEVICE
 exports.createDevice = async (req, res) => {
-  const { name, uniqueId } = req.body;
+  const { name, uniqueId, speedLimit, fuelEfficiency } = req.body;
   const user = req.user;
   if (user.role !== "admin") {
     return res.status(403).json({
@@ -25,7 +25,9 @@ exports.createDevice = async (req, res) => {
       traccarId: response.data.id,
       companyId: user.companyId,
       createdBy: user._id,
-      assignedTo: [user._id] // ✅ FIXED ARRAY
+      assignedTo: [user._id],
+      speedLimit: speedLimit || 70,
+      fuelEfficiency: fuelEfficiency || 12
     });
 
     res.json(device);
@@ -85,7 +87,7 @@ exports.deleteDevice = async (req, res) => {
 
     await traccarAPI.delete(`/api/devices/${device.traccarId}`);
 
-      await Geofence.deleteMany({
+    await Geofence.deleteMany({
       deviceId: device.traccarId
     });
 
