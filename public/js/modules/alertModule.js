@@ -7,15 +7,21 @@ export function initAlertModule() {
 
     loadInitialAlerts();
 
-    onAlert((alert) => {
+   onAlert((alert) => {
 
-        console.log("🚨 ALERT RECEIVED:", alert);
+    console.log("🚨 ALERT RECEIVED:", alert);
+       const exists = alertList.find(a =>
+        a.deviceId === alert.deviceId &&
+        a.type === alert.type &&
+        new Date(a.timestamp).getTime() === new Date(alert.timestamp).getTime()
+    );
 
-        alertList.unshift(alert);
+    if (exists) return;
+    alertList.unshift(alert);
 
-        window.alertUI.renderAlerts(alertList);
-        window.alertUI.showToast(alert.message, "error");
-    });
+    window.alertUI.renderAlerts(alertList);
+    window.alertUI.showToast(alert.message, "error");
+});
 }
 
 export async function loadInitialAlerts() {

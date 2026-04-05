@@ -28,8 +28,8 @@ function renderAlerts(alerts = []) {
 
         div.innerHTML = `
             ${a.message}<br>
-            <small>${new Date(a.timestamp || Date.now()).toLocaleTimeString()}</small>
-        `;
+            <small>${new Date(a.timestamp).toLocaleTimeString()}</small> 
+       `;
 
         container.appendChild(div);
     });
