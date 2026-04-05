@@ -644,3 +644,45 @@ body {
     width: 250px;
     text-align: center;
 }
+/* 🔥 PANEL SYSTEM */
+.vehicle-panel {
+    display: none;
+}
+
+/* active panel */
+.vehicle-panel.active {
+    display: flex;
+}
+
+/* 🔥 MAP VISIBILITY */
+.map-hidden {
+    display: none !important;
+}
+
+/* 🔥 STATS BAR */
+.stats-hidden {
+    display: none !important;
+}
+/* 🔥 ACTION BUTTONS (Step 2) */
+.btn-action {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+/* variants */
+.btn-analytics {
+    color: #2563eb;
+}
+
+.btn-playback {
+    color: #16a34a;
+}
+
+/* layout fix */
+.vehicle-body {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}

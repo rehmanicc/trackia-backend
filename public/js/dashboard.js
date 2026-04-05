@@ -202,11 +202,11 @@ document.addEventListener("DOMContentLoaded", () => {
         currentMode = "geofence";
         localStorage.setItem("activePanel", "geofence");
         document.querySelector(".header h2").innerText = "Geofencing";
-        document.querySelectorAll(".vehicle-panel").forEach(p => p.style.display = "none");
-        document.getElementById("geofencePanel").style.display = "block";
+        document.querySelectorAll(".vehicle-panel")
+            .forEach(p => p.classList.remove("active"));
+        document.getElementById("geofencePanel").classList.add("active");
         map.addControl(drawControl);
     }
-
 
     function renderGeofenceList() {
         const container = document.getElementById("geofenceList");
@@ -973,15 +973,14 @@ function updateVehicleList(positions) {
         // ✅ Create button OUTSIDE HTML
         const actionButton = isAnalytics
             ? `<button 
-        onclick="selectDeviceForAnalytics('${pos.deviceId}')"
-        style="background:none; border:none; color:#2563eb; cursor:pointer; font-weight:bold;">
-        📊 Trip Details
-       </button>`
+            onclick="selectDeviceForAnalytics('${pos.deviceId}')"
+            class="btn-action btn-analytics">📊 Trip Details 
+            </button>`
             : `<button 
-        onclick="openPlaybackModal('${pos.deviceId}')"
-        style="background:none; border:none; color:#16a34a; cursor:pointer; font-weight:bold;">
-        ▶ Playback
-       </button>`;
+            onclick="openPlaybackModal('${pos.deviceId}')"
+            class="btn-action btn-playback">
+            ▶ Playback
+            </button>`;
 
         // ✅ NOW use inside HTML
         div.innerHTML = `
@@ -995,7 +994,7 @@ function updateVehicleList(positions) {
         </div>
     </div>
 
-    <div class="vehicle-body" style="display:flex; justify-content:space-between; align-items:center;">
+    <div class="vehicle-body">
         <div>
             <div>Speed: <b>${speed} km/h</b></div>
             <div>Last update: ${minutesAgo} min ago</div>
@@ -1077,8 +1076,8 @@ function switchPanel(panel) {
     // Reset all panels
     document.querySelectorAll(".vehicle-panel")
         .forEach(p => {
-            p.style.display = "none";
-            p.style.width = "";
+            p.classList.remove("active");
+            p.style.width = ""; // keep safe
         });
 
     // Reset map
@@ -1095,15 +1094,17 @@ function switchPanel(panel) {
     // ===== SWITCH =====
 
     if (panel === "live") {
-        document.getElementById("vehicleList")
-            .closest(".vehicle-panel").style.display = "block";
-
+        const livePanel = document.getElementById("vehicleList")
+            .closest(".vehicle-panel");
+        livePanel.classList.add("active");
         document.querySelector(".header h2").innerText = "Live Tracking";
     }
 
     if (panel === "analytics") {
-        document.getElementById("vehicleList")
-            .closest(".vehicle-panel").style.display = "block";
+        const analyticsPanel = document.getElementById("vehicleList")
+            .closest(".vehicle-panel");
+
+        analyticsPanel.classList.add("active");   // ✅ FIXED
 
         document.querySelector(".header h2").innerText = "Trip Analytics";
 
@@ -1111,21 +1112,20 @@ function switchPanel(panel) {
     }
 
     if (panel === "devices") {
-        document.getElementById("devicePanel").style.display = "block";
-
+        document.getElementById("devicePanel").classList.add("active");
         document.querySelector(".header h2").innerText = "Devices";
 
         loadDevices(); // 🔥 moved here
     }
 
     if (panel === "geofence") {
-        document.getElementById("geofencePanel").style.display = "block";
+        document.getElementById("geofencePanel").classList.add("active");
 
         document.querySelector(".header h2").innerText = "Geofencing";
     }
 
     if (panel === "alerts") {
-        document.getElementById("alertPanel").style.display = "block";
+        document.getElementById("alertPanel").classList.add("active");
 
         document.querySelector(".header h2").innerText = "Alerts";
 
