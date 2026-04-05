@@ -3,17 +3,52 @@ let selectedVehicleId = null;
 let collapsedDevices = {};
 window.selectedDeviceId = null;
 let lastPositions = {};
-const ALL_PERMISSIONS = [
-    "VIEW_DEVICE",
-    "SEND_COMMAND",
-    "EDIT_DEVICE",
-    "EDIT_SPEED",
-    "EDIT_FUEL",
-    "GEOFENCE_VIEW",
-    "GEOFENCE_CREATE",
-    "GEOFENCE_EDIT",
-    "GEOFENCE_DELETE"
-];
+// ===============================
+// PERMISSION GROUPS (v2.4)
+// ===============================
+const PERMISSION_GROUPS = {
+    DEVICES: {
+        label: "🚗 Devices",
+        permissions: [
+            "VIEW_DEVICE",
+            "EDIT_DEVICE",
+            "SEND_COMMAND"
+        ]
+    },
+    GEOFENCE: {
+        label: "📍 Geofencing",
+        permissions: [
+            "GEOFENCE_VIEW",
+            "GEOFENCE_CREATE",
+            "GEOFENCE_EDIT",
+            "GEOFENCE_DELETE"
+        ]
+    },
+    SYSTEM: {
+        label: "⚙️ System",
+        permissions: [
+            "EDIT_SPEED",
+            "EDIT_FUEL"
+        ]
+    }
+};
+
+// ===============================
+// HUMAN READABLE LABELS
+// ===============================
+const PERMISSION_LABELS = {
+    VIEW_DEVICE: "View Devices",
+    EDIT_DEVICE: "Edit Devices",
+    SEND_COMMAND: "Send Commands",
+
+    EDIT_SPEED: "Edit Speed Limit",
+    EDIT_FUEL: "Edit Fuel Settings",
+
+    GEOFENCE_VIEW: "View Geofences",
+    GEOFENCE_CREATE: "Create Geofence",
+    GEOFENCE_EDIT: "Edit Geofence",
+    GEOFENCE_DELETE: "Delete Geofence"
+};
 
 import {
     initSocket,
@@ -75,7 +110,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // ✅ AUTO FOCUS
         emailInput?.focus();
 
-        return; 
+        return;
     } else {
 
         loginSection.style.display = "none";
@@ -87,9 +122,10 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
         payload = JSON.parse(atob(token.split(".")[1]));
     } catch (e) {
-        alert("Session expired. Please login again.");
-        localStorage.removeItem("token");
-        window.location.href = "login.html";
+        console.error("Token parsing error:", e);
+
+        // 🔥 DO NOT force logout immediately
+        payload = null;
     }
     const userRole = payload.role;
     const adminPanel = document.getElementById("adminPanel");
@@ -1077,7 +1113,7 @@ function focusOnVehicle(id) {
 }
 function switchPanel(panel) {
 
-    // Reset all panels
+    setState({ activePanel: panel });
     document.querySelectorAll(".vehicle-panel")
         .forEach(p => {
             p.classList.remove("active");
@@ -1298,36 +1334,6 @@ function setActiveMenu(element) {
     element.classList.add("active");
 }
 let permissionChanges = {};
-async function loadUserPermissions() {
-
-    const users = await apiRequest("/api/users");
-
-    const container = document.getElementById("userPermissionList");
-    container.innerHTML = "";
-
-    users.forEach(user => {
-
-        const div = document.createElement("div");
-        div.className = "user-permission-card";
-
-        div.innerHTML = `
-      <h4>${user.name} (${user.role})</h4>
-      <div class="permission-grid">
-        ${ALL_PERMISSIONS.map(p => `
-          <label>
-            <input type="checkbox"
-              ${user.permissions.includes(p) ? "checked" : ""}
-              onchange="togglePermission('${user._id}', '${p}', this.checked)">
-            ${p}
-          </label>
-        `).join("")}
-      </div>
-      <button onclick="savePermissions('${user._id}')">Save</button>
-    `;
-
-        container.appendChild(div);
-    });
-}
 function togglePermission(userId, permission, isChecked) {
 
     if (!permissionChanges[userId]) {
@@ -1352,4 +1358,44 @@ async function savePermissions(userId) {
     alert("Permissions updated");
 
     loadUserPermissions(); // reload UI
+}
+async function loadUserPermissions() {
+
+    const users = await apiRequest("/api/users");
+
+    const container = document.getElementById("userPermissionList");
+    container.innerHTML = "";
+
+    // ✅ EMPTY STATE FIX
+    if (!users || users.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <h3>No Users Found</h3>
+                <p>Create users to assign permissions</p>
+            </div>
+        `;
+        return;
+    }
+
+    users.forEach(user => {
+        const div = document.createElement("div");
+        div.className = "user-permission-card";
+
+        div.innerHTML = `
+          <h4>${user.name} (${user.role})</h4>
+          <div class="permission-grid">
+            ${ALL_PERMISSIONS.map(p => `
+              <label>
+                <input type="checkbox"
+                  ${user.permissions.includes(p) ? "checked" : ""}
+                  onchange="togglePermission('${user._id}', '${p}', this.checked)">
+                ${p}
+              </label>
+            `).join("")}
+          </div>
+          <button onclick="savePermissions('${user._id}')">Save</button>
+        `;
+
+        container.appendChild(div);
+    });
 }

@@ -162,8 +162,29 @@
                 </div>
                 <div id="userPanel" class="vehicle-panel">
 
-                    <h3 style="padding:10px;">👤 User Permissions</h3>
+                    <h3 style="padding:10px;">👤 User Management</h3>
 
+                    <!-- 🔥 CREATE USER FORM -->
+                    <div class="user-create-box">
+
+                        <h4>Create User</h4>
+
+                        <div class="form-row">
+                            <input id="newUserName" placeholder="Full Name">
+                            <input id="newUserEmail" placeholder="Email">
+                        </div>
+
+                        <div class="form-row">
+                            <input id="newUserPassword" type="password" placeholder="Password">
+                            <select id="newUserRole"></select>
+                        </div>
+
+                        <button class="btn-primary" onclick="createUser()">
+                            ➕ Create User
+                        </button>
+                    </div>
+
+                    <!-- 🔥 PERMISSION PANEL -->
                     <div id="userPermissionList" style="padding:10px;"></div>
 
                 </div>
