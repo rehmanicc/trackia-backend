@@ -791,3 +791,35 @@ body {
 .btn-success:hover {
   background: #1e7e34;
 }
+/* 🔐 AUTH SECTION (HEADER RIGHT SIDE) */
+.auth-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: 20px; /* ✅ space from right edge */
+}
+
+/* 🔑 LOGIN INPUTS */
+#loginSection {
+  display: flex;
+  align-items: center;
+  gap: 10px; /* ✅ space between inputs */
+}
+
+/* INPUT STYLING */
+#loginSection input {
+  padding: 5px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* OPTIONAL: better spacing for logged in section */
+#loggedInSection {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+#loginSection input:focus {
+  outline: none;
+  border-color: #007bff;
+}

@@ -14,6 +14,7 @@ const ALL_PERMISSIONS = [
     "GEOFENCE_EDIT",
     "GEOFENCE_DELETE"
 ];
+
 import {
     initSocket,
     onPositions,
@@ -50,17 +51,33 @@ document.addEventListener("DOMContentLoaded", () => {
     let selectedGeofenceId = null;
 
 
-
     const loginSection = document.getElementById("loginSection");
     const loggedInSection = document.getElementById("loggedInSection");
+
+    const emailInput = document.getElementById("loginEmail");
+    const passwordInput = document.getElementById("loginPassword");
 
     if (!token) {
 
         loginSection.style.display = "flex";
         loggedInSection.style.display = "none";
-        return;
+
+        // ✅ ENTER KEY SUPPORT
+        function handleEnter(e) {
+            if (e.key === "Enter") {
+                handleLogin();
+            }
+        }
+
+        emailInput?.addEventListener("keypress", handleEnter);
+        passwordInput?.addEventListener("keypress", handleEnter);
+
+        // ✅ AUTO FOCUS
+        emailInput?.focus();
+
+        return; 
     } else {
-        // ✅ User logged in
+
         loginSection.style.display = "none";
         loggedInSection.style.display = "flex";
     }

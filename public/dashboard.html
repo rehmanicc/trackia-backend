@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
 
+    <script src="/js/login.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -17,6 +18,7 @@
     <script src="/js/alerts/alertUI.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/leaflet-rotatedmarker@0.2.0/leaflet.rotatedMarker.js"></script>
     <script type="module" src="js/analytics.js"></script>
+    <script type="module" src="/js/dashboard.js"></script>
 </head>
 
 <body>
@@ -37,7 +39,7 @@
                     <li onclick="setActiveMenu(this); switchPanel('users')">⚙️ User Rights</li>
                 </ul>
             </nav>
-           
+
         </aside>
 
 
@@ -51,8 +53,7 @@
                     <p>Real-time fleet monitoring</p>
                 </div>
 
-                <div id="authSection" style="display:flex; align-items:center; gap:10px;">
-
+                <div id="authSection" class="auth-section">
                     <!-- LOGIN FORM -->
                     <div id="loginSection">
                         <input id="loginEmail" placeholder="Login ID" style="width:120px;">
