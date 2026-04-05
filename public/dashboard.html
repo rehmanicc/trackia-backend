@@ -29,11 +29,11 @@
 
             <nav>
                 <ul>
-                    <li onclick="setActiveMenu(this); openLive()">📡 Live Tracking</li>
-                    <li onclick="setActiveMenu(this); openAnalytics()">📊 Trip Analytics</li>
-                    <li onclick="setActiveMenu(this); openDevices()">📦 Devices</li>
-                    <li onclick="setActiveMenu(this); openGeofence()">📍 Geofencing</li>
-                    <li onclick="openAlerts()"> 🚨 Alerts</li>
+                    <li onclick="setActiveMenu(this); switchPanel('live')">📡 Live Tracking</li>
+                    <li onclick="setActiveMenu(this); switchPanel('analytics')">📊 Trip Analytics</li>
+                    <li onclick="setActiveMenu(this); switchPanel('devices')">📦 Device Management</li>
+                    <li onclick="setActiveMenu(this); switchPanel('geofence')">📍 Geofencing</li>
+                    <li onclick="setActiveMenu(this); switchPanel('alerts')"> 🚨 Alerts</li>
                     <li>⚙️ Settings</li>
                 </ul>
             </nav>

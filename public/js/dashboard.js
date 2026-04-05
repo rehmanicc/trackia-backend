@@ -29,68 +29,6 @@ import {
     startPlayback,
     togglePlayback
 } from "./modules/playbackModule.js";
-function switchPanel(panel) {
-
-    // Save state
-    localStorage.setItem("activePanel", panel);
-
-    // Hide everything
-    document.querySelectorAll(".vehicle-panel")
-        .forEach(p => {
-            p.style.display = "none";
-            p.style.width = "";           // 🔥 reset width
-        });
-
-    // 🔥 Reset map (IMPORTANT)
-    const map = document.getElementById("map");
-    map.style.display = "block";
-
-    // Hide analytics stats
-    const stats = document.getElementById("tripStatsPanel");
-    if (stats) stats.style.display = "none";
-
-    // Reset header
-    document.querySelector(".header h2").innerText = "";
-
-    // ===== SWITCH =====
-
-    if (panel === "live") {
-        document.getElementById("vehicleList")
-            .closest(".vehicle-panel").style.display = "block";
-
-        document.querySelector(".header h2").innerText = "Live Tracking";
-    }
-
-    if (panel === "analytics") {
-        document.getElementById("vehicleList")
-            .closest(".vehicle-panel").style.display = "block";   // ✅ FIXED
-
-        document.querySelector(".header h2").innerText = "Trip Analytics";
-
-        if (stats) stats.style.display = "flex";                  // ✅ keep flex
-    }
-
-    if (panel === "geofence") {
-        document.getElementById("geofencePanel").style.display = "block";
-        document.querySelector(".header h2").innerText = "Geofencing";
-    }
-
-    if (panel === "alerts") {
-        document.getElementById("alertPanel").style.display = "block";
-        document.querySelector(".header h2").innerText = "Alerts";
-    }
-
-    if (panel === "devices") {
-        const devicePanel = document.getElementById("devicePanel");
-
-        devicePanel.style.display = "block";
-        devicePanel.style.width = "100%";   // 🔥 FULL WIDTH
-
-        map.style.display = "none";         // 🔥 HIDE MAP
-
-        document.querySelector(".header h2").innerText = "Devices";
-    }
-}
 document.addEventListener("DOMContentLoaded", () => {
 
     let geofenceLayers = {};
@@ -269,10 +207,7 @@ document.addEventListener("DOMContentLoaded", () => {
         map.addControl(drawControl);
     }
 
-    function openLive() {
-        switchPanel("live");
-        updateVehicleList(Object.values(lastPositions));
-    }
+
     function renderGeofenceList() {
         const container = document.getElementById("geofenceList");
         if (!container) return;
@@ -478,22 +413,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const savedPanel = localStorage.getItem("activePanel") || "live";
 
-        switch (savedPanel) {
-            case "geofence":
-                openGeofence();
-                break;
-            case "alerts":
-                openAlerts();
-                break;
-            case "devices":
-                openDevices();
-                break;
-            case "analytics":
-                openAnalytics();
-                break;
-            default:
-                openLive();
-        } // default
+        switchPanel(savedPanel);
     }
 
 
@@ -868,10 +788,6 @@ document.addEventListener("DOMContentLoaded", () => {
             alert("Failed to send command");
         }
     }
-    function openAnalytics() {
-        switchPanel("analytics");
-        updateVehicleList(Object.values(lastPositions));
-    }
     let selectedDeviceId = null;
 
     function selectDeviceForAnalytics(deviceId) {
@@ -956,23 +872,20 @@ document.addEventListener("DOMContentLoaded", () => {
     window.createUser = createUser;
     window.deleteSelectedGeofence = deleteSelectedGeofence;
     window.openGeofence = openGeofence;
-    window.openLive = openLive;
     window.editGeofenceName = editGeofenceName;
     window.openAddDeviceModal = openAddDeviceModal;
     window.closeAddDeviceModal = closeAddDeviceModal;
     window.submitNewDevice = submitNewDevice;
     window.setActiveMenu = setActiveMenu;
-    window.openAlerts = openAlerts;
-    window.openDevices = openDevices;
     window.loadGeofences = loadGeofences;
     window.renderGeofenceList = renderGeofenceList;
     window.deleteDevice = deleteDevice;
     window.openPlaybackModal = openPlaybackModal;
     window.closePlaybackModal = closePlaybackModal;
     window.confirmPlayback = confirmPlayback;
-    window.openAnalytics = openAnalytics;
     window.selectDeviceForAnalytics = selectDeviceForAnalytics;
     window.closeAnalyticsModal = closeAnalyticsModal;
+    window.switchPanel = switchPanel;
     initApp();
     setInterval(() => {
         console.log("🔄 Fallback refresh...");
@@ -1156,25 +1069,70 @@ function focusOnVehicle(id) {
 
     marker.openPopup?.();
 }
-function openDevices() {
-    localStorage.setItem("activePanel", "devices");
+function switchPanel(panel) {
 
-    
+    // Save state
+    localStorage.setItem("activePanel", panel);
+
+    // Reset all panels
     document.querySelectorAll(".vehicle-panel")
-        .forEach(p => p.style.display = "none");
+        .forEach(p => {
+            p.style.display = "none";
+            p.style.width = "";
+        });
 
-        document.getElementById("devicePanel").style.display = "block";
-
-        const map = document.getElementById("map");
+    // Reset map
+    const map = document.getElementById("map");
     if (map) map.style.display = "block";
-    
+
+    // Hide analytics stats
     const stats = document.getElementById("tripStatsPanel");
     if (stats) stats.style.display = "none";
-    
-    document.querySelector(".header h2").innerText = "Devices";
 
-    loadDevices();
+    // Reset header
+    document.querySelector(".header h2").innerText = "";
+
+    // ===== SWITCH =====
+
+    if (panel === "live") {
+        document.getElementById("vehicleList")
+            .closest(".vehicle-panel").style.display = "block";
+
+        document.querySelector(".header h2").innerText = "Live Tracking";
+    }
+
+    if (panel === "analytics") {
+        document.getElementById("vehicleList")
+            .closest(".vehicle-panel").style.display = "block";
+
+        document.querySelector(".header h2").innerText = "Trip Analytics";
+
+        if (stats) stats.style.display = "flex";
+    }
+
+    if (panel === "devices") {
+        document.getElementById("devicePanel").style.display = "block";
+
+        document.querySelector(".header h2").innerText = "Devices";
+
+        loadDevices(); // 🔥 moved here
+    }
+
+    if (panel === "geofence") {
+        document.getElementById("geofencePanel").style.display = "block";
+
+        document.querySelector(".header h2").innerText = "Geofencing";
+    }
+
+    if (panel === "alerts") {
+        document.getElementById("alertPanel").style.display = "block";
+
+        document.querySelector(".header h2").innerText = "Alerts";
+
+        loadInitialAlerts(); // 🔥 moved here
+    }
 }
+
 async function loadDevices() {
     const container = document.getElementById("deviceList");
 
@@ -1322,14 +1280,4 @@ async function submitAssign() {
 function setActiveMenu(element) {
     document.querySelectorAll(".sidebar li").forEach(li => li.classList.remove("active"));
     element.classList.add("active");
-}
-
-function openAlerts() {
-    localStorage.setItem("activePanel", "alerts");
-    document.querySelectorAll(".vehicle-panel")
-        .forEach(p => p.style.display = "none");
-
-    document.getElementById("alertPanel").style.display = "block";
-
-    loadInitialAlerts();
 }
