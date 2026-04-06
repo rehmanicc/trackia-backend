@@ -3,6 +3,7 @@ let selectedVehicleId = null;
 let collapsedDevices = {};
 window.selectedDeviceId = null;
 let lastPositions = {};
+let currentPanel = "live";
 // ===============================
 // ALL PERMISSIONS (REQUIRED)
 // ===============================
@@ -942,6 +943,7 @@ document.addEventListener("DOMContentLoaded", () => {
     window.switchPanel = switchPanel;
     window.showUserPermissions = showUserPermissions;
     window.showEditUser = showEditUser;
+    window.showCreateUserForm = showCreateUserForm;
     initApp();
     setInterval(() => {
         console.log("🔄 Fallback refresh...");
@@ -1022,21 +1024,7 @@ function updateVehicleList(positions) {
         div.className = "vehicle-card";
         div.dataset.id = pos.deviceId;
 
-        const activePanel = getState().activePanel;
-        const isAnalytics = activePanel === "analytics";
-        // ✅ Create button OUTSIDE HTML
-        const actionButton = isAnalytics
-            ? `<button 
-            onclick="selectDeviceForAnalytics('${pos.deviceId}')"
-            class="btn-action btn-analytics">📊 Trip Details 
-            </button>`
-            : `<button 
-            onclick="openPlaybackModal('${pos.deviceId}')"
-            class="btn-action btn-playback">
-            ▶ Playback
-            </button>`;
-
-        // ✅ NOW use inside HTML
+        const isAnalytics = currentPanel === "analytics";
         div.innerHTML = createVehicleCard({
             pos,
             device,
@@ -1110,6 +1098,7 @@ function focusOnVehicle(id) {
 }
 function switchPanel(panel) {
 
+    currentPanel = panel;
     setState({ activePanel: panel });
     document.querySelectorAll(".vehicle-panel")
         .forEach(p => {
@@ -1180,6 +1169,7 @@ function switchPanel(panel) {
         document.querySelector(".header h2").innerText = "User Rights";
         loadUserPermissions();
     }
+    updateVehicleList(Object.values(lastPositions));
 }
 
 async function loadDevices() {
