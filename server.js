@@ -72,6 +72,7 @@ app.use("/api/traccar", traccarRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/devices", deviceRoutes); 
 app.use("/api/alerts", alertRoutes);
+app.use("/api/users", userRoutes);
 // ======================
 // DB CHECK ROUTE
 // ======================
