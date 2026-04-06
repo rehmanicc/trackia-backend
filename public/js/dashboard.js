@@ -4,6 +4,20 @@ let collapsedDevices = {};
 window.selectedDeviceId = null;
 let lastPositions = {};
 // ===============================
+// ALL PERMISSIONS (REQUIRED)
+// ===============================
+const ALL_PERMISSIONS = [
+    "VIEW_DEVICE",
+    "EDIT_DEVICE",
+    "SEND_COMMAND",
+    "EDIT_SPEED",
+    "EDIT_FUEL",
+    "GEOFENCE_VIEW",
+    "GEOFENCE_CREATE",
+    "GEOFENCE_EDIT",
+    "GEOFENCE_DELETE"
+];
+// ===============================
 // PERMISSION GROUPS (v2.4)
 // ===============================
 const PERMISSION_GROUPS = {
@@ -130,25 +144,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const userRole = payload.role;
     const adminPanel = document.getElementById("adminPanel");
     const userPanel = document.getElementById("userPanel");
-
-    if (adminPanel) adminPanel.style.display = "none";
-    if (userPanel) userPanel.style.display = "none";
-
-    // ✅ PANEL CONTROL
-    if (userRole === "admin") {
-        if (adminPanel) adminPanel.style.display = "block";
-    }
-
-    if (userRole === "user") {
-        if (userPanel) userPanel.style.display = "block";
-    }
-
-    if (userRole === "owner") {
-        document.getElementById("adminPanel").style.display = "block";
-    }
-
-    // ✅ ROLE DROPDOWN CONTROL
-
 
     const roleSelect = document.getElementById("newUserRole");
 
@@ -945,6 +940,8 @@ document.addEventListener("DOMContentLoaded", () => {
     window.selectDeviceForAnalytics = selectDeviceForAnalytics;
     window.closeAnalyticsModal = closeAnalyticsModal;
     window.switchPanel = switchPanel;
+    window.showUserPermissions = showUserPermissions;
+    window.showEditUser = showEditUser;
     initApp();
     setInterval(() => {
         console.log("🔄 Fallback refresh...");
@@ -1361,41 +1358,134 @@ async function savePermissions(userId) {
 }
 async function loadUserPermissions() {
 
+    console.log("🔥 Loading users...");
+
     const users = await apiRequest("/api/users");
+    console.log("✅ Users:", users);
 
-    const container = document.getElementById("userPermissionList");
-    container.innerHTML = "";
+    const list = document.getElementById("userList");
 
-    // ✅ EMPTY STATE FIX
+    list.innerHTML = "";
+
     if (!users || users.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <h3>No Users Found</h3>
-                <p>Create users to assign permissions</p>
-            </div>
-        `;
+        list.innerHTML = "<p>No users found</p>";
         return;
     }
 
     users.forEach(user => {
+
         const div = document.createElement("div");
-        div.className = "user-permission-card";
+        div.className = "user-item";
 
         div.innerHTML = `
-          <h4>${user.name} (${user.role})</h4>
-          <div class="permission-grid">
-            ${ALL_PERMISSIONS.map(p => `
-              <label>
-                <input type="checkbox"
-                  ${user.permissions.includes(p) ? "checked" : ""}
-                  onchange="togglePermission('${user._id}', '${p}', this.checked)">
-                ${p}
-              </label>
-            `).join("")}
-          </div>
-          <button onclick="savePermissions('${user._id}')">Save</button>
-        `;
+    <div class="user-row">
+        <div>
+            <b>${user.name}</b><br>
+            <small>${user.role}</small>
+        </div>
 
-        container.appendChild(div);
+        <div class="user-actions">
+            <button onclick="showEditUser('${user._id}')">✏️</button>
+            <button onclick="showUserPermissions('${user._id}')">🔐</button>
+        </div>
+    </div>
+`;
+
+        list.appendChild(div);
     });
+    showCreateUserForm();
+}
+function showCreateUserForm() {
+
+    const right = document.getElementById("userContent");
+
+    right.innerHTML = `
+        <h3>Create User</h3>
+
+        <input id="newUserName" placeholder="Full Name"><br><br>
+        <input id="newUserEmail" placeholder="Email"><br><br>
+        <input id="newUserPassword" type="password" placeholder="Password"><br><br>
+        <select id="newUserRole"></select><br><br>
+
+        <button onclick="createUser()">Create User</button>
+    `;
+
+    // 🔥 IMPORTANT: populate role dropdown again
+    populateRoleDropdown();
+}
+function populateRoleDropdown() {
+
+    const roleSelect = document.getElementById("newUserRole");
+    if (!roleSelect) return;
+
+    const token = localStorage.getItem("token");
+
+    let role = null;
+
+    try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        role = payload.role;
+    } catch (e) {
+        console.error("Role parse error");
+    }
+
+    roleSelect.innerHTML = "";
+
+    if (role === "owner") {
+        roleSelect.innerHTML = `<option value="admin">Admin</option>`;
+    } else if (role === "admin") {
+        roleSelect.innerHTML = `<option value="user">User</option>`;
+    }
+}
+async function showUserPermissions(userId) {
+
+    const right = document.getElementById("userContent");
+    if (!right) return;
+
+    const user = await apiRequest(`/api/users/${userId}`);
+
+    let html = `<h3>${user.name} Permissions</h3>`;
+
+    Object.entries(PERMISSION_GROUPS).forEach(([key, group]) => {
+
+        html += `<div style="margin-bottom:15px;">
+                    <h4>${group.label}</h4>`;
+
+        group.permissions.forEach(p => {
+
+            const checked = user.permissions?.includes(p) ? "checked" : "";
+
+            html += `
+                <label style="display:block; margin:5px 0;">
+                    <input type="checkbox"
+                        ${checked}
+                        onchange="togglePermission('${userId}','${p}', this.checked)">
+                    ${PERMISSION_LABELS[p]}
+                </label>
+            `;
+        });
+
+        html += `</div>`;
+    });
+
+    html += `
+        <button onclick="savePermissions('${userId}')">
+            💾 Save Permissions
+        </button>
+    `;
+
+    right.innerHTML = html;
+}
+function showEditUser(userId) {
+
+    const right = document.getElementById("userContent");
+
+    right.innerHTML = `
+        <h3>Edit User</h3>
+
+        <input placeholder="Update Name"><br><br>
+        <input placeholder="Update Email"><br><br>
+
+        <button>Save Changes</button>
+    `;
 }
