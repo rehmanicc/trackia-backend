@@ -1335,7 +1335,17 @@ function togglePermission(userId, permission, isChecked) {
 }
 async function savePermissions(userId) {
 
-    const perms = Array.from(permissionChanges[userId] || []);
+    const allInputs = document.querySelectorAll(".permission-item input");
+
+    const perms = [];
+    allInputs.forEach(input => {
+        if (input.checked) {
+            const match = input.getAttribute("onchange").match(/'(.*?)'/g);
+            if (match && match[1]) {
+                perms.push(match[1].replace(/'/g, ""));
+            }
+        }
+    });
 
     await apiRequest(`/api/auth/permissions/${userId}`, {
         method: "PUT",
@@ -1368,18 +1378,20 @@ async function loadUserPermissions() {
         div.className = "user-item";
 
         div.innerHTML = `
-    <div class="user-row">
-        <div>
-            <b>${user.name}</b><br>
-            <small>${user.role}</small>
-        </div>
+            <div class="user-row">
 
-        <div class="user-actions">
-            <button onclick="showEditUser('${user._id}')">✏️</button>
-            <button onclick="showUserPermissions('${user._id}')">🔐</button>
+            <div class="user-line">
+                <b>${user.name}</b>
+                <button onclick="showEditUser('${user._id}')">Edit</button>
+            </div>
+
+            <div class="user-line">
+                <small>${user.role}</small>
+                <button onclick="showUserPermissions('${user._id}')">Permissions</button>
+            </div>
+
         </div>
-    </div>
-`;
+        `;
 
         list.appendChild(div);
     });
@@ -1390,15 +1402,34 @@ function showCreateUserForm() {
     const right = document.getElementById("userContent");
 
     right.innerHTML = `
+    <div class="user-form-card">
         <h3>Create User</h3>
 
-        <input id="newUserName" placeholder="Full Name"><br><br>
-        <input id="newUserEmail" placeholder="Email"><br><br>
-        <input id="newUserPassword" type="password" placeholder="Password"><br><br>
-        <select id="newUserRole"></select><br><br>
+        <div class="form-group">
+            <label>Full Name</label>
+            <input id="newUserName" placeholder="Enter full name">
+        </div>
 
-        <button onclick="createUser()">Create User</button>
-    `;
+        <div class="form-group">
+            <label>Email</label>
+            <input id="newUserEmail" placeholder="Enter email">
+        </div>
+
+        <div class="form-group">
+            <label>Password</label>
+            <input id="newUserPassword" type="password" placeholder="Enter password">
+        </div>
+
+        <div class="form-group">
+            <label>Role</label>
+            <select id="newUserRole"></select>
+        </div>
+
+        <button class="btn-create-user" onclick="createUser()">
+            Create User
+        </button>
+    </div>
+`;
 
     // 🔥 IMPORTANT: populate role dropdown again
     populateRoleDropdown();
@@ -1434,33 +1465,50 @@ async function showUserPermissions(userId) {
 
     const user = await apiRequest(`/api/users/${userId}`);
 
-    let html = `<h3>${user.name} Permissions</h3>`;
+    let html = `<div class="permission-container">
+    <h3>${user.name} Permissions</h3>`;
 
     Object.entries(PERMISSION_GROUPS).forEach(([key, group]) => {
+        const allChecked = group.permissions.every(p =>
+            user.permissions?.includes(p)
+        );
+        html += `
+                <div class="permission-card">
+<div class="permission-header">
+    <span>${group.label}</span>
 
-        html += `<div style="margin-bottom:15px;">
-                    <h4>${group.label}</h4>`;
+    <label class="switch">
+        <input type="checkbox"
+    ${allChecked ? "checked" : ""}
+    onchange="toggleGroup('${userId}', '${key}', this.checked)">
+        <span class="slider"></span>
+    </label>
+</div>
+                <div class="permission-list">
+        `;
 
         group.permissions.forEach(p => {
 
             const checked = user.permissions?.includes(p) ? "checked" : "";
 
             html += `
-                <label style="display:block; margin:5px 0;">
-                    <input type="checkbox"
-                        ${checked}
-                        onchange="togglePermission('${userId}','${p}', this.checked)">
-                    ${PERMISSION_LABELS[p]}
-                </label>
-            `;
+        <label class="permission-item">
+        <span>${PERMISSION_LABELS[p]}</span>
+        <label class="switch">
+            <input type="checkbox"
+            ${checked}
+            onchange="togglePermission('${userId}','${p}', this.checked)">
+            <span class="slider"></span>
+            </label>
+        </label>
+        `;
         });
 
-        html += `</div>`;
+        html += `</div></div>`;
     });
 
     html += `
-        <button onclick="savePermissions('${userId}')">
-            💾 Save Permissions
+    <button class="btn-save-permissions" onclick="savePermissions('${userId}')">            💾 Save Permissions
         </button>
     `;
 
@@ -1479,3 +1527,26 @@ function showEditUser(userId) {
         <button>Save Changes</button>
     `;
 }
+window.toggleGroup = function (userId, groupKey, isChecked) {
+
+    const group = PERMISSION_GROUPS[groupKey];
+
+    // 🔥 Update permissionChanges
+    if (!permissionChanges[userId]) {
+        permissionChanges[userId] = new Set();
+    }
+
+    group.permissions.forEach(p => {
+        if (isChecked) {
+            permissionChanges[userId].add(p);
+        } else {
+            permissionChanges[userId].delete(p);
+        }
+    });
+
+    // 🔥 ALSO update UI instantly
+    group.permissions.forEach(p => {
+        const inputs = document.querySelectorAll(`input[onchange*="${p}"]`);
+        inputs.forEach(input => input.checked = isChecked);
+    });
+};

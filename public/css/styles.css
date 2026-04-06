@@ -51,13 +51,6 @@ body {
     margin-top: auto;
 }
 
-/* MAIN */
-.main {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-}
-
 /* HEADER */
 .header {
     height: 70px;
@@ -86,11 +79,7 @@ body {
     font-size: 12px;
 }
 
-/* CONTENT */
-.content {
-    display: flex;
-    flex: 1;
-}
+
 
 /* VEHICLE PANEL */
 .vehicle-panel {
@@ -281,21 +270,18 @@ body {
     height: 100%;
 }
 
-.app {
-    height: 100vh;
-}
-
 .main {
     display: flex;
     flex-direction: column;
     height: 100%;
+    flex: 1;
+    flex-direction: column;
 }
 
 .content {
     flex: 1;
     display: flex;
     min-height: 0;
-    /* 🔥 critical fix */
 }
 
 .map-container {
@@ -372,6 +358,8 @@ body {
 }
 
 .device-header {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
     margin-bottom: 10px;
 }
 
@@ -475,11 +463,6 @@ body {
     border-radius: 6px;
     font-size: 13px;
     margin: 10px;
-}
-
-.device-header {
-    padding: 10px;
-    border-bottom: 1px solid #eee;
 }
 
 #toastContainer {
@@ -644,6 +627,7 @@ body {
     width: 250px;
     text-align: center;
 }
+
 /* 🔥 PANEL SYSTEM */
 .vehicle-panel {
     display: none;
@@ -663,6 +647,7 @@ body {
 .stats-hidden {
     display: none !important;
 }
+
 /* 🔥 ACTION BUTTONS (Step 2) */
 .btn-action {
     background: none;
@@ -686,6 +671,7 @@ body {
     justify-content: space-between;
     align-items: center;
 }
+
 /* 🔥 STATUS COLORS (Step 3) */
 .status-online {
     background: #10b981;
@@ -698,6 +684,7 @@ body {
 .status-unknown {
     background: #6b7280;
 }
+
 /* 🔥 GEOFENCE LIST UI */
 .geo-device {
     font-weight: bold;
@@ -724,6 +711,7 @@ body {
     justify-content: space-between;
     align-items: center;
 }
+
 .alert-card {
     cursor: pointer;
     transition: 0.2s;
@@ -741,88 +729,99 @@ body {
 .alert-card.read {
     opacity: 0.6;
 }
+
 .user-permission-card {
-  border: 1px solid #ccc;
-  padding: 10px;
-  margin-bottom: 10px;
-  background: #fff;
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin-bottom: 10px;
+    background: #fff;
 }
 
 .permission-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 5px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
 }
+
 /* 🔘 BUTTON BASE */
 .btn {
-  padding: 6px 12px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 13px;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 13px;
 }
 
 /*LOGOUT BUTTON section */
 .btn-logout {
-  background: #ff4d4d;
-  color: white;
+    background: #ff4d4d;
+    color: white;
 }
 
 .btn-logout:hover {
-  background: #e60000;
+    background: #e60000;
 }
 
-/* 🔵 PRIMARY BUTTON */
 .btn-primary {
-  background: #007bff;
-  color: white;
+    background: #2563eb;
+    /* 🔥 consistent theme */
+    color: white;
+    padding: 8px 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
 }
 
 .btn-primary:hover {
-  background: #0056b3;
+    background: #1e40af;
 }
 
 
 .btn-success {
-  background: #28a745;
-  color: white;
+    background: #28a745;
+    color: white;
 }
 
 .btn-success:hover {
-  background: #1e7e34;
+    background: #1e7e34;
 }
+
 /* 🔐 AUTH SECTION (HEADER RIGHT SIDE) */
 .auth-section {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-right: 20px; /* ✅ space from right edge */
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-right: 20px;
+    /* ✅ space from right edge */
 }
 
 /* 🔑 LOGIN INPUTS */
 #loginSection {
-  display: flex;
-  align-items: center;
-  gap: 10px; /* ✅ space between inputs */
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    /* ✅ space between inputs */
 }
 
 /* INPUT STYLING */
 #loginSection input {
-  padding: 5px 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+    padding: 5px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
 }
 
 /* OPTIONAL: better spacing for logged in section */
 #loggedInSection {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
+
 #loginSection input:focus {
-  outline: none;
-  border-color: #007bff;
+    outline: none;
+    border-color: #007bff;
 }
+
 .empty-state {
     text-align: center;
     padding: 40px;
@@ -832,12 +831,13 @@ body {
 .empty-state h3 {
     margin-bottom: 10px;
 }
+
 .user-create-box {
     background: #fff;
     padding: 15px;
     margin: 10px;
     border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .form-row {
@@ -854,18 +854,11 @@ body {
     border-radius: 6px;
 }
 
-.btn-primary {
-    background: #4CAF50;
-    color: white;
-    padding: 8px 14px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-}
+
 /* USER RIGHTS*/
 .user-layout {
     display: flex;
-    width: 100%;   
+    width: 100%;
     height: 100%;
 }
 
@@ -880,12 +873,265 @@ body {
     flex: 1;
     padding: 20px;
     background: #fff;
+
+    display: flex;
+    justify-content: flex-start;
+    /* 🔥 LEFT ALIGN */
 }
+
+.permission-container {
+    width: 100%;
+    max-width: 700px;
+    /* 🔥 controls width */
+}
+
 .user-item {
     padding: 10px;
     border-bottom: 1px solid #eee;
 }
+
 #userPanel {
     width: 100% !important;
     flex: 1;
+}
+
+/* Login Inputs */
+#loginEmail,
+#loginPassword {
+    width: 200px;
+    font-size: 15px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+
+/* Optional: Password slightly smaller if needed */
+#loginPassword {
+    width: 180px;
+}
+
+/* Align nicely in header */
+#loginSection {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.user-row {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.user-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.user-line button {
+    border: none;
+    background: #42799e;
+    color: #f5f9fc;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: 0.2s;
+}
+
+.user-line button:hover {
+    background: #093f5c;
+    color: white;
+}
+
+/* =========================
+   USER FORM (UPGRADED)
+========================= */
+
+.user-form-card {
+    max-width: 480px;
+    width: 100%;
+    background: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.user-form-card h3 {
+    margin-bottom: 15px;
+    font-size: 18px;
+}
+
+/* Form groups */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 12px;
+}
+
+.form-group label {
+    font-size: 13px;
+    margin-bottom: 4px;
+    color: #555;
+}
+
+.form-group input,
+.form-group select {
+    padding: 12px;
+    font-size: 15px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    transition: 0.2s;
+}
+
+/* Focus effect */
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 4px rgba(37, 99, 235, 0.3);
+}
+
+/* Create button */
+.btn-create-user {
+    width: 100%;
+    padding: 10px;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 15px;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: 0.2s;
+}
+
+.btn-create-user:hover {
+    background: #1e40af;
+}
+
+/* =========================
+   PERMISSION PANEL UI
+========================= */
+
+.permission-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.permission-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    font-weight: 600;
+    font-size: 17px;
+    margin-bottom: 10px;
+}
+
+/* Permission rows */
+.permission-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    font-size: 15px;
+    color: #374151;
+}
+
+.permission-item span {
+    font-weight: 500;
+}
+
+/* Remove default checkbox spacing */
+.permission-item input {
+    transform: scale(1.3);
+    cursor: pointer;
+}
+
+/* Hover effect */
+.permission-item:hover {
+    background: #f9fafb;
+    border-radius: 6px;
+    padding-left: 6px;
+}
+
+.btn-save-permissions {
+    width: 100%;
+    padding: 10px;
+    background: #16a34a;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    margin-top: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: 0.2s;
+    max-width: 600px;
+    margin: 15px auto 0;
+    display: block;
+}
+
+.btn-save-permissions:hover {
+    background: #15803d;
+}
+/* =========================
+   TOGGLE SWITCH
+========================= */
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 22px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+/* slider */
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #ccc;
+    transition: 0.3s;
+    border-radius: 22px;
+}
+
+/* circle */
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 3px;
+    top: 3px;
+    background: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+/* ON STATE */
+.switch input:checked + .slider {
+    background: #2563eb; /* 🔵 theme blue */
+}
+
+.switch input:checked + .slider:before {
+    transform: translateX(18px);
+}
+
+/* hover */
+.switch:hover .slider {
+    opacity: 0.9;
 }
