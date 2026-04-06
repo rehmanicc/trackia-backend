@@ -1135,3 +1135,40 @@ body {
 .switch:hover .slider {
     opacity: 0.9;
 }
+.alert-card {
+    border-bottom: 1px solid #ddd;
+    padding: 6px;
+    margin-bottom: 3px;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+/* Alert Types */
+.alert-enter {
+    background: #d4edda;
+}
+
+.alert-exit {
+    background: #f8d7da;
+}
+
+.alert-engine-on {
+    background: #d1ecf1;
+}
+
+.alert-engine-off {
+    background: #fff3cd;
+}
+
+.alert-overspeed {
+    background: #f5c6cb;
+}
+
+/* Read / Unread */
+.alert-card.unread {
+    font-weight: bold;
+}
+
+.alert-card.read {
+    opacity: 0.7;
+}

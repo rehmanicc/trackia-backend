@@ -4,21 +4,18 @@ let dailyChart, geoChart, deviceChart;
 const token = localStorage.getItem("token");
 const API_BASE = "https://trackia-backend.onrender.com";
 import { getMap, drawTrip } from "./modules/mapModule.js";
+import { apiRequest } from "./services/apiService.js";
 
 const map = getMap();
 async function loadAnalytics(query = "") {
 
-    const res = await fetch(`${API_BASE}/api/analytics/report?${query}`, {
-        headers: {
-            "Authorization": `Bearer ${token}`
-        }
-    });
-    if (!res.ok) {
-        const err = await res.text();
-        console.error("❌ API error:", err);
+    let data;
+    try {
+        data = await apiRequest(`/api/analytics/report?${query}`);
+    } catch (err) {
+        console.error("❌ API error:", err.message);
         return;
     }
-    const data = await res.json();
 
     const totalVisitsEl = document.getElementById("totalVisits");
     const totalTimeEl = document.getElementById("totalTime");
@@ -64,15 +61,13 @@ function openAnalytics() {
 }
 async function loadDailyChart(query = "") {
 
-    const res = await fetch(`${API_BASE}/api/analytics/daily?${query}`, {
-        headers: { Authorization: `Bearer ${token}` }
-    });
-    if (!res.ok) {
-        const err = await res.text();
-        console.error("❌ API error:", err);
+    let data;
+    try {
+        data = await apiRequest(`/api/analytics/daily?${query}`);
+    } catch (err) {
+        console.error("❌ API error:", err.message);
         return;
     }
-    const data = await res.json();
     if (dailyChart) dailyChart.destroy();
     dailyChart = new Chart(document.getElementById("dailyChart"), {
         type: "line",
@@ -88,15 +83,13 @@ async function loadDailyChart(query = "") {
 
 async function loadGeofenceChart(query = "") {
 
-    const res = await fetch(`${API_BASE}/api/analytics/top-geofences?${query}`, {
-        headers: { Authorization: `Bearer ${token}` }
-    });
-    if (!res.ok) {
-        const err = await res.text();
-        console.error("❌ API error:", err);
+    let data;
+    try {
+        data = await apiRequest(`/api/analytics/top-geofences?${query}`);
+    } catch (err) {
+        console.error("❌ API error:", err.message);
         return;
     }
-    const data = await res.json();
     if (geoChart) geoChart.destroy();
 
     geoChart = new Chart(document.getElementById("geofenceChart"), {
@@ -113,15 +106,13 @@ async function loadGeofenceChart(query = "") {
 
 async function loadDeviceChart(query = "") {
 
-    const res = await fetch(`${API_BASE}/api/analytics/device-summary?${query}`, {
-        headers: { Authorization: `Bearer ${token}` }
-    });
-    if (!res.ok) {
-        const err = await res.text();
-        console.error("❌ API error:", err);
+    let data;
+    try {
+        data = await apiRequest(`/api/analytics/device-summary?${query}`);
+    } catch (err) {
+        console.error("❌ API error:", err.message);
         return;
     }
-    const data = await res.json();
 
     if (deviceChart) deviceChart.destroy();
 
@@ -180,18 +171,15 @@ async function fetchTrip() {
         return;
     }
 
-    const res = await fetch(
-        `${API_BASE}/api/analytics/trip/${window.selectedDeviceId}?start=${start}&end=${end}`,
-        {
-            headers: { Authorization: `Bearer ${token}` }
-        }
-    );
-    if (!res.ok) {
-        const err = await res.text();
-        console.error("❌ API error:", err);
+    let data;
+    try {
+        data = await apiRequest(
+            `/api/analytics/trip/${window.selectedDeviceId}?start=${start}&end=${end}`
+        );
+    } catch (err) {
+        console.error("❌ API error:", err.message);
         return;
     }
-    const data = await res.json();
 
     if (!data.positions || data.positions.length === 0) {
         alert("No trip data found");
@@ -210,9 +198,8 @@ function showAnalytics(stats, mileage) {
     const mileageValue = Number(mileage || 0);
 
     // Convert speed from knots → km/h (if needed)
-    const avgSpeed = stats.avgSpeed ? (stats.avgSpeed * 1.852).toFixed(1) : 0;
-    const maxSpeed = stats.maxSpeed ? (stats.maxSpeed * 1.852).toFixed(1) : 0;
-
+    const avgSpeed = stats.avgSpeed ? toKmh(stats.avgSpeed) : 0;
+    const maxSpeed = stats.maxSpeed ? toKmh(stats.maxSpeed) : 0;
     // Distance already in KM (your backend uses Haversine)
     const distance = stats.distance ? stats.distance.toFixed(2) : 0;
 

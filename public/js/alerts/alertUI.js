@@ -9,27 +9,26 @@ function renderAlerts(alerts = []) {
 
         const div = document.createElement("div");
 
-        div.style.borderBottom = "1px solid #ddd";
-        div.style.padding = "6px";
-        div.style.marginBottom = "3px";
+        div.className = "alert-card";
 
         if (a.type.includes("ENTER")) {
-            div.style.background = "#d4edda";
+            div.classList.add("alert-enter");
         }
         else if (a.type.includes("EXIT")) {
-            div.style.background = "#f8d7da";
+            div.classList.add("alert-exit");
         }
         else if (a.type.includes("ENGINE_ON")) {
-            div.style.background = "#d1ecf1";
+            div.classList.add("alert-engine-on");
         }
         else if (a.type.includes("ENGINE_OFF")) {
-            div.style.background = "#fff3cd";
+            div.classList.add("alert-engine-off");
         }
         else if (a.type.includes("OVERSPEED")) {
-            div.style.background = "#f5c6cb"; // light red
+            div.classList.add("alert-overspeed");
         }
 
-        div.className = "alert-card " + (a.read === true ? "read" : "unread");
+        div.classList.add(a.read === true ? "read" : "unread");
+
         div.innerHTML = `
             ${a.message}<br>
             <small>${new Date(a.timestamp).toLocaleTimeString()}</small>

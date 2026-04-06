@@ -4,6 +4,9 @@ let collapsedDevices = {};
 window.selectedDeviceId = null;
 let lastPositions = {};
 let currentPanel = "live";
+let stopMarkers = [];
+let lastRenderTime = 0;
+let activeCard = null;
 // ===============================
 // ALL PERMISSIONS (REQUIRED)
 // ===============================
@@ -72,32 +75,54 @@ import {
     onAlert,
     getSocket
 } from "./services/socketService.js";
-import { getState, setState, subscribe } from "./state/uiState.js";
+import { getState, setState } from "./state/uiState.js";
 import { createVehicleCard } from "./components/vehicleCard.js";
 import { apiRequest } from "./services/apiService.js";
 import { hasPermission } from "./components/permissions.js";
 import {
+    parseLatLng,
+    toKmh,
     initMap,
     updateMarker,
     getMap,
+    getMarkers,
     icons
 } from "./modules/mapModule.js";
 import {
     initAlertModule,
     loadInitialAlerts
 } from "./modules/alertModule.js";
-import { getMarkers } from "./modules/mapModule.js";
 import {
     initPlayback,
     startPlayback,
     togglePlayback
 } from "./modules/playbackModule.js";
+const $ = (id) => document.getElementById(id);
+const $$ = (selector) => document.querySelector(selector);
+const headerTitle = document.querySelector(".header h2");
+function createButton({ text, className = "", onClick = "", title = "" }) {
+    return `
+        <button 
+            class="${className}" 
+            onclick="${onClick}"
+            title="${title}">
+            ${text}
+        </button>
+    `;
+}
+async function safeApi(call, fallback = null) {
+    try {
+        return await call();
+    } catch (err) {
+        console.error("API Error:", err);
+        alert("Something went wrong. Please try again.");
+        return fallback;
+    }
+}
 document.addEventListener("DOMContentLoaded", () => {
 
     let geofenceLayers = {};
     const token = localStorage.getItem("token")
-    let geofenceBBoxes = {};
-    let currentMode = "live";
     let selectedGeofenceId = null;
 
 
@@ -221,7 +246,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     map.on(L.Draw.Event.CREATED, async function (event) {
-        if (currentMode !== "geofence") {
+        if (getState().mode !== "geofence") {
             alert("Switch to Geofence mode first");
             return;
         }
@@ -263,15 +288,17 @@ document.addEventListener("DOMContentLoaded", () => {
         await loadGeofences();
     });
     document.getElementById("searchInput")?.addEventListener("input", () => {
-        updateVehicleList(Object.values(lastPositions));
+        const positionsArray = Object.values(lastPositions);
+        updateVehicleList(positionsArray);
     });
 
     document.getElementById("statusFilter")?.addEventListener("change", () => {
-        updateVehicleList(Object.values(lastPositions));
+        const positionsArray = Object.values(lastPositions);
+        updateVehicleList(positionsArray);
     });
     function openGeofence() {
-        currentMode = "geofence";
-        setState({ activePanel: "geofence", mode: "geofence" }); document.querySelector(".header h2").innerText = "Geofencing";
+        setState({ activePanel: "geofence", mode: "geofence" });
+        headerTitle.innerText = "Geofencing";
         map.addControl(drawControl);
     }
 
@@ -294,23 +321,18 @@ document.addEventListener("DOMContentLoaded", () => {
                     <button class="add-geo-btn">+ Add</button>
                 </div>
             `;
-            vehicleDiv.querySelector(".add-geo-btn").onclick = (e) => {
+            vehicleDiv.querySelector(".add-geo-btn").onclick = async (e) => {
                 e.stopPropagation();
-                selectedVehicleId = String(deviceId);
-                highlightVehicleCard(selectedVehicleId);
-                focusOnVehicle(selectedVehicleId);
+
+                await selectVehicle(deviceId);
+
                 openGeofence();
                 window.alertUI.showToast(`Creating geofence for ${device.name}`, "success");
             };
             vehicleDiv.onclick = async () => {
                 collapsedDevices[deviceId] = !collapsedDevices[deviceId];
-                selectedVehicleId = String(deviceId);
 
-                highlightVehicleCard(selectedVehicleId);
-                focusOnVehicle(selectedVehicleId);
-
-                await loadGeofences();
-                renderGeofenceList();
+                await selectVehicle(deviceId);
             };
 
             container.appendChild(vehicleDiv);
@@ -410,13 +432,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 const id = String(pos.deviceId);
 
-                const lat = Number(pos.latitude ?? pos.lat);
-                const lng = Number(pos.longitude ?? pos.lon);
+                const coords = parseLatLng(pos);
+                if (!coords) return;
 
-                if (isNaN(lat) || isNaN(lng)) {
-                    console.warn("⚠️ Invalid initial position skipped:", pos);
-                    return;
-                }
+                const { lat, lng } = coords;
 
                 lastPositions[id] = pos;
                 updateMarker(id, pos, allowedDevices[id]);
@@ -427,7 +446,8 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (err) {
             console.error("❌ Initial load error:", err);
         }
-        updateVehicleList(Object.values(lastPositions));
+        const positionsArray = Object.values(lastPositions);
+        updateVehicleList(positionsArray);
     }
     async function initApp() {
         const token = localStorage.getItem("token");
@@ -438,33 +458,40 @@ document.addEventListener("DOMContentLoaded", () => {
         await loadGeofences();
         await loadInitialPositions();
         // POSITIONS
+        let positionBuffer = [];
+        let processing = false;
+
         onPositions((positions) => {
-            console.log("📡 FRONTEND POSITIONS:", positions);
-            const filtered = positions.filter(pos =>
-                allowedDevices[String(pos.deviceId)]
-            );
+            positionBuffer.push(...positions);
 
-            filtered.forEach((pos) => {
+            if (processing) return;
 
-                const id = String(pos.deviceId);
+            processing = true;
 
-                const lat = Number(pos.latitude ?? pos.lat);
-                const lng = Number(pos.longitude ?? pos.lon);
+            setTimeout(() => {
+                const batch = positionBuffer;
+                positionBuffer = [];
 
-                if (isNaN(lat) || isNaN(lng)) {
-                    console.warn("⚠️ Invalid realtime position skipped:", pos);
-                    return;
-                }
+                batch.forEach((pos) => {
 
-                lastPositions[id] = pos;
-                updateMarker(id, pos);
-                console.log("📍 Updating marker:", id, pos.latitude, pos.longitude);
-            });
+                    const id = String(pos.deviceId);
 
-            updateVehicleList(Object.values(lastPositions));
+                    if (!allowedDevices[id]) return;
+
+                    const coords = parseLatLng(pos);
+                    if (!coords) return;
+
+                    lastPositions[id] = pos;
+                    updateMarker(id, pos);
+                });
+
+                const positionsArray = Object.values(lastPositions);
+                updateVehicleList(positionsArray);
+
+                processing = false;
+
+            }, 500); // 🔥 batch every 500ms
         });
-
-        // GEOFENCE
         onGeofence(({ geofenceId, type }) => {
             updateGeofenceVisual(geofenceId, type);
         });
@@ -553,10 +580,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 layer.eachLayer(l => {
 
                     const geofenceId = f._id || f.id;
-                    geofenceBBoxes[geofenceId] = turf.bbox({
-                        type: "Feature",
-                        geometry: f.geometry
-                    });
                     geofenceLayers[geofenceId] = l;
 
                     drawnItems.addLayer(l);
@@ -601,9 +624,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const speedSlider = document.getElementById("speedSlider");
     const speedLabel = document.getElementById("speedLabel");
-    speedSlider.addEventListener("input", function () {
-        speedLabel.innerText = this.value + "x";
-    });
+    if (speedSlider && speedLabel) {
+        speedSlider.addEventListener("input", function () {
+            speedLabel.innerText = this.value + "x";
+        });
+    }
     function renderVehicleDetails(p) {
 
         const container = document.getElementById("vehicleDetails");
@@ -612,7 +637,7 @@ document.addEventListener("DOMContentLoaded", () => {
     <div style="border:1px solid #ccc;padding:10px;background:#fff;">
         <h4>Vehicle ${p.deviceId}</h4>
 
-        <p><b>Speed:</b> ${Math.round(p.speed * 1.852)} km/h</p>
+        <p><b>Speed:</b>${toKmh(p.speed)} km/h</p>
         <p><b>Latitude:</b> ${p.latitude}</p>
         <p><b>Longitude:</b> ${p.longitude}</p>
         <p><b>Battery:</b> ${p.attributes.batteryLevel || "N/A"}%</p>
@@ -621,15 +646,17 @@ document.addEventListener("DOMContentLoaded", () => {
         <hr>
 
         <div style="margin-top:10px;">
-            <button onclick="sendCommand(${p.deviceId}, 'engineStop')" 
-                style="background:red;color:white;padding:6px 10px;margin-right:5px;border:none;">
-                🔴 Engine OFF
-            </button>
+            ${createButton({
+            text: "🔴 Engine OFF",
+            className: "btn-danger",
+            onClick: `sendCommand(${p.deviceId}, 'engineStop')`
+        })}
 
-            <button onclick="sendCommand(${p.deviceId}, 'engineResume')" 
-                style="background:green;color:white;padding:6px 10px;border:none;">
-                🟢 Engine ON
-            </button>
+${createButton({
+            text: "🟢 Engine ON",
+            className: "btn-success",
+            onClick: `sendCommand(${p.deviceId}, 'engineResume')`
+        })}
         </div>
     </div>
 `;
@@ -776,11 +803,11 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("sumSpeed").innerText = avgSpeed.toFixed(1);
         document.getElementById("sumStops").innerText = totalStops;
         document.getElementById("sumIdle").innerText = idleTime.toFixed(1);
-        document.getElementById("sumFuel").innerText = fuelUsed.toFixed(2);
+        document.getElementById("sumFuel").innerText = "0.00";
     }
     async function fetchAllowedDevices() {
         try {
-            const devices = await apiRequest("/api/devices");
+            const devices = await safeApi(() => apiRequest("/api/devices"), []);
             allowedDevices = {};
             console.log("📦 Devices from backend:", devices);
             devices.forEach(device => {
@@ -843,7 +870,6 @@ document.addEventListener("DOMContentLoaded", () => {
             alert("Failed to send command");
         }
     }
-    let selectedDeviceId = null;
 
     function selectDeviceForAnalytics(deviceId) {
         window.selectedDeviceId = deviceId;
@@ -961,16 +987,14 @@ const endInput = document.getElementById("endTime");
 
 if (startInput && endInput) {
 
-    if (startInput && endInput) {
+    startInput.addEventListener("change", () => {
+        endInput.showPicker?.(); // 🔥 opens next picker (modern browsers)
+    });
 
-        startInput.addEventListener("change", () => {
-            endInput.showPicker?.(); // 🔥 opens next picker (modern browsers)
-        });
+    endInput.addEventListener("change", () => {
+        document.activeElement.blur(); // close cleanly
+    });
 
-        endInput.addEventListener("change", () => {
-            document.activeElement.blur(); // close cleanly
-        });
-    }
 
     endInput.addEventListener("change", () => {
         setTimeout(() => {
@@ -978,15 +1002,25 @@ if (startInput && endInput) {
         }, 100);
     });
 }
+async function selectVehicle(deviceId) {
+    selectedVehicleId = String(deviceId);
+
+    highlightVehicleCard(selectedVehicleId);
+    focusOnVehicle(selectedVehicleId);
+
+    await loadGeofences();
+    renderGeofenceList();
+}
 function updateVehicleList(positions) {
 
-    const container = document.getElementById("vehicleList");
-    const search = document.getElementById("searchInput")?.value.toLowerCase() || "";
+    const container = $("vehicleList");
+    const search = $("searchInput")?.value
     const statusFilter = document.getElementById("statusFilter")?.value || "all";
 
     if (!container) return;
 
     container.innerHTML = "";
+    const fragment = document.createDocumentFragment();
 
     let counts = {
         moving: 0,
@@ -1002,8 +1036,7 @@ function updateVehicleList(positions) {
         const device = allowedDevices[String(pos.deviceId)];
 
         const status = device?.status || "offline";
-        const speed = Math.round((pos.speed || 0) * 1.852);
-
+        const speed = toKmh(pos.speed);
         let statusClass = {
             online: "status-online",
             offline: "status-offline",
@@ -1036,16 +1069,13 @@ function updateVehicleList(positions) {
                 selectDeviceForAnalytics(pos.deviceId);
                 return;
             }
-            selectedVehicleId = String(pos.deviceId);
-            highlightVehicleCard(selectedVehicleId);
-            focusOnVehicle(selectedVehicleId);
-            await loadGeofences();
-            renderGeofenceList();
+
+            await selectVehicle(pos.deviceId);
         };
 
-        container.appendChild(div);
+        fragment.appendChild(div);
     });
-
+    container.appendChild(fragment);
     // ✅ UPDATE STATS UI
     document.getElementById("countMoving").innerText = counts.moving;
     document.getElementById("countIdle").innerText = counts.idle;
@@ -1061,24 +1091,25 @@ function isVehicleOnline(deviceTime) {
 }
 function getVehicleState(pos) {
     const isOnline = isVehicleOnline(pos.deviceTime);
-    const speed = Math.round((pos.speed || 0) * 1.852);
-
+    const speed = toKmh(pos.speed);
     if (!isOnline) return { state: "offline", speed };
     if (speed > 5) return { state: "moving", speed };
     if (speed > 0) return { state: "idle", speed };
     return { state: "stopped", speed };
 }
 function highlightVehicleCard(id) {
-    document.querySelectorAll(".vehicle-card").forEach(card => {
-        card.classList.remove("active");
 
-        if (card.dataset.id === String(id)) {
-            card.classList.add("active");
+    if (activeCard) {
+        activeCard.classList.remove("active");
+    }
 
-            // auto scroll
-            card.scrollIntoView({ block: "center", behavior: "smooth" });
-        }
-    });
+    const newCard = document.querySelector(`.vehicle-card[data-id="${id}"]`);
+
+    if (newCard) {
+        newCard.classList.add("active");
+        newCard.scrollIntoView({ block: "center", behavior: "smooth" });
+        activeCard = newCard;
+    }
 }
 function focusOnVehicle(id) {
     const markers = getMarkers();
@@ -1096,34 +1127,42 @@ function focusOnVehicle(id) {
 
     marker.openPopup?.();
 }
+function resetUI() {
+    // Reset all panels
+    document.querySelectorAll(".vehicle-panel")
+        .forEach(p => {
+            p.classList.remove("active");
+            p.style.width = "";
+        });
+
+    // Show map by default
+    const map = $("map");
+    if (map) map.style.display = "block";
+
+    // Hide trip stats
+    const tripStats = document.getElementById("tripStatsPanel");
+    if (tripStats) tripStats.style.display = "none";
+
+    // Show stats bar (default)
+    const statsBar = document.querySelector(".stats-bar");
+    if (statsBar) statsBar.style.display = "flex";
+
+    // Reset header
+    const header = document.querySelector(".header h2");
+    if (header) header.innerText = "";
+}
 function switchPanel(panel) {
 
     currentPanel = panel;
     setState({ activePanel: panel });
-    document.querySelectorAll(".vehicle-panel")
-        .forEach(p => {
-            p.classList.remove("active");
-            p.style.width = ""; // keep safe
-        });
-
-    // Reset map
-    const map = document.getElementById("map");
-    if (map) map.style.display = "block";
-
-    // Hide analytics stats
-    const stats = document.getElementById("tripStatsPanel");
-    if (stats) stats.style.display = "none";
-
-    // Reset header
-    document.querySelector(".header h2").innerText = "";
-
+    resetUI();
     // ===== SWITCH =====
 
     if (panel === "live") {
         const livePanel = document.getElementById("vehicleList")
             .closest(".vehicle-panel");
         livePanel.classList.add("active");
-        document.querySelector(".header h2").innerText = "Live Tracking";
+        headerTitle.innerText = "Live Tracking";
     }
 
     if (panel === "analytics") {
@@ -1132,14 +1171,15 @@ function switchPanel(panel) {
 
         analyticsPanel.classList.add("active");   // ✅ FIXED
 
-        document.querySelector(".header h2").innerText = "Trip Analytics";
+        headerTitle.innerText = "Trip Analytics";
 
-        if (stats) stats.style.display = "flex";
+        const tripStats = document.getElementById("tripStatsPanel");
+        if (tripStats) tripStats.style.display = "flex";
     }
 
     if (panel === "devices") {
-        document.getElementById("devicePanel").classList.add("active");
-        document.querySelector(".header h2").innerText = "Devices";
+        $("devicePanel").classList.add("active");
+        $$(".header h2").innerText = "Devices";
 
         loadDevices(); // 🔥 moved here
     }
@@ -1147,36 +1187,37 @@ function switchPanel(panel) {
     if (panel === "geofence") {
         document.getElementById("geofencePanel").classList.add("active");
 
-        document.querySelector(".header h2").innerText = "Geofencing";
+        headerTitle.innerText = "Geofencing";
     }
 
     if (panel === "alerts") {
         document.getElementById("alertPanel").classList.add("active");
 
-        document.querySelector(".header h2").innerText = "Alerts";
+        headerTitle.innerText = "Alerts";
 
         loadInitialAlerts(); // 🔥 moved here
     }
     if (panel === "users") {
-        const map = document.getElementById("map");
+        const map = $("map");
         if (map) map.style.display = "none";
-        const stats = document.querySelector(".stats-bar");
-        if (stats) stats.style.display = "none";
 
-        const tripStats = document.getElementById("tripStatsPanel");
-        if (tripStats) tripStats.style.display = "none";
+        const statsBar = document.querySelector(".stats-bar");
+        if (statsBar) statsBar.style.display = "none";
+
         document.getElementById("userPanel").classList.add("active");
-        document.querySelector(".header h2").innerText = "User Rights";
+        headerTitle.innerText = "User Rights";
+
         loadUserPermissions();
     }
-    updateVehicleList(Object.values(lastPositions));
+    const positionsArray = Object.values(lastPositions);
+    updateVehicleList(positionsArray);
 }
 
 async function loadDevices() {
     const container = document.getElementById("deviceList");
 
     try {
-        const devices = await apiRequest("/api/devices");
+        const devices = await safeApi(() => apiRequest("/api/devices"), []);
         container.innerHTML = `
     <div class="device-header">
         <input type="text" id="deviceSearch" placeholder="Search devices..." oninput="filterDevices()">
@@ -1208,9 +1249,26 @@ async function loadDevices() {
     <td>${users || "-"}</td>
     <td>
         <div class="action-buttons">
-            <button class="icon-btn assign" onclick="openAssign('${d._id}')">👤</button>
-            <button class="icon-btn delete" onclick="deleteDevice('${d._id}')">🗑</button>
-            <button class="icon-btn unassign" onclick="unassignDevice('${d._id}')">❌</button>
+            ${createButton({
+                text: "👤",
+                className: "icon-btn assign",
+                onClick: `openAssign('${d._id}')`,
+                title: "Assign User"
+            })}
+
+${createButton({
+                text: "🗑",
+                className: "icon-btn delete",
+                onClick: `deleteDevice('${d._id}')`,
+                title: "Delete Device"
+            })}
+
+${createButton({
+                text: "❌",
+                className: "icon-btn unassign",
+                onClick: `unassignDevice('${d._id}')`,
+                title: "Unassign"
+            })}
         </div> 
     </td>
 `;
@@ -1225,7 +1283,7 @@ async function loadDevices() {
 async function unassignDevice(deviceId) {
     const userId = document.getElementById("assignUserSelect").value;
 
-    await apiRequest(`/ api / devices / ${deviceId}/unassign`, {
+    await apiRequest(`/api/devices/${deviceId}/unassign`, {
         method: "POST",
         body: JSON.stringify({ userId })
     });
@@ -1284,7 +1342,7 @@ let selectedDeviceForAssign = null;
 async function openAssign(deviceId) {
     selectedDeviceForAssign = deviceId;
 
-    const users = await apiRequest("/api/users"); // your existing API
+    const users = await safeApi(() => apiRequest("/api/users"), []); // your existing API
 
     const select = document.getElementById("assignUserSelect");
     select.innerHTML = "";
@@ -1335,15 +1393,14 @@ function togglePermission(userId, permission, isChecked) {
 }
 async function savePermissions(userId) {
 
-    const allInputs = document.querySelectorAll(".permission-item input");
+    const inputs = document.querySelectorAll(".permission-item input");
 
     const perms = [];
-    allInputs.forEach(input => {
+
+    inputs.forEach(input => {
         if (input.checked) {
-            const match = input.getAttribute("onchange").match(/'(.*?)'/g);
-            if (match && match[1]) {
-                perms.push(match[1].replace(/'/g, ""));
-            }
+            const perm = input.dataset.permission;
+            if (perm) perms.push(perm);
         }
     });
 
@@ -1352,15 +1409,15 @@ async function savePermissions(userId) {
         body: JSON.stringify({ permissions: perms })
     });
 
-    alert("Permissions updated");
+    alertUI.showToast("Permissions updated", "success");
 
-    loadUserPermissions(); // reload UI
+    loadUserPermissions();
 }
 async function loadUserPermissions() {
 
     console.log("🔥 Loading users...");
 
-    const users = await apiRequest("/api/users");
+    const users = await safeApi(() => apiRequest("/api/users"), []);
     console.log("✅ Users:", users);
 
     const list = document.getElementById("userList");
@@ -1479,8 +1536,8 @@ async function showUserPermissions(userId) {
 
     <label class="switch">
         <input type="checkbox"
-    ${allChecked ? "checked" : ""}
-    onchange="toggleGroup('${userId}', '${key}', this.checked)">
+${allChecked ? "checked" : ""}
+onchange="toggleGroup('${userId}', '${key}', this.checked)">
         <span class="slider"></span>
     </label>
 </div>
@@ -1496,8 +1553,9 @@ async function showUserPermissions(userId) {
         <span>${PERMISSION_LABELS[p]}</span>
         <label class="switch">
             <input type="checkbox"
-            ${checked}
-            onchange="togglePermission('${userId}','${p}', this.checked)">
+data-permission="${p}"
+${checked}
+onchange="togglePermission('${userId}','${p}', this.checked)">
             <span class="slider"></span>
             </label>
         </label>
@@ -1546,7 +1604,7 @@ window.toggleGroup = function (userId, groupKey, isChecked) {
 
     // 🔥 ALSO update UI instantly
     group.permissions.forEach(p => {
-        const inputs = document.querySelectorAll(`input[onchange*="${p}"]`);
+        const inputs = document.querySelectorAll(`input[data-permission="${p}"]`);
         inputs.forEach(input => input.checked = isChecked);
     });
 };

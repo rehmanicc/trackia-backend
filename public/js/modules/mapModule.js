@@ -32,6 +32,17 @@ function isValidLatLng(lat, lng) {
         lng >= -180 && lng <= 180
     );
 }
+export function parseLatLng(pos) {
+    const lat = Number(pos.latitude ?? pos.lat);
+    const lng = Number(pos.longitude ?? pos.lon);
+
+    if (isNaN(lat) || isNaN(lng)) {
+        console.warn("⚠️ Invalid coordinates:", pos);
+        return null;
+    }
+
+    return { lat, lng };
+}
 function smoothMove(marker, target, duration = 1000) {
 
     if (!marker || !target) return;
@@ -85,17 +96,12 @@ export function initMap() {
 
     return map;
 }
-
 export function updateMarker(id, pos, device) {
 
-    const lat = Number(pos.latitude ?? pos.lat);
-    const lng = Number(pos.longitude ?? pos.lon);
+    const coords = parseLatLng(pos);
+    if (!coords) return;
 
-    // 🔥 FINAL PROTECTION
-    if (isNaN(lat) || isNaN(lng)) {
-        console.warn("🚫 Skipping invalid marker:", pos);
-        return;
-    }
+    const { lat, lng } = coords;
 
     const status = device?.status || "offline";
 
@@ -103,8 +109,7 @@ export function updateMarker(id, pos, device) {
         ? icons.moving
         : icons.offline;
 
-    const speed = Math.round((pos.speed || 0) * 1.852);
-
+    const speed = toKmh(pos.speed);
     if (!markers[id]) {
 
         markers[id] = L.marker([lat, lng], { icon }).addTo(map);
@@ -178,11 +183,8 @@ export function drawTrip(positions) {
 
     const validPoints = positions
         .map(p => {
-            const lat = Number(p.latitude ?? p.lat);
-            const lng = Number(p.longitude ?? p.lon);
-
-            if (isNaN(lat) || isNaN(lng)) return null;
-            return [lat, lng];
+            const coords = parseLatLng(p);
+            return coords ? [coords.lat, coords.lng] : null;
         })
         .filter(p => p !== null);
 
@@ -228,4 +230,7 @@ export { icons };
 
 export function getMarkers() {
     return markers;
+}
+export function toKmh(speed) {
+    return Math.round((speed || 0) * 1.852);
 }

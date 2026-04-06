@@ -1,6 +1,7 @@
+import { toKmh } from "../modules/mapModule.js";
 export function createVehicleCard({ pos, device, isAnalytics, statusClass }) {
 
-    const speed = Math.round((pos.speed || 0) * 1.852);
+    const speed = toKmh(pos.speed);
     const minutesAgo = Math.floor((new Date() - new Date(pos.deviceTime)) / 60000);
 
     const actionButton = isAnalytics
