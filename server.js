@@ -155,28 +155,28 @@ const PORT = process.env.PORT || 5000;
 const User = require("./models/User");
 app.delete("/api/reset", async (req, res) => {
   try {
-    const secret = req.headers["x-reset-key"];
+    const secret = req.headers["x-reset-key"]?.trim();
 
     console.log("HEADER:", secret);
     console.log("ENV:", process.env.RESET_SECRET);
 
     if (!secret || secret !== process.env.RESET_SECRET) {
-      {
-        return res.status(403).json({ message: "Unauthorized" });
-      }
-
-      await User.deleteMany({});
-      await Device.deleteMany({});
-      await Position.deleteMany({});
-      await PositionArchive.deleteMany({});
-      await Trip.deleteMany({});
-
-      res.json({ message: "Database reset successful" });
-
-    } catch (err) {
-      res.status(500).json({ error: err.message });
+      return res.status(403).json({ message: "Unauthorized" });
     }
-  });
+
+    await User.deleteMany({});
+    await Device.deleteMany({});
+    await Position.deleteMany({});
+    await PositionArchive.deleteMany({});
+    await Trip.deleteMany({});
+
+    return res.json({ message: "Database reset successful" });
+
+  } catch (err) {
+    console.error("RESET ERROR:", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
