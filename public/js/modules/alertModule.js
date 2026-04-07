@@ -22,7 +22,8 @@ export function initAlertModule() {
         alertList.unshift(alert);
         saveAlertsToStorage();
         window.alertUI.renderAlerts(alertList);
-        window.alertUI.showToast(alert.message, "error");
+        const type = alert.priority === "high" ? "error" : "success";
+        window.alertUI.showToast(alert.message, type);
     });
 }
 window.markAlertRead = function (timestamp) {
@@ -75,6 +76,20 @@ function loadAlertsFromStorage() {
         }));
     }
 }
+window.filterAlerts = function (type) {
+
+    let filtered = [...alertList];
+
+    if (type === "high") {
+        filtered = filtered.filter(a => a.priority === "high");
+    }
+
+    if (type === "unread") {
+        filtered = filtered.filter(a => a.read === false);
+    }
+
+    window.alertUI.renderAlerts(filtered);
+};
 export async function loadInitialAlerts() {
 
     try {

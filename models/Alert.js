@@ -35,14 +35,21 @@ const alertSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
         index: true
+    },
+    ruleId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "AlertRule"
+    },
+
+    priority: {
+        type: String,
+        enum: ["low", "medium", "high"],
+        default: "medium"
     }
 
 }, { timestamps: true });
 
-/**
- * 🚀 IMPORTANT:
- * Helps prevent duplicate alerts
- */
+
 alertSchema.index({
     deviceId: 1,
     type: 1,

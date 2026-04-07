@@ -141,14 +141,18 @@ async function processPosition(position, io) {
             });
         }
     }
-    const alerts = detectAlerts(position);
+    const alerts = await detectAlerts(position);
 
     for (const alert of alerts) {
         await createAlert({
             deviceId: position.deviceId,
             type: alert.type,
             message: alert.message,
-            metadata: alert.metadata || {}
+            metadata: alert.metadata || {},
+
+            ruleId: alert.ruleId,
+            priority: alert.priority
+
         }, io);
     }
 }

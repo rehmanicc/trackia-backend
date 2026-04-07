@@ -1079,6 +1079,7 @@ body {
 .btn-save-permissions:hover {
     background: #15803d;
 }
+
 /* =========================
    TOGGLE SWITCH
 ========================= */
@@ -1123,11 +1124,12 @@ body {
 }
 
 /* ON STATE */
-.switch input:checked + .slider {
-    background: #2563eb; /* 🔵 theme blue */
+.switch input:checked+.slider {
+    background: #2563eb;
+    /* 🔵 theme blue */
 }
 
-.switch input:checked + .slider:before {
+.switch input:checked+.slider:before {
     transform: translateX(18px);
 }
 
@@ -1135,6 +1137,7 @@ body {
 .switch:hover .slider {
     opacity: 0.9;
 }
+
 .alert-card {
     border-bottom: 1px solid #ddd;
     padding: 6px;
@@ -1171,4 +1174,19 @@ body {
 
 .alert-card.read {
     opacity: 0.7;
+}
+
+.alert-high {
+    border-left: 5px solid red;
+    background: #ffe5e5;
+}
+
+.alert-medium {
+    border-left: 5px solid orange;
+    background: #fff4e5;
+}
+
+.alert-low {
+    border-left: 5px solid blue;
+    background: #e5f0ff;
 }

@@ -2,27 +2,50 @@ const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema({
 
-name: String,
+  name: String,
 
-email: {
-type: String,
-unique: true
+  email: {
+    type: String,
+    unique: true
+  },
+
+  password: String,
+
+  role: {
+    type: String,
+    enum: ["owner", "admin", "user"],
+    default: "user"
+  },
+  companyId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Company"
+  },
+  permissions: {
+    type: [String],
+    default: []
+  },
+  alertPreferences: {
+    type: Object,
+    default: {
+      OVERSPEED: true,
+      GEOFENCE_ENTER: true,
+      GEOFENCE_EXIT: true,
+      ENGINE_ON: false,
+      ENGINE_OFF: false,
+      BATTERY_DISCONNECTED: true
+    }
+  },
+  phoneNumber: String,
+
+callEnabled: {
+  type: Boolean,
+  default: false
 },
 
-password: String,
-
-role: {
-type: String,
-enum: ["owner","admin","user"],
-default: "user"
-},
-companyId: {
-type: mongoose.Schema.Types.ObjectId,
-ref: "Company"
-},
-permissions: {
-  type: [String],
-  default: []
+callPriority: {
+  type: String,
+  enum: ["low", "medium", "high"],
+  default: "high"
 }
 
 });

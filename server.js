@@ -23,12 +23,12 @@ const io = socket.init(server);
 
 
 app.use(cors({
-    origin: [
-        "http://127.0.0.1:8080",
-        "http://localhost:8080"
-    ],
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true
+  origin: [
+    "http://127.0.0.1:8080",
+    "http://localhost:8080"
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true
 }));
 
 // ======================
@@ -65,12 +65,15 @@ const tripRoutes = require("./routes/trips");
 const analyticsRoutes = require("./routes/analyticsRoutes");
 const alertRoutes = require("./routes/alertRoutes");
 const userRoutes = require("./routes/user");
+const alertRuleRoutes = require("./routes/alertRuleRoutes");
+
+app.use("/api/alert-rules", alertRuleRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/geofence", geofenceRoutes);
 app.use("/api/trips", tripRoutes);
 app.use("/api/traccar", traccarRoutes);
 app.use("/api/analytics", analyticsRoutes);
-app.use("/api/devices", deviceRoutes); 
+app.use("/api/devices", deviceRoutes);
 app.use("/api/alerts", alertRoutes);
 app.use("/api/users", userRoutes);
 // ======================
@@ -126,7 +129,7 @@ io.on("connection", async (socket) => {
     if (decoded.role === "user") {
       socket.join(`user_${decoded.id}`);
     }
-
+    socket.join(String(decoded.id));
     console.log("✅ User connected:", decoded.id);
 
   } catch (err) {

@@ -28,7 +28,16 @@ function renderAlerts(alerts = []) {
         }
 
         div.classList.add(a.read === true ? "read" : "unread");
-
+        // 🔥 PRIORITY COLORS
+        if (a.priority === "high") {
+            div.classList.add("alert-high");
+        }
+        else if (a.priority === "medium") {
+            div.classList.add("alert-medium");
+        }
+        else {
+            div.classList.add("alert-low");
+        }
         div.innerHTML = `
             ${a.message}<br>
             <small>${new Date(a.timestamp).toLocaleTimeString()}</small>

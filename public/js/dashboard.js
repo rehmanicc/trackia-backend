@@ -1197,6 +1197,11 @@ function switchPanel(panel) {
 
         loadInitialAlerts(); // 🔥 moved here
     }
+    if (panel === "alertRules") {
+        document.getElementById("alertRulesPanel").classList.add("active");
+        headerTitle.innerText = "Alert Rules";
+        loadAlertRules();
+    }
     if (panel === "users") {
         const map = $("map");
         if (map) map.style.display = "none";
@@ -1571,6 +1576,47 @@ onchange="togglePermission('${userId}','${p}', this.checked)">
     `;
 
     right.innerHTML = html;
+}
+async function loadAlertRules() {
+
+    const container = document.getElementById("alertRulesPanel");
+
+    try {
+        const rules = await apiRequest("/api/alert-rules");
+
+        container.innerHTML = `
+            <div style="padding:10px;">
+                <button onclick="createRule()">➕ Add Rule</button>
+                <div id="ruleList"></div>
+            </div>
+        `;
+
+        const list = document.getElementById("ruleList");
+
+        rules.forEach(r => {
+
+            const div = document.createElement("div");
+            div.className = "vehicle-card";
+
+            div.innerHTML = `
+                <b>${r.type}</b> 
+                (${r.conditions?.speedLimit || "-"}) km/h
+                <br>
+                Priority: ${r.priority}
+                <br>
+                Status: ${r.enabled ? "✅ Enabled" : "❌ Disabled"}
+                <br>
+                <button onclick="toggleRule('${r._id}', ${r.enabled})">
+                    Toggle
+                </button>
+            `;
+
+            list.appendChild(div);
+        });
+
+    } catch (err) {
+        container.innerHTML = "<p>Failed to load rules</p>";
+    }
 }
 function showEditUser(userId) {
 
