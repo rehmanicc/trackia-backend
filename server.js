@@ -4,7 +4,7 @@ const PositionArchive = require("./models/PositionsArchive");
 const Trip = require("./models/Trip");
 console.log("MONGO_URI:", process.env.MONGO_URI);
 const deviceRoutes = require("./routes/device");
-const geofenceEngine = require("./services/geofenceEngine");
+const { getPendingCalls, clearCalls } = require("./services/callService");
 
 const express = require("express");
 const cors = require("cors");
@@ -30,7 +30,13 @@ app.use(cors({
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
-
+app.get("/api/call/pending", (req, res) => {
+  res.json(getPendingCalls());
+});
+app.post("/api/call/clear", (req, res) => {
+  clearCalls();
+  res.json({ success: true });
+});
 // ======================
 // MONGODB CONNECTION
 // ======================

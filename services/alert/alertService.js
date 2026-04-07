@@ -2,7 +2,7 @@ const Alert = require("../../models/Alert");
 // 🔥 Prevent duplicate spam
 
 const COOLDOWN = 15000; // 15 seconds
-const { triggerCall } = require("./callService");
+const { triggerCall } = require("../callService");
 
 async function createAlert(alertData, io) {
     try {
