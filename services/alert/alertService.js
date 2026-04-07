@@ -53,12 +53,18 @@ async function createAlert(alertData, io) {
         }
 
         console.log("🚨 ALERT:", alertData.type, alertData.deviceId);
-
+        if (alertDoc.priority === "high") {
+            try {
+                await triggerCall(alertDoc);
+            } catch (err) {
+                console.error("Call trigger failed:", err);
+            }
+        }
         return alertDoc;
 
     } catch (error) {
         console.error("Alert creation failed:", error);
     }
 }
-await triggerCall(alertDoc);
+
 module.exports = { createAlert };

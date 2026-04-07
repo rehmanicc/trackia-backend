@@ -1618,6 +1618,34 @@ async function loadAlertRules() {
         container.innerHTML = "<p>Failed to load rules</p>";
     }
 }
+async function toggleRule(id, current) {
+
+    await apiRequest(`/api/alert-rules/${id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+            enabled: !current
+        })
+    });
+
+    loadAlertRules();
+}
+async function createRule() {
+
+    const speed = prompt("Enter speed limit (km/h):");
+    if (!speed) return;
+
+    await apiRequest("/api/alert-rules", {
+        method: "POST",
+        body: JSON.stringify({
+            type: "OVERSPEED",
+            conditions: { speedLimit: Number(speed) },
+            deviceIds: [],
+            priority: "high"
+        })
+    });
+
+    loadAlertRules();
+}
 function showEditUser(userId) {
 
     const right = document.getElementById("userContent");
