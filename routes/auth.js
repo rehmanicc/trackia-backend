@@ -11,7 +11,7 @@ if (!process.env.JWT_SECRET) {
 // REGISTER
 router.post("/register", authMiddleware, async (req, res) => {
   const Company = require("../models/Company");
-  const { name, email, password, role } = req.body;
+  const { name, phoneNumber, password, role } = req.body;
 
   try {
 
@@ -31,7 +31,7 @@ router.post("/register", authMiddleware, async (req, res) => {
 
       const user = new User({
         name,
-        email,
+        phoneNumber,
         password: hash,
         role: "admin",
         companyId: company._id
@@ -86,12 +86,12 @@ router.post("/login", async (req, res) => {
   }
 
   const token = jwt.sign(
-  {
-    id: user._id,
-    role: user.role,
-    companyId: user.companyId,
-    permissions: user.permissions || [] 
-  },
+    {
+      id: user._id,
+      role: user.role,
+      companyId: user.companyId,
+      permissions: user.permissions || []
+    },
     SECRET,
     { expiresIn: "24h" }
   );

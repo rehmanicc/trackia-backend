@@ -4,8 +4,9 @@ const userSchema = new mongoose.Schema({
 
   name: String,
 
-  email: {
+  phoneNumber: {
     type: String,
+    required: true,
     unique: true
   },
 
@@ -37,16 +38,16 @@ const userSchema = new mongoose.Schema({
   },
   phoneNumber: String,
 
-callEnabled: {
-  type: Boolean,
-  default: false
-},
+  callEnabled: {
+    type: Boolean,
+    default: false
+  },
 
-callPriority: {
-  type: String,
-  enum: ["low", "medium", "high"],
-  default: "high"
-}
+  callPriority: {
+    type: String,
+    enum: ["low", "medium", "high"],
+    default: "high"
+  }
 
 });
 

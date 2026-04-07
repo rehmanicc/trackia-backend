@@ -56,8 +56,9 @@
 
                 <div id="authSection" class="auth-section">
                     <!-- LOGIN FORM -->
+                    <!-- LOGIN FORM -->
                     <div id="loginSection">
-                        <input id="loginEmail" placeholder="Login ID" style="width:200">
+                        <input id="loginPhone" placeholder="03XXXXXXXXX" style="width:200px;">
                         <input id="loginPassword" type="password" placeholder="Password" style="width:120px;">
                         <button onclick="handleLogin()" class="btn btn-primary">
                             Login
@@ -191,23 +192,54 @@
                 </div>
                 <div id="modalOverlay"></div>
 
-                <div id="addDeviceModal"
-                    style="display:none; position:fixed; top:30%; left:40%; background:#fff; padding:20px; border:1px solid #ccc;">
+                <div id="createDevicePanel" class="vehicle-panel">
 
-                    <h4>Add Device</h4>
+                    <div class="user-layout">
 
-                    <input id="deviceNameInput" placeholder="Device Name"><br><br>
-                    <input id="deviceUniqueInput" placeholder="IMEI / Unique ID"><br><br>
-                    <input type="number" placeholder="Speed Limit (km/h)" />
-                    <input type="number" placeholder="Initial Mileage (km)" />
-                    <button onclick="submitNewDevice()">Add</button>
-                    <button onclick="closeAddDeviceModal()">Cancel</button>
+                        <div class="user-right">
+
+                            <div class="user-form-card">
+
+                                <div class="flex-between">
+                                    <h3>Create Device</h3>
+                                    <button class="btn" onclick="switchPanel('devices')">✖</button>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Device Name</label>
+                                    <input id="deviceNameInput" type="text">
+                                </div>
+
+                                <div class="form-group">
+                                    <label>IMEI / Unique ID</label>
+                                    <input id="deviceUniqueInput" type="text">
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Speed Limit (km/h)</label>
+                                    <input id="deviceSpeedInput" type="number">
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Initial Mileage (km)</label>
+                                    <input id="deviceMileageInput" type="number">
+                                </div>
+
+                                <button class="btn-create-user" onclick="submitNewDevice()">
+                                    Create Device
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                    </div>
 
                 </div>
                 <div id="devicePanel" class="vehicle-panel">
 
                     <div style="padding:10px;">
-                        <button class="primary-btn" onclick="openAddDeviceModal()">➕ Add Device</button>
+                        <button class="primary-btn" onclick="switchPanel('createDevice')">➕ Add Device</button>
                     </div>
 
                     <div id="deviceList"></div>

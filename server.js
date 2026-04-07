@@ -155,12 +155,20 @@ const PORT = process.env.PORT || 5000;
 const User = require("./models/User");
 app.delete("/api/reset", async (req, res) => {
   try {
+    const secret = req.headers["x-reset-key"];
+
+    if (secret !== process.env.RESET_SECRET) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
+
     await User.deleteMany({});
     await Device.deleteMany({});
-    await Position.deleteMany({});          // ✅ ADD
-    await PositionArchive.deleteMany({});   // ✅ ADD
+    await Position.deleteMany({});
+    await PositionArchive.deleteMany({});
     await Trip.deleteMany({});
+
     res.json({ message: "Database reset successful" });
+
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -820,15 +820,19 @@ ${createButton({
             console.error("❌ Error fetching devices:", err);
         }
     }
-    // create user function
+
     async function createUser() {
 
         const name = document.getElementById("newUserName").value.trim();
-        const email = document.getElementById("newUserEmail").value.trim();
+        const phone = document.getElementById("newUserPhone").value.trim();
         const password = document.getElementById("newUserPassword").value.trim();
         const role = document.getElementById("newUserRole").value;
 
-        if (!name || !email || !password) {
+        if (!phone.match(/^03\d{9}$/)) {
+            alert("Enter valid mobile number (03XXXXXXXXX)");
+            return;
+        }
+        if (!name || !phone || !password) {
             alert("Fill all fields");
             return;
         }
@@ -836,13 +840,13 @@ ${createButton({
         try {
             const data = await apiRequest("/api/auth/register", {
                 method: "POST",
-                body: JSON.stringify({ name, email, password, role })
+                body: JSON.stringify({ name, phoneNumber: phone, password, role })
             });
             alert(data.message || "User created successfully");
 
             // clear form
             document.getElementById("newUserName").value = "";
-            document.getElementById("newUserEmail").value = "";
+            document.getElementById("newUserPhone").value = "";
             document.getElementById("newUserPassword").value = "";
 
         } catch (err) {
@@ -954,8 +958,6 @@ ${createButton({
     window.deleteSelectedGeofence = deleteSelectedGeofence;
     window.openGeofence = openGeofence;
     window.editGeofenceName = editGeofenceName;
-    window.openAddDeviceModal = openAddDeviceModal;
-    window.closeAddDeviceModal = closeAddDeviceModal;
     window.submitNewDevice = submitNewDevice;
     window.setActiveMenu = setActiveMenu;
     window.loadGeofences = loadGeofences;
@@ -1214,6 +1216,15 @@ function switchPanel(panel) {
 
         loadUserPermissions();
     }
+    if (panel === "createDevice") {
+        document.getElementById("createDevicePanel").classList.add("active");
+        headerTitle.innerText = "Create Device";
+        const map = document.getElementById("map");
+        if (map) map.style.display = "block";
+
+        const statsBar = document.querySelector(".stats-bar");
+        if (statsBar) statsBar.style.display = "flex";
+    }
     const positionsArray = Object.values(lastPositions);
     updateVehicleList(positionsArray);
 }
@@ -1305,14 +1316,6 @@ function filterDevices() {
         row.style.display = text.includes(search) ? "" : "none";
     });
 }
-function openAddDeviceModal() {
-    document.getElementById("addDeviceModal").style.display = "block";
-}
-
-function closeAddDeviceModal() {
-    document.getElementById("addDeviceModal").style.display = "none";
-}
-
 async function submitNewDevice() {
     const name = document.getElementById("deviceNameInput").value;
     const uniqueId = document.getElementById("deviceUniqueInput").value;
@@ -1328,8 +1331,7 @@ async function submitNewDevice() {
     });
 
     alert("Device added");
-
-    closeAddDeviceModal();
+    switchPanel("devices");
     loadDevices();
 }
 async function deleteDevice(id) {
@@ -1473,8 +1475,8 @@ function showCreateUserForm() {
         </div>
 
         <div class="form-group">
-            <label>Email</label>
-            <input id="newUserEmail" placeholder="Enter email">
+        <label>Mobile Number</label>
+        <input id="newUserPhone" type="text" placeholder="03XXXXXXXXX">
         </div>
 
         <div class="form-group">

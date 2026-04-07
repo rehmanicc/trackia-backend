@@ -1,6 +1,6 @@
 async function handleLogin() {
 
-const email = document.getElementById("loginEmail").value
+const phoneNumber = document.getElementById("loginPhone").value
 const password = document.getElementById("loginPassword").value
 
 if (!email || !password) {
@@ -13,7 +13,7 @@ const response = await fetch("https://trackia-backend.onrender.com/api/auth/logi
     headers:{
         "Content-Type":"application/json"
     },
-    body:JSON.stringify({ email, password })
+    body:JSON.stringify({ phoneNumber, password })
 })
 
 const data = await response.json()
