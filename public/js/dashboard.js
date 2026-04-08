@@ -161,10 +161,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
         payload = JSON.parse(atob(token.split(".")[1]));
+
+        const userDisplay = document.getElementById("loggedInUser");
+
+        if (userDisplay && payload) {
+            const roleLabel =
+                payload.role.charAt(0).toUpperCase() + payload.role.slice(1);
+
+            userDisplay.innerText = `👤 ${payload.name} (${roleLabel})`;
+        }
+
     } catch (e) {
         console.error("Token parsing error:", e);
-
-        // 🔥 DO NOT force logout immediately
         payload = null;
     }
     const userRole = payload.role;
@@ -971,6 +979,7 @@ ${createButton({
     window.switchPanel = switchPanel;
     window.showUserPermissions = showUserPermissions;
     window.showEditUser = showEditUser;
+    window.updateUser = updateUser;
     window.showCreateUserForm = showCreateUserForm;
     window.openAssign = openAssign;
     window.submitAssign = submitAssign;
@@ -1680,18 +1689,70 @@ async function createRule() {
 
     loadAlertRules();
 }
-function showEditUser(userId) {
+async function showEditUser(userId) {
 
     const right = document.getElementById("userContent");
 
+    // 🔥 FIRST render HTML
     right.innerHTML = `
-        <h3>Edit User</h3>
+        <div class="user-form-card">
+            <h3>Edit User</h3>
 
-        <input placeholder="Update Name"><br><br>
-        <input placeholder="Update Email"><br><br>
+            <div class="form-group">
+                <label>Full Name</label>
+                <input id="editUserName" placeholder="Update Name">
+            </div>
 
-        <button>Save Changes</button>
+            <div class="form-group">
+                <label>Mobile Number</label>
+                <input id="editUserPhone" placeholder="03XXXXXXXXX">
+            </div>
+
+            <button class="btn-save-user" onclick="updateUser('${userId}')">
+                Save Changes
+            </button>
+        </div>
     `;
+
+    // 🔥 THEN fetch user
+    const user = await apiRequest(`/api/users/${userId}`);
+
+    // 🔥 NOW elements exist
+    document.getElementById("editUserName").value = user.name || "";
+    document.getElementById("editUserPhone").value = user.phoneNumber || "";
+
+    // 🔥 STORE ORIGINAL (IMPORTANT FIX)
+    window.originalPhone = (user.phoneNumber || "").trim();
+}
+async function updateUser(userId) {
+
+    const name = document.getElementById("editUserName").value.trim();
+    const phone = document.getElementById("editUserPhone").value
+        .trim()
+        .replace(/\s+/g, "");
+    console.log("Phone raw:", document.getElementById("editUserPhone").value);
+    console.log("Phone trimmed:", phone);
+    console.log("Length:", phone.length);
+    if (!name || !phone) {
+        alert("Fill all fields");
+        return;
+    }
+    if (phone !== window.originalPhone) {
+        if (!phone.match(/^03\\d{9}$/)) {
+            alert("Enter valid mobile number");
+            return;
+        }
+    }
+    await apiRequest(`/api/users/${userId}`, {
+        method: "PUT",
+        body: JSON.stringify({
+            name,
+            phoneNumber: phone
+        })
+    });
+
+    alert("User updated");
+    loadUserPermissions();
 }
 window.toggleGroup = function (userId, groupKey, isChecked) {
 

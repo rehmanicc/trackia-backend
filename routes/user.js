@@ -50,4 +50,39 @@ router.get("/:id", authMiddleware, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// ✅ UPDATE USER
+router.put("/:id", authMiddleware, async (req, res) => {
+  try {
+    const { name, phoneNumber } = req.body;
+
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // 🔐 Admin restriction (same company)
+    if (
+      req.user.role === "admin" &&
+      String(user.companyId) !== String(req.user.companyId)
+    ) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    // 🔥 UPDATE FIELDS
+    if (name) user.name = name;
+    if (phoneNumber) user.phoneNumber = phoneNumber;
+
+    await user.save();
+
+    res.json({
+      message: "User updated",
+      user
+    });
+
+  } catch (err) {
+    console.error("❌ UPDATE USER ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 module.exports = router;
