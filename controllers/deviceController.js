@@ -62,7 +62,7 @@ exports.createDevice = async (req, res) => {
       traccarId: traccarDevice.id,
       companyId: user.companyId,
       createdBy: user._id,
-      assignedTo: [user._id],
+      assignedTo: [],
       speedLimit: speedLimit || 70,
       fuelEfficiency: fuelEfficiency || 12
     });
@@ -143,7 +143,6 @@ exports.deleteDevice = async (req, res) => {
 // ASSIGN DEVICE
 exports.assignDevice = async (req, res) => {
   try {
-
     const mongoose = require("mongoose");
 
     const { userId } = req.body;
@@ -152,17 +151,12 @@ exports.assignDevice = async (req, res) => {
     console.log("📥 Device ID:", deviceId);
     console.log("📥 Assign Body:", req.body);
 
-    // ✅ VALIDATE DEVICE ID FIRST
+    // ✅ VALIDATION
     if (!mongoose.Types.ObjectId.isValid(deviceId)) {
       return res.status(400).json({ error: "Invalid deviceId" });
     }
 
-    // ✅ VALIDATE USER ID
-    if (!userId) {
-      return res.status(400).json({ error: "userId required" });
-    }
-
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({ error: "Invalid userId" });
     }
 
@@ -176,26 +170,35 @@ exports.assignDevice = async (req, res) => {
       return res.status(403).json({ error: "Not allowed" });
     }
 
-    if (!device.assignedTo) {
+    // ✅ FORCE ARRAY (IMPORTANT)
+    if (!Array.isArray(device.assignedTo)) {
       device.assignedTo = [];
     }
 
-    const userObjectId = new mongoose.Types.ObjectId(userId);
+    // ✅ PREVENT DUPLICATE
+    const alreadyAssigned = device.assignedTo.some(
+      u => u.toString() === userId
+    );
 
-    device.assignedTo.addToSet(userObjectId);
+    if (alreadyAssigned) {
+      return res.status(400).json({
+        error: "Device already assigned"
+      });
+    }
+
+    // ✅ ASSIGN
+    device.assignedTo.push(new mongoose.Types.ObjectId(userId));
+
     await device.save();
 
     res.json({
-      message: "Device assigned",
-      device
+      message: "Device assigned successfully",
+      assignedTo: device.assignedTo
     });
 
   } catch (err) {
     console.error("❌ ASSIGN ERROR:", err);
-
-    res.status(500).json({
-      error: err.message
-    });
+    res.status(500).json({ error: err.message });
   }
 };
 // UNASSIGN DEVICE

@@ -27,10 +27,13 @@ const deviceSchema = new mongoose.Schema({
         type: Number,
         default: 12
     },
-    assignedTo: [{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User"
-    }]
+    assignedTo: {
+        type: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User"
+        }],
+        default: []
+    }
 
 }, { timestamps: true });
 
