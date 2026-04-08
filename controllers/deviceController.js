@@ -4,25 +4,62 @@ const Geofence = require("../models/Geofence");
 
 // CREATE DEVICE
 exports.createDevice = async (req, res) => {
+
   const { name, uniqueId, speedLimit, fuelEfficiency } = req.body;
   const user = req.user;
+
   if (user.role !== "admin") {
     return res.status(403).json({
       error: "Only admin can create devices"
     });
   }
+
   try {
 
-    const response = await traccarAPI.post("/api/devices", {
-      name,
-      uniqueId
-    });
+    // ======================
+    // 1️⃣ CHECK MONGO FIRST
+    // ======================
+    const existingMongo = await Device.findOne({ uniqueId });
 
-    // 2. Save in Mongo
+    if (existingMongo) {
+      return res.status(400).json({
+        error: "Device already exists in system"
+      });
+    }
+
+    // ======================
+    // 2️⃣ CHECK TRACCAR
+    // ======================
+    const traccarRes = await traccarAPI.get("/api/devices");
+    const traccarDevices = traccarRes.data;
+
+    let traccarDevice = traccarDevices.find(d => d.uniqueId === uniqueId);
+
+    // ======================
+    // 3️⃣ CREATE IF NOT EXISTS
+    // ======================
+    if (!traccarDevice) {
+
+      console.log("➕ Creating device in Traccar");
+
+      const response = await traccarAPI.post("/api/devices", {
+        name,
+        uniqueId
+      });
+
+      traccarDevice = response.data;
+
+    } else {
+      console.log("♻️ Reusing existing Traccar device");
+    }
+
+    // ======================
+    // 4️⃣ SAVE IN MONGO
+    // ======================
     const device = await Device.create({
       name,
       uniqueId,
-      traccarId: response.data.id,
+      traccarId: traccarDevice.id,
       companyId: user.companyId,
       createdBy: user._id,
       assignedTo: [user._id],
@@ -33,7 +70,11 @@ exports.createDevice = async (req, res) => {
     res.json(device);
 
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("❌ DEVICE ERROR:", err.response?.data || err.message);
+
+    res.status(500).json({
+      error: err.response?.data?.message || err.message
+    });
   }
 };
 exports.getDevices = async (req, res) => {
