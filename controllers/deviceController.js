@@ -160,7 +160,15 @@ exports.assignDevice = async (req, res) => {
       return res.status(403).json({ error: "Not allowed" });
     }
 
-    device.assignedTo.addToSet(userId);
+    if (!device.assignedTo) {
+      device.assignedTo = [];
+    }
+
+    const mongoose = require("mongoose");
+
+    const userObjectId = new mongoose.Types.ObjectId(userId);
+
+    device.assignedTo.addToSet(userObjectId);
     await device.save();
 
     res.json({
