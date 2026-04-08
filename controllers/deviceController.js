@@ -166,6 +166,13 @@ exports.assignDevice = async (req, res) => {
 
     const mongoose = require("mongoose");
 
+    const mongoose = require("mongoose");
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ error: "Invalid userId" });
+    }
+    console.log("📥 Assign Body:", req.body);
+    console.log("📥 userId received:", userId);
     const userObjectId = new mongoose.Types.ObjectId(userId);
 
     device.assignedTo.addToSet(userObjectId);
