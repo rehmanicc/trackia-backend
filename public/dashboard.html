@@ -262,13 +262,16 @@
                     </div>
                 </div>
                 <div id="alertPanel" class="vehicle-panel">
+
                     <h3>🚨 Alerts</h3>
-                    <div style="padding:10px;">
+
+                    <div style="margin-bottom:10px;">
                         <button onclick="filterAlerts('all')">All</button>
                         <button onclick="filterAlerts('high')">Critical</button>
                         <button onclick="filterAlerts('unread')">Unread</button>
+                        <button onclick="clearReadAlerts()">Clear Read</button>
                     </div>
-                    <button onclick="clearReadAlerts()">Clear Read</button>
+
                     <div style="margin-bottom:10px;">
                         <select id="alertTypeFilter">
                             <option value="all">All</option>
@@ -276,12 +279,14 @@
                             <option value="engine_off">Engine OFF</option>
                             <option value="geofence_enter">Geofence Enter</option>
                             <option value="geofence_exit">Geofence Exit</option>
+                            <option value="geofence_exit">Over Speed</option>
                         </select>
 
                         <input type="text" id="vehicleSearch" placeholder="Search vehicle">
                     </div>
 
                     <div id="alertList"></div>
+
                 </div>
                 <!-- MAP -->
                 <div id="map" class="map-container">

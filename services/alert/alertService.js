@@ -9,7 +9,6 @@ async function createAlert(alertData, io) {
 
         const now = new Date();
 
-        // ✅ CHECK RECENT DUPLICATE (KEY FIX)
         const recent = await Alert.findOne({
             deviceId: alertData.deviceId,
             type: alertData.type,

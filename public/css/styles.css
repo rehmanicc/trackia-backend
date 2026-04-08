@@ -1190,12 +1190,13 @@ body {
     border-left: 5px solid blue;
     background: #e5f0ff;
 }
+
 .user-form-card {
     background: #fff;
     padding: 20px;
     border-radius: 12px;
     width: 320px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .user-form-card h3 {
@@ -1241,6 +1242,7 @@ body {
 .btn-save-user:hover {
     background: #3a9be0;
 }
+
 /* 🔥 BACKDROP */
 #assignModal {
     position: fixed;
@@ -1261,9 +1263,10 @@ body {
 #assignModal .modal-content {
     background: #fff;
     padding: 25px 30px;
-    width: 320px;              /* ✅ increased size */
+    width: 320px;
+    /* ✅ increased size */
     border-radius: 12px;
-    box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
     text-align: center;
 
     animation: fadeIn 0.2s ease;
@@ -1310,6 +1313,76 @@ body {
 
 /* 🔥 ANIMATION */
 @keyframes fadeIn {
-    from { transform: scale(0.9); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* 🔥 ALERT PANEL CLEAN UI */
+#alertPanel {
+    padding: 15px;
+    overflow-y: auto;
+}
+
+/* HEADER */
+#alertPanel h3 {
+    margin-bottom: 10px;
+}
+
+/* BUTTON GROUP */
+#alertPanel button {
+    padding: 6px 10px;
+    margin-right: 5px;
+    border-radius: 6px;
+    border: none;
+    background: #eee;
+    cursor: pointer;
+}
+
+#alertPanel button:hover {
+    background: #ddd;
+}
+
+/* FILTER ROW */
+#alertPanel select,
+#alertPanel input {
+    padding: 6px;
+    margin-right: 5px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+
+/* ALERT LIST */
+#alertList {
+    margin-top: 10px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* ALERT CARD */
+.alert-item {
+    background: #fff;
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* PRIORITY COLORS */
+.alert-high {
+    border-left: 4px solid red;
+}
+
+.alert-medium {
+    border-left: 4px solid orange;
+}
+
+.alert-low {
+    border-left: 4px solid green;
 }

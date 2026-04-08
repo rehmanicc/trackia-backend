@@ -171,7 +171,16 @@ document.addEventListener("DOMContentLoaded", () => {
         location.reload();                  // 🔥 ADD THIS
         return;
     }
-    const userRole = payload.role;
+    const userRole = payload?.role;
+    const userDisplay = document.getElementById("loggedInUser");
+
+    if (userDisplay && payload) {
+        const roleLabel = payload.role
+            ? payload.role.charAt(0).toUpperCase() + payload.role.slice(1)
+            : "";
+
+        userDisplay.innerText = `👤 ${payload.name || "User"} (${roleLabel})`;
+    }
     const adminPanel = document.getElementById("adminPanel");
     const userPanel = document.getElementById("userPanel");
 
@@ -1255,12 +1264,11 @@ async function loadDevices() {
 
     <table class="device-table">
         <thead>
-            <tr>
-                <th>Name</th>
-                <th>Traccar ID</th>
-                <th>Assigned Users</th>
-                <th>Actions</th>
-            </tr>                   
+            <th>Name</th>
+<th>Traccar ID</th>
+<th>Speed</th>
+<th>Assigned Users</th>
+<th>Actions</th>                   
         </thead>
         <tbody id="deviceTableBody"></tbody>
     </table>
@@ -1275,8 +1283,19 @@ async function loadDevices() {
 
             row.innerHTML = `
     <td>${d.name}</td>
-    <td>${d.traccarId}</td>
-    <td>${users || "-"}</td>
+<td>${d.traccarId}</td>
+
+<td>
+  <input 
+    type="number" 
+    value="${d.speedLimit || 70}" 
+    onchange="updateSpeed('${d._id}', this.value)"
+    style="width:70px;"
+    ${!hasPermission("EDIT_SPEED") ? "disabled" : ""}
+  >
+</td>
+
+<td>${users || "-"}</td>
     <td>
         <div class="action-buttons">
             ${createButton({
@@ -1391,9 +1410,6 @@ async function openAssign(deviceId) {
     modal.style.display = "flex";
 }
 
-function closeAssign() {
-    document.getElementById("assignModal").style.display = "none";
-}
 async function submitAssign() {
 
     const select = document.getElementById("assignUserSelect");
@@ -1664,7 +1680,7 @@ async function loadAlertRules() {
         container.innerHTML = "<p>Failed to load rules</p>";
     }
 }
-async function toggleRule(id, current) {
+window.toggleRule = async function (id, current) {
 
     await apiRequest(`/api/alert-rules/${id}`, {
         method: "PUT",
@@ -1675,7 +1691,7 @@ async function toggleRule(id, current) {
 
     loadAlertRules();
 }
-async function createRule() {
+window.createRule = async function () {
 
     const speed = prompt("Enter speed limit (km/h):");
     if (!speed) return;
@@ -1779,4 +1795,20 @@ window.toggleGroup = function (userId, groupKey, isChecked) {
         const inputs = document.querySelectorAll(`input[data-permission="${p}"]`);
         inputs.forEach(input => input.checked = isChecked);
     });
+};
+window.updateSpeed = async function (deviceId, speed) {
+    try {
+        await apiRequest(`/api/devices/${deviceId}/speed`, {
+            method: "PUT",
+            body: JSON.stringify({
+                speedLimit: Number(speed)
+            })
+        });
+
+        alertUI.showToast("Speed updated", "success");
+
+    } catch (err) {
+        console.error(err);
+        alert("Failed to update speed");
+    }
 };

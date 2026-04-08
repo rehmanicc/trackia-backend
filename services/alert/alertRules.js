@@ -1,6 +1,6 @@
 // 🔥 In-memory state (per device)
 const vehicleState = {};
-const AlertRule = require("../../models/AlertRule");
+
 async function detectAlerts(position) {
 
     const alerts = [];
@@ -19,20 +19,7 @@ async function detectAlerts(position) {
         };
     }
     const state = vehicleState[deviceId];
-    let rules = [];
 
-    try {
-        rules = await AlertRule.find({
-            type: "OVERSPEED",
-            enabled: true,
-            $or: [
-                { deviceIds: { $size: 0 } }, // global rule
-                { deviceIds: String(deviceId) }
-            ]
-        });
-    } catch (err) {
-        console.error("Rule fetch failed:", err.message);
-    }
     // ================= ENGINE ON =================
     if (speed > 5 && !state.engineOn) {
 
@@ -75,62 +62,48 @@ async function detectAlerts(position) {
     }
     // ================= OVERSPEED =================
 
-    // Default limit
-    const DEFAULT_LIMIT = 70;
 
-    let speedLimit =
-        position.deviceConfig?.speedLimit ||
-        attributes.speedLimit ||
-        DEFAULT_LIMIT;
+    const Device = require("../../models/Device");
 
-    let selectedRule = null;
+    let speedLimit = 70;
 
-    // 🎯 Priority 1: Device-specific rule
-    selectedRule = rules.find(r =>
-        r.deviceIds && r.deviceIds.includes(String(deviceId))
-    );
+    const device = await Device.findOne({ traccarId: deviceId });
 
-    // 🎯 Priority 2: Global rule
-    if (!selectedRule) {
-        selectedRule = rules.find(r =>
-            !r.deviceIds || r.deviceIds.length === 0
-        );
+    if (device?.speedLimit) {
+        speedLimit = device.speedLimit;
     }
-    if (selectedRule && selectedRule.conditions?.speedLimit) {
-        speedLimit = selectedRule.conditions.speedLimit;
+
+    const speedKmh = speed * 1.852;
+
+    // init state
+    if (!state.lastOverspeedTime) {
+        state.lastOverspeedTime = 0;
     }
-const speedKmh = speed * 1.852;
 
-// init state
-if (!state.lastOverspeedTime) {
-    state.lastOverspeedTime = 0;
-}
+    // cooldown (prevent spam)
+    const COOLDOWN = 15000; // 15 sec
 
-// cooldown (prevent spam)
-const COOLDOWN = 15000; // 15 sec
+    if (speedKmh > speedLimit) {
 
-if (speedKmh > speedLimit) {
+        const now = Date.now();
 
-    const now = Date.now();
+        if (now - state.lastOverspeedTime > COOLDOWN) {
 
-    if (now - state.lastOverspeedTime > COOLDOWN) {
+            alerts.push({
+                type: "OVERSPEED",
+                message: `Vehicle ${deviceId} Overspeed (${Math.round(speedKmh)} km/h)`,
+                metadata: {
+                    speed: Math.round(speedKmh),
+                    limit: speedLimit
+                },
 
-        alerts.push({
-            type: "OVERSPEED",
-            message: `Vehicle ${deviceId} Overspeed (${Math.round(speedKmh)} km/h)`,
-            metadata: {
-                speed: Math.round(speedKmh),
-                limit: speedLimit
-            },
+                priority: "high"
+            });
 
-            ruleId: selectedRule?._id || null,
-            priority: selectedRule?.priority || "medium"
-        });
-
-        state.lastOverspeedTime = now;
+            state.lastOverspeedTime = now;
+        }
     }
-}
-return alerts;
+    return alerts;
 }
 
 module.exports = { detectAlerts };
