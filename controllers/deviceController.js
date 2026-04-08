@@ -142,20 +142,39 @@ exports.deleteDevice = async (req, res) => {
 };
 // ASSIGN DEVICE
 exports.assignDevice = async (req, res) => {
-  const { userId } = req.body;
+  try {
 
-  const device = await Device.findById(req.params.id);
+    const { userId } = req.body;
 
-  if (!device) return res.status(404).json({ error: "Not found" });
+    if (!userId) {
+      return res.status(400).json({ error: "userId required" });
+    }
 
-  if (req.user.role !== "admin") {
-    return res.status(403).json({ error: "Not allowed" });
+    const device = await Device.findById(req.params.id);
+
+    if (!device) {
+      return res.status(404).json({ error: "Device not found" });
+    }
+
+    if (req.user.role !== "admin") {
+      return res.status(403).json({ error: "Not allowed" });
+    }
+
+    device.assignedTo.addToSet(userId);
+    await device.save();
+
+    res.json({
+      message: "Device assigned",
+      device
+    });
+
+  } catch (err) {
+    console.error("❌ ASSIGN ERROR:", err);
+
+    res.status(500).json({
+      error: err.message
+    });
   }
-
-  device.assignedTo.addToSet(userId);
-  await device.save();
-
-  res.json(device);
 };
 // UNASSIGN DEVICE
 exports.unassignDevice = async (req, res) => {

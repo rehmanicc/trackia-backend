@@ -972,6 +972,9 @@ ${createButton({
     window.showUserPermissions = showUserPermissions;
     window.showEditUser = showEditUser;
     window.showCreateUserForm = showCreateUserForm;
+    window.openAssign = openAssign;
+    window.submitAssign = submitAssign;
+window.closeAssign = closeAssign;
     initApp();
     setInterval(() => {
         console.log("🔄 Fallback refresh...");
