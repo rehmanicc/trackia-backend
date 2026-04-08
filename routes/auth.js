@@ -10,12 +10,27 @@ if (!process.env.JWT_SECRET) {
 }
 // REGISTER
 router.post("/register", authMiddleware, async (req, res) => {
+
   const Company = require("../models/Company");
   const { name, phoneNumber, password, role } = req.body;
 
+  console.log("📥 BODY:", req.body);
+  console.log("👤 USER:", req.user);
+
   try {
 
-    // 🔐 OWNER → can create ADMIN only
+    // ✅ VALIDATION FIRST
+    if (!name || !phoneNumber || !password) {
+      return res.status(400).json({ error: "Missing fields" });
+    }
+
+    // ✅ CHECK DUPLICATE
+    const existing = await User.findOne({ phoneNumber });
+    if (existing) {
+      return res.status(400).json({ error: "Phone already exists" });
+    }
+
+    // 🔐 OWNER → ADMIN
     if (req.user.role === "owner") {
 
       if (role !== "admin") {
@@ -24,7 +39,6 @@ router.post("/register", authMiddleware, async (req, res) => {
 
       const hash = await bcrypt.hash(password, 10);
 
-      // ✅ CREATE COMPANY FIRST
       const company = await Company.create({
         name: name + " Company"
       });
@@ -42,7 +56,7 @@ router.post("/register", authMiddleware, async (req, res) => {
       return res.json({ message: "Admin created", user });
     }
 
-    // 🔐 ADMIN → can create USER only
+    // 🔐 ADMIN → USER
     if (req.user.role === "admin") {
 
       const hash = await bcrypt.hash(password, 10);
@@ -60,15 +74,17 @@ router.post("/register", authMiddleware, async (req, res) => {
       return res.json({ message: "User created", user });
     }
 
-    // 🔐 USER → no access
     return res.status(403).json({ error: "Access denied" });
 
   } catch (err) {
-    console.error(err);
-    console.error("❌ REGISTER ERROR:", err); // 🔥 FULL ERROR
-    res.status(500).json({ error: "Failed to create user" });
-  }
+    console.error("❌ REGISTER ERROR FULL:", err);
 
+    if (err.code === 11000) {
+      return res.status(400).json({ error: "Phone already exists" });
+    }
+
+    res.status(500).json({ error: err.message });
+  }
 });
 // LOGIN
 router.post("/login", async (req, res) => {
