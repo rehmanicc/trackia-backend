@@ -1,6 +1,15 @@
 // 🔥 In-memory state (per device)
 const vehicleState = {};
+const ALERT_PRIORITY = {
+    OVERSPEED: "high",
+    GEOFENCE_EXIT: "high",
+    BATTERY_DISCONNECTED: "high",
 
+    GEOFENCE_ENTER: "medium",
+
+    ENGINE_ON: "low",
+    ENGINE_OFF: "low"
+};
 async function detectAlerts(position) {
 
     const alerts = [];
@@ -96,13 +105,14 @@ async function detectAlerts(position) {
                     speed: Math.round(speedKmh),
                     limit: speedLimit
                 },
-
-                priority: "high"
             });
 
             state.lastOverspeedTime = now;
         }
     }
+    alerts.forEach(a => {
+        a.priority = ALERT_PRIORITY[a.type] || "medium";
+    });
     return alerts;
 }
 
