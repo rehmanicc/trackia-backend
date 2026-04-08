@@ -974,7 +974,7 @@ ${createButton({
     window.showCreateUserForm = showCreateUserForm;
     window.openAssign = openAssign;
     window.submitAssign = submitAssign;
-window.closeAssign = closeAssign;
+    window.closeAssign = closeAssign;
     initApp();
     setInterval(() => {
         console.log("🔄 Fallback refresh...");
@@ -1350,13 +1350,23 @@ async function deleteDevice(id) {
 let selectedDeviceForAssign = null;
 
 async function openAssign(deviceId) {
+
     selectedDeviceForAssign = deviceId;
 
-    const users = await safeApi(() => apiRequest("/api/users"), []); // your existing API
+    const users = await apiRequest("/api/users");
 
     const select = document.getElementById("assignUserSelect");
+
+    // ✅ Clear previous
     select.innerHTML = "";
 
+    // ✅ ADD DEFAULT OPTION (THIS FIXES YOUR BUG)
+    const defaultOpt = document.createElement("option");
+    defaultOpt.value = "";
+    defaultOpt.textContent = "-- Select User --";
+    select.appendChild(defaultOpt);
+
+    // ✅ Populate users
     users.forEach(u => {
         const opt = document.createElement("option");
         opt.value = u._id;
@@ -1364,15 +1374,33 @@ async function openAssign(deviceId) {
         select.appendChild(opt);
     });
 
+    console.log("Users loaded:", users);
+
     document.getElementById("assignModal").style.display = "block";
 }
 
 function closeAssign() {
     document.getElementById("assignModal").style.display = "none";
 }
-
 async function submitAssign() {
-    const userId = document.getElementById("assignUserSelect").value;
+
+    const select = document.getElementById("assignUserSelect");
+
+    // ✅ Check select exists
+    if (!select) {
+        alert("User selector not found");
+        return;
+    }
+
+    const userId = select.value;
+
+    console.log("Assigning userId:", userId);
+
+    // ✅ IMPORTANT FIX
+    if (!userId || userId === "undefined") {
+        alert("Please select a user");
+        return;
+    }
 
     await apiRequest(`/api/devices/${selectedDeviceForAssign}/assign`, {
         method: "POST",
@@ -1384,6 +1412,7 @@ async function submitAssign() {
     closeAssign();
     loadDevices();
 }
+
 function setActiveMenu(element) {
     document.querySelectorAll(".sidebar li").forEach(li => li.classList.remove("active"));
     element.classList.add("active");
