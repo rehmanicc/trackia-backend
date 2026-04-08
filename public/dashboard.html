@@ -36,7 +36,6 @@
                     <li onclick="setActiveMenu(this); switchPanel('devices')">📦 Device Management</li>
                     <li onclick="setActiveMenu(this); switchPanel('geofence')">📍 Geofencing</li>
                     <li onclick="setActiveMenu(this); switchPanel('alerts')"> 🚨 Alerts</li>
-                    <li onclick="switchPanel('alertRules')">⚙️ Alert Rules</li>
                     <li onclick="setActiveMenu(this); switchPanel('users')">👤 User Management</li>
                 </ul>
             </nav>
@@ -155,14 +154,12 @@
                 <div id="geofencePanel" class="vehicle-panel">
 
                     <div style="padding:10px;">
-                        <button onclick="openGeofence()">➕ Add Geofence</button>
-                        <button onclick="deleteSelectedGeofence()">🗑 Delete</button>
+                        Manage Geofences
                     </div>
 
                     <div id="geofenceList"></div>
 
                 </div>
-                <div id="alertRulesPanel" class="vehicle-panel"></div>
                 <div id="userPanel" class="vehicle-panel">
 
                     <div class="user-layout">

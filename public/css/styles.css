@@ -81,12 +81,16 @@ body {
 
 
 
+#deviceList {
+    overflow-x: auto;
+}
+
 /* VEHICLE PANEL */
 .vehicle-panel {
-    width: 320px;
+    width: 450px;
     background: white;
     border-right: 1px solid #ddd;
-    display: flex;
+    display: none;
     flex-direction: column;
 }
 
@@ -97,10 +101,10 @@ body {
 
 .action-buttons {
     display: flex;
-    gap: 6px;
-    /* spacing between buttons */
+    gap: 4px;
     align-items: center;
-    justify-content: flex-start;
+    flex-wrap: nowrap;
+    overflow: hidden;
 }
 
 .action-buttons button {
@@ -138,6 +142,8 @@ body {
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
     z-index: 10000 !important;
 }
+
+
 
 #playbackRow {
     display: flex;
@@ -370,42 +376,7 @@ body {
     border-radius: 6px;
 }
 
-.device-table {
-    width: 100%;
-    border-collapse: collapse;
-    background: white;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-}
 
-.device-table th {
-    background: #f9fafb;
-    font-size: 12px;
-    color: #374151;
-    text-transform: uppercase;
-}
-
-.device-table td {
-    font-size: 13px;
-    color: #111827;
-}
-
-.device-table tr:hover {
-    background: #f3f4f6;
-}
-
-.device-table button {
-    margin-right: 5px;
-    padding: 5px 8px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.device-table button:hover {
-    opacity: 0.8;
-}
 
 /* PRIMARY BUTTON (Add Device) */
 .primary-btn {
@@ -628,10 +599,7 @@ body {
     text-align: center;
 }
 
-/* 🔥 PANEL SYSTEM */
-.vehicle-panel {
-    display: none;
-}
+
 
 /* active panel */
 .vehicle-panel.active {
@@ -1385,4 +1353,298 @@ body {
 
 .alert-low {
     border-left: 4px solid green;
+}
+
+input:disabled {
+    background: #eee;
+    cursor: not-allowed;
+}
+
+/* ========================
+   DEVICE PANEL
+======================== */
+.vehicle-panel {
+    width: 420px;
+}
+
+/* ========================
+   DEVICE TABLE BASE
+======================== */
+#deviceList {
+    overflow-x: auto;
+}
+
+.device-table {
+    width: 98%;
+    min-width: 420px;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 12px;
+}
+
+/* ========================
+   TABLE HEADER
+======================== */
+.device-table th {
+    padding: 8px 10px;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    color: #272727;
+    text-align: left;
+}
+
+/* ========================
+   TABLE CELLS
+======================== */
+.device-table td {
+    padding: 8px 10px;
+    vertical-align: middle;
+}
+
+/* ========================
+   COLUMN CONTROL
+======================== */
+
+/* NAME */
+.device-table th:nth-child(1),
+.device-table td:nth-child(1) {
+    width: 90px;
+    padding-left: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* TRACCAR ID */
+.device-table th:nth-child(2),
+.device-table td:nth-child(2) {
+    width: 55px;
+    text-align: center;
+}
+
+/* SPEED */
+.device-table th:nth-child(3),
+.device-table td:nth-child(3) {
+    width: 60px;
+    text-align: center;
+}
+
+/* USERS */
+.device-table th:nth-child(4),
+.device-table td:nth-child(4) {
+    width: 90px;
+    padding-left: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* ACTIONS */
+.device-table th:nth-child(5),
+.device-table td:nth-child(5) {
+    width: 105px;
+    text-align: center;
+}
+
+/* ========================
+   SPEED INPUT
+======================== */
+.device-table input[type="number"] {
+    width: 40px;
+    min-width: 40px;
+    max-width: 40px;
+    padding: 2px;
+    font-size: 11px;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+/* Remove arrows */
+.device-table input[type="number"]::-webkit-inner-spin-button,
+.device-table input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.device-table input[type="number"] {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+}
+
+/* ========================
+   ACTION BUTTONS
+======================== */
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+}
+
+/* BUTTON STYLE */
+.icon-btn {
+    padding: 4px 6px;
+    font-size: 12px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+/* ========================
+   ROW HOVER
+======================== */
+.device-table tr:hover {
+    background: #f5f7fa;
+}
+
+/* ========================
+   DISABLED INPUT
+======================== */
+input:disabled {
+    background: #eee;
+    cursor: not-allowed;
+}
+
+/* ICON BUTTONS IN GEOFENCE */
+#geofenceList button {
+    font-size: 13px;
+    padding: 3px 6px;
+    border-radius: 4px;
+    transition: 0.2s;
+}
+
+/* EDIT */
+#geofenceList button:hover {
+    background: #e5e7eb;
+}
+
+/* DELETE HOVER */
+#geofenceList button[title="Delete"]:hover {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+/* =========================
+   🔥 MODERN GEOFENCE UI (MATCH USER PANEL)
+========================= */
+
+/* HEADER */
+.geo-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px;
+}
+
+/* LIST */
+#geofenceList {
+    padding: 10px;
+}
+
+/* DEVICE CARD */
+.geo-device {
+    background: #fff;
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.geo-device:hover {
+    transform: translateY(-1px);
+}
+
+/* ACTIVE DEVICE */
+.geo-device.active {
+    border-left: 4px solid #2563eb;
+    background: #f0f7ff;
+}
+
+/* DEVICE HEADER */
+.geo-device .flex-between {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* ADD BUTTON */
+.add-geo-btn {
+    background: #2563eb !important;
+    color: #fff !important;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.add-geo-btn:hover {
+    background: #1e40af;
+}
+
+/* EMPTY STATE */
+.geo-empty {
+    font-size: 12px;
+    color: #999;
+    margin: 5px 0 10px 5px;
+}
+
+/* GEOFENCE CARD */
+#geofenceList .vehicle-card {
+    background: #fff;
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin: 6px 0;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    font-size: 13px;
+    transition: 0.2s;
+}
+
+#geofenceList .vehicle-card:hover {
+    background: #f9fafb;
+}
+
+/* EDIT ICON */
+/* 🔥 FIX GEOFENCE BUTTON VISIBILITY */
+#geofenceList button {
+    border: none;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 5px;
+    font-size: 12px;
+}
+
+/* EDIT BUTTON */
+#geofenceList button[title="Edit"] {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+#geofenceList button[title="Edit"]:hover {
+    background: #bae6fd;
+}
+
+/* DELETE BUTTON */
+#geofenceList button[title="Delete"] {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+#geofenceList button[title="Delete"]:hover {
+    background: #fecaca;
+}
+
+/* DELETE BUTTON */
+.btn-danger {
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
 }

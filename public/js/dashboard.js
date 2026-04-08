@@ -1,26 +1,11 @@
 let allowedDevices = {};
 let selectedVehicleId = null;
 let collapsedDevices = {};
-window.selectedDeviceId = null;
 let lastPositions = {};
 let currentPanel = "live";
 let stopMarkers = [];
-let lastRenderTime = 0;
 let activeCard = null;
-// ===============================
-// ALL PERMISSIONS (REQUIRED)
-// ===============================
-const ALL_PERMISSIONS = [
-    "VIEW_DEVICE",
-    "EDIT_DEVICE",
-    "SEND_COMMAND",
-    "EDIT_SPEED",
-    "EDIT_FUEL",
-    "GEOFENCE_VIEW",
-    "GEOFENCE_CREATE",
-    "GEOFENCE_EDIT",
-    "GEOFENCE_DELETE"
-];
+
 // ===============================
 // PERMISSION GROUPS (v2.4)
 // ===============================
@@ -98,7 +83,6 @@ import {
     togglePlayback
 } from "./modules/playbackModule.js";
 const $ = (id) => document.getElementById(id);
-const $$ = (selector) => document.querySelector(selector);
 const headerTitle = document.querySelector(".header h2");
 function createButton({ text, className = "", onClick = "", title = "" }) {
     return `
@@ -171,7 +155,7 @@ document.addEventListener("DOMContentLoaded", () => {
         location.reload();                  // 🔥 ADD THIS
         return;
     }
-    const userRole = payload?.role;
+    window.userRole = payload?.role;
     const userDisplay = document.getElementById("loggedInUser");
 
     if (userDisplay && payload) {
@@ -235,12 +219,6 @@ document.addEventListener("DOMContentLoaded", () => {
         renderStops: renderStops,
         renderTripSummary: renderTripSummary
     });
-
-    setTimeout(() => {
-        try {
-            map.removeControl(drawControl);
-        } catch (e) { }
-    }, 500);
 
     const drawnItems = new L.FeatureGroup()
     map.addLayer(drawnItems)
@@ -312,7 +290,12 @@ document.addEventListener("DOMContentLoaded", () => {
     function openGeofence() {
         setState({ activePanel: "geofence", mode: "geofence" });
         headerTitle.innerText = "Geofencing";
-        map.addControl(drawControl);
+
+        // 🔥 Prevent duplicate controls
+        if (!map._drawControlAdded) {
+            map.addControl(drawControl);
+            map._drawControlAdded = true;
+        }
     }
 
     function renderGeofenceList() {
@@ -331,7 +314,7 @@ document.addEventListener("DOMContentLoaded", () => {
             vehicleDiv.innerHTML = `
                 <div class="flex-between">
                     <span>🚗 ${device.name || "Vehicle " + deviceId}</span>
-                    <button class="add-geo-btn">+ Add</button>
+                    <button class="add-geo-btn" type="button">+ Add</button>
                 </div>
             `;
             vehicleDiv.querySelector(".add-geo-btn").onclick = async (e) => {
@@ -372,11 +355,24 @@ document.addEventListener("DOMContentLoaded", () => {
                 div.className = "vehicle-card";
 
                 div.innerHTML = `
-                <div style="display:flex; justify-content:space-between;">
-                    <span>📍 ${f.name || "Unnamed"}</span>
-                    <button onclick="editGeofenceName('${f._id}')">✏️</button>
-                </div>
-            `;
+    <div class="flex-between">
+        <span>📍 ${f.name || "Unnamed"}</span>
+
+        <div style="display:flex; gap:6px;">
+            <button 
+                title="Edit"
+                onclick="event.stopPropagation(); editGeofenceName('${f._id}')">
+                ✏️
+            </button>
+
+            <button 
+                title="Delete"
+                onclick="event.stopPropagation(); deleteGeofence('${f._id}')">
+                🗑
+            </button>
+        </div>
+    </div>
+`;
 
                 div.onclick = async () => {
                     selectedGeofenceId = f._id;
@@ -421,25 +417,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
         await loadGeofences();
     }
-    async function deleteSelectedGeofence() {
-        if (!selectedGeofenceId) {
-            alert("Select geofence first");
-            return;
-        }
+    async function deleteGeofence(id) {
         if (!confirm("Delete this geofence?")) return;
 
-        await apiRequest(`/api/geofence/${selectedGeofenceId}`, {
+        await apiRequest(`/api/geofence/${id}`, {
             method: "DELETE"
         });
 
-        selectedGeofenceId = null;
+        if (window.alertUI) {
+            window.alertUI.showToast("Geofence deleted", "success");
+        }
+
         await loadGeofences();
     }
     async function loadInitialPositions() {
         try {
             const positions = await apiRequest("/api/traccar/positions");
-
-            console.log("📦 Initial positions:", positions);
 
             positions.forEach(pos => {
 
@@ -464,7 +457,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     async function initApp() {
         const token = localStorage.getItem("token");
-        const socket = initSocket(token);
+        initSocket(token);
         initAlertModule();
         await loadInitialAlerts();
         await fetchAllowedDevices();
@@ -822,12 +815,9 @@ ${createButton({
         try {
             const devices = await safeApi(() => apiRequest("/api/devices"), []);
             allowedDevices = {};
-            console.log("📦 Devices from backend:", devices);
             devices.forEach(device => {
                 allowedDevices[device.traccarId] = device;
             });
-
-            console.log("✅ Allowed Devices:", allowedDevices);
 
         } catch (err) {
             console.error("❌ Error fetching devices:", err);
@@ -968,7 +958,6 @@ ${createButton({
     window.logout = logout;
     window.togglePlayback = togglePlayback;
     window.createUser = createUser;
-    window.deleteSelectedGeofence = deleteSelectedGeofence;
     window.openGeofence = openGeofence;
     window.editGeofenceName = editGeofenceName;
     window.submitNewDevice = submitNewDevice;
@@ -989,6 +978,9 @@ ${createButton({
     window.openAssign = openAssign;
     window.submitAssign = submitAssign;
     window.closeAssign = closeAssign;
+    window.deleteGeofence = deleteGeofence;
+    window.togglePermission = togglePermission;
+    window.savePermissions = savePermissions;
     initApp();
     setInterval(() => {
         console.log("🔄 Fallback refresh...");
@@ -1009,11 +1001,6 @@ if (startInput && endInput) {
     startInput.addEventListener("change", () => {
         endInput.showPicker?.(); // 🔥 opens next picker (modern browsers)
     });
-
-    endInput.addEventListener("change", () => {
-        document.activeElement.blur(); // close cleanly
-    });
-
 
     endInput.addEventListener("change", () => {
         setTimeout(() => {
@@ -1105,17 +1092,6 @@ function updateVehicleList(positions) {
         highlightVehicleCard(selectedVehicleId);
     }
 }
-function isVehicleOnline(deviceTime) {
-    return ((new Date() - new Date(deviceTime)) / 60000) <= 5;
-}
-function getVehicleState(pos) {
-    const isOnline = isVehicleOnline(pos.deviceTime);
-    const speed = toKmh(pos.speed);
-    if (!isOnline) return { state: "offline", speed };
-    if (speed > 5) return { state: "moving", speed };
-    if (speed > 0) return { state: "idle", speed };
-    return { state: "stopped", speed };
-}
 function highlightVehicleCard(id) {
 
     if (activeCard) {
@@ -1199,7 +1175,7 @@ function switchPanel(panel) {
 
     if (panel === "devices") {
         $("devicePanel").classList.add("active");
-        $$(".header h2").innerText = "Devices";
+        headerTitle.innerText = "Devices";
 
         loadDevices(); // 🔥 moved here
     }
@@ -1216,11 +1192,6 @@ function switchPanel(panel) {
         headerTitle.innerText = "Alerts";
 
         loadInitialAlerts(); // 🔥 moved here
-    }
-    if (panel === "alertRules") {
-        document.getElementById("alertRulesPanel").classList.add("active");
-        headerTitle.innerText = "Alert Rules";
-        loadAlertRules();
     }
     if (panel === "users") {
         const map = $("map");
@@ -1253,6 +1224,7 @@ function closeAssign() {
     }
 }
 async function loadDevices() {
+    console.log("🚀 loadDevices called");
     const container = document.getElementById("deviceList");
 
     try {
@@ -1265,7 +1237,7 @@ async function loadDevices() {
     <table class="device-table">
         <thead>
             <th>Name</th>
-<th>Traccar ID</th>
+<th>Tra ID</th>
 <th>Speed</th>
 <th>Assigned Users</th>
 <th>Actions</th>                   
@@ -1279,48 +1251,54 @@ async function loadDevices() {
         devices.forEach(d => {
             const users = (d.assignedTo || []).map(u => u.name || "User").join(", ");
 
+            const canEditSpeed =
+                window.userRole === "owner" ||
+                window.userRole === "admin" ||
+                hasPermission?.("EDIT_SPEED");
+
             const row = document.createElement("tr");
 
             row.innerHTML = `
-    <td>${d.name}</td>
-<td>${d.traccarId}</td>
+        <td>${d.name}</td>
+        <td>${d.traccarId}</td>
 
-<td>
-  <input 
-    type="number" 
-    value="${d.speedLimit || 70}" 
-    onchange="updateSpeed('${d._id}', this.value)"
-    style="width:70px;"
-    ${!hasPermission("EDIT_SPEED") ? "disabled" : ""}
-  >
-</td>
+        <td>
+            <input 
+                type="number" 
+                value="${d.speedLimit ?? 70}" 
+                onchange="updateSpeed('${d._id}', this.value)"
+                style="width:70px;"
+                ${canEditSpeed ? "" : "disabled"}
+            >
+        </td>
 
-<td>${users || "-"}</td>
-    <td>
-        <div class="action-buttons">
-            ${createButton({
+        <td>${users || "-"}</td>
+
+        <td>
+            <div class="action-buttons">
+             ${createButton({
                 text: "👤",
                 className: "icon-btn assign",
                 onClick: `openAssign('${d._id}')`,
-                title: "Assign User"
+                title: "Assign"
             })}
+
+${d.assignedTo?.length ? createButton({
+                text: "❌",
+                className: "icon-btn unassign",
+                onClick: `unassignDevice('${d._id}')`,
+                title: "Unassign"
+            }) : ""}
 
 ${createButton({
                 text: "🗑",
                 className: "icon-btn delete",
                 onClick: `deleteDevice('${d._id}')`,
-                title: "Delete Device"
-            })}
-
-${createButton({
-                text: "❌",
-                className: "icon-btn unassign",
-                onClick: `unassignDevice('${d._id}')`,
-                title: "Unassign"
-            })}
-        </div> 
-    </td>
-`;
+                title: "Delete"
+            })} 
+            </div>
+        </td>
+    `;
 
             tbody.appendChild(row);
         });
@@ -1639,75 +1617,6 @@ onchange="togglePermission('${userId}','${p}', this.checked)">
 
     right.innerHTML = html;
 }
-async function loadAlertRules() {
-
-    const container = document.getElementById("alertRulesPanel");
-
-    try {
-        const rules = await apiRequest("/api/alert-rules");
-
-        container.innerHTML = `
-            <div style="padding:10px;">
-                <button onclick="createRule()">➕ Add Rule</button>
-                <div id="ruleList"></div>
-            </div>
-        `;
-
-        const list = document.getElementById("ruleList");
-
-        rules.forEach(r => {
-
-            const div = document.createElement("div");
-            div.className = "vehicle-card";
-
-            div.innerHTML = `
-                <b>${r.type}</b> 
-                (${r.conditions?.speedLimit || "-"}) km/h
-                <br>
-                Priority: ${r.priority}
-                <br>
-                Status: ${r.enabled ? "✅ Enabled" : "❌ Disabled"}
-                <br>
-                <button onclick="toggleRule('${r._id}', ${r.enabled})">
-                    Toggle
-                </button>
-            `;
-
-            list.appendChild(div);
-        });
-
-    } catch (err) {
-        container.innerHTML = "<p>Failed to load rules</p>";
-    }
-}
-window.toggleRule = async function (id, current) {
-
-    await apiRequest(`/api/alert-rules/${id}`, {
-        method: "PUT",
-        body: JSON.stringify({
-            enabled: !current
-        })
-    });
-
-    loadAlertRules();
-}
-window.createRule = async function () {
-
-    const speed = prompt("Enter speed limit (km/h):");
-    if (!speed) return;
-
-    await apiRequest("/api/alert-rules", {
-        method: "POST",
-        body: JSON.stringify({
-            type: "OVERSPEED",
-            conditions: { speedLimit: Number(speed) },
-            deviceIds: [],
-            priority: "high"
-        })
-    });
-
-    loadAlertRules();
-}
 async function showEditUser(userId) {
 
     const right = document.getElementById("userContent");
@@ -1796,16 +1705,22 @@ window.toggleGroup = function (userId, groupKey, isChecked) {
         inputs.forEach(input => input.checked = isChecked);
     });
 };
+
 window.updateSpeed = async function (deviceId, speed) {
     try {
         await apiRequest(`/api/devices/${deviceId}/speed`, {
             method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
             body: JSON.stringify({
                 speedLimit: Number(speed)
             })
         });
 
         alertUI.showToast("Speed updated", "success");
+
+        loadDevices(); // ✅ refresh UI
 
     } catch (err) {
         console.error(err);
