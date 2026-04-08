@@ -144,13 +144,29 @@ exports.deleteDevice = async (req, res) => {
 exports.assignDevice = async (req, res) => {
   try {
 
-    const { userId } = req.body;
+    const mongoose = require("mongoose");
 
+    const { userId } = req.body;
+    const deviceId = req.params.id;
+
+    console.log("📥 Device ID:", deviceId);
+    console.log("📥 Assign Body:", req.body);
+
+    // ✅ VALIDATE DEVICE ID FIRST
+    if (!mongoose.Types.ObjectId.isValid(deviceId)) {
+      return res.status(400).json({ error: "Invalid deviceId" });
+    }
+
+    // ✅ VALIDATE USER ID
     if (!userId) {
       return res.status(400).json({ error: "userId required" });
     }
 
-    const device = await Device.findById(req.params.id);
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ error: "Invalid userId" });
+    }
+
+    const device = await Device.findById(deviceId);
 
     if (!device) {
       return res.status(404).json({ error: "Device not found" });
@@ -164,14 +180,6 @@ exports.assignDevice = async (req, res) => {
       device.assignedTo = [];
     }
 
-    const mongoose = require("mongoose");
-
-    
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({ error: "Invalid userId" });
-    }
-    console.log("📥 Assign Body:", req.body);
-    console.log("📥 userId received:", userId);
     const userObjectId = new mongoose.Types.ObjectId(userId);
 
     device.assignedTo.addToSet(userObjectId);

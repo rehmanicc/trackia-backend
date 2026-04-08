@@ -6,12 +6,12 @@ export async function apiRequest(path, options = {}) {
 
     try {
         const res = await fetch(BASE_URL + path, {
+            ...options,
             headers: {
                 "Content-Type": "application/json",
                 ...(token && { "Authorization": "Bearer " + token }),
                 ...(options.headers || {})
-            },
-            ...options
+            }
         });
 
         const text = await res.text();
