@@ -49,7 +49,7 @@ router.post("/register", authMiddleware, async (req, res) => {
 
       const user = new User({
         name,
-        email,
+        phoneNumber,
         password: hash,
         role: "user",
         companyId: req.user.companyId
@@ -72,7 +72,7 @@ router.post("/register", authMiddleware, async (req, res) => {
 });
 // LOGIN
 router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
+  const { phoneNumber, password } = req.body;
   const user = await User.findOne({ email });
 
   if (!user) {

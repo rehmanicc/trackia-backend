@@ -36,8 +36,7 @@ const userSchema = new mongoose.Schema({
       BATTERY_DISCONNECTED: true
     }
   },
-  phoneNumber: String,
-
+  
   callEnabled: {
     type: Boolean,
     default: false

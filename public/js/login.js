@@ -3,7 +3,7 @@ async function handleLogin() {
 const phoneNumber = document.getElementById("loginPhone").value
 const password = document.getElementById("loginPassword").value
 
-if (!email || !password) {
+if (!phoneNumber || !password) {
     alert("Enter credentials")
     return
 }

@@ -13,7 +13,7 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const http = require("http");
 const path = require("path");
-
+const Alert = require("./models/Alert");
 const app = express();
 const server = http.createServer(app);
 const jwt = require("jsonwebtoken");
@@ -190,7 +190,7 @@ setInterval(() => {
   console.log("🔥 Server alive");
 }, 1000 * 60 * 5);
 
-const Alert = require("./models/Alert");
+
 
 app.get("/test-alert", async (req, res) => {
 

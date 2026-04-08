@@ -24,7 +24,14 @@ export async function apiRequest(path, options = {}) {
         }
 
         if (!res.ok) {
-            throw new Error(data.message || "API Error");
+            console.error("FULL BACKEND RESPONSE:", data);
+
+            throw new Error(
+                data.message ||
+                data.error ||
+                JSON.stringify(data) ||
+                "API Error"
+            );
         }
 
         return data;
