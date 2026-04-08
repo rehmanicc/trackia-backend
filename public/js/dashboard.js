@@ -129,7 +129,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const loginSection = document.getElementById("loginSection");
     const loggedInSection = document.getElementById("loggedInSection");
 
-    const emailInput = document.getElementById("loginEmail");
+    const emailInput = document.getElementById("loginPhone");
     const passwordInput = document.getElementById("loginPassword");
 
     if (!token) {
@@ -162,18 +162,14 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
         payload = JSON.parse(atob(token.split(".")[1]));
 
-        const userDisplay = document.getElementById("loggedInUser");
-
-        if (userDisplay && payload) {
-            const roleLabel =
-                payload.role.charAt(0).toUpperCase() + payload.role.slice(1);
-
-            userDisplay.innerText = `👤 ${payload.name} (${roleLabel})`;
-        }
+        if (!payload) throw new Error("Invalid token");
 
     } catch (e) {
         console.error("Token parsing error:", e);
-        payload = null;
+
+        localStorage.removeItem("token");   // 🔥 ADD THIS
+        location.reload();                  // 🔥 ADD THIS
+        return;
     }
     const userRole = payload.role;
     const adminPanel = document.getElementById("adminPanel");
@@ -1170,6 +1166,7 @@ function switchPanel(panel) {
     currentPanel = panel;
     setState({ activePanel: panel });
     resetUI();
+    closeAssign();
     // ===== SWITCH =====
 
     if (panel === "live") {
@@ -1240,7 +1237,12 @@ function switchPanel(panel) {
     const positionsArray = Object.values(lastPositions);
     updateVehicleList(positionsArray);
 }
-
+function closeAssign() {
+    const modal = document.getElementById("assignModal");
+    if (modal) {
+        modal.style.display = "none";
+    }
+}
 async function loadDevices() {
     const container = document.getElementById("deviceList");
 
@@ -1385,7 +1387,8 @@ async function openAssign(deviceId) {
 
     console.log("Users loaded:", users);
 
-    document.getElementById("assignModal").style.display = "block";
+    const modal = document.getElementById("assignModal");
+    modal.style.display = "flex";
 }
 
 function closeAssign() {

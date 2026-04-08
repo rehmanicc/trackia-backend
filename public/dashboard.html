@@ -245,16 +245,21 @@
                     <div id="deviceList"></div>
 
                 </div>
-                <div id="assignModal"
-                    style="display:none; position:fixed; top:30%; left:40%; background:#fff; padding:20px; border:1px solid #ccc; z-index:1000;">
+                <div id="assignModal">
+                    <div class="modal-content">
 
-                    <h4>Assign Device</h4>
+                        <h3>Assign Device</h3>
 
-                    <select id="assignUserSelect"></select><br><br>
+                        <select id="assignUserSelect">
+                            <option value="">-- Select User --</option>
+                        </select>
 
-                    <button onclick="submitAssign()">Assign</button>
-                    <button onclick="closeAssign()">Cancel</button>
+                        <div class="assign-actions">
+                            <button class="assign-btn" onclick="submitAssign()">Assign</button>
+                            <button class="cancel-btn" onclick="closeAssign()">Cancel</button>
+                        </div>
 
+                    </div>
                 </div>
                 <div id="alertPanel" class="vehicle-panel">
                     <h3>🚨 Alerts</h3>

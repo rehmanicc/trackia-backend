@@ -175,9 +175,12 @@ exports.assignDevice = async (req, res) => {
       device.assignedTo = [];
     }
 
-    // ✅ PREVENT DUPLICATE
+    // ✅ CLEAN NULL VALUES
+    device.assignedTo = (device.assignedTo || []).filter(u => u);
+
+    // ✅ SAFE DUPLICATE CHECK
     const alreadyAssigned = device.assignedTo.some(
-      u => u.toString() === userId
+      u => u && u.toString() === userId
     );
 
     if (alreadyAssigned) {
