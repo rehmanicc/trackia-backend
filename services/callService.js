@@ -113,8 +113,8 @@ const axios = require("axios");
 
 async function makeCall(call) {
 
-    const AUTOMATE_URL = "http://192.168.1.100:8080/call"; // 🔥 CHANGE THIS
-
+    const AUTOMATE_URL = "https://howard-unsymbolized-grant.ngrok-free.dev/call"; // 🔥 CHANGE THIS
+    console.log("🚨 CALL TRIGGERED:", phoneNumber);
     await axios.post(AUTOMATE_URL, {
         number: call.number
     });
