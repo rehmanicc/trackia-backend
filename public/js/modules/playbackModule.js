@@ -62,7 +62,14 @@ function startAutoPlayback() {
         // Interpolate position
         const lat = startPoint.lat + (endPoint.lat - startPoint.lat) * t;
         const lng = startPoint.lng + (endPoint.lng - startPoint.lng) * t;
+        // 🔥 ADD THIS BLOCK (IMPORTANT)
+        if (routeLine) {
+            const currentLatLngs = routeLine.getLatLngs();
 
+            currentLatLngs.push([lat, lng]);
+
+            routeLine.setLatLngs(currentLatLngs);
+        }
         // Smooth rotation
         const deltaAngle = ((endPoint.course - startPoint.course + 540) % 360) - 180;
         const angle = startPoint.course + deltaAngle * t;
@@ -70,19 +77,8 @@ function startAutoPlayback() {
         playbackMarker.setLatLng([lat, lng]);
         playbackMarker.setRotationAngle(angle);
         if (autoFollow) {
-            const mapSize = map.getSize();
-
-            // Move center slightly UP so marker appears lower
-            const offsetY = mapSize.y * 0.25; // 25% from center
-
-            const targetPoint = map.project([lat, lng], map.getZoom())
-                .subtract([0, offsetY]);
-
-            const targetLatLng = map.unproject(targetPoint, map.getZoom());
-
-            map.panTo(targetLatLng, {
-                animate: true,
-                duration: 0.25
+            map.setView([lat, lng], map.getZoom(), {
+                animate: false
             });
         }
         // Time label
@@ -101,6 +97,12 @@ function startAutoPlayback() {
 
             if (playbackIndex >= playbackData.length - 1) {
                 stopAutoPlayback();
+
+                // 🔥 CLEAR AFTER FINISH
+                setTimeout(() => {
+                    clearPlayback();
+                }, 1000);
+
                 return;
             }
 
@@ -198,7 +200,7 @@ export async function startPlayback(deviceId, date) {
     })
         .addTo(map)
         .bindPopup("End Point");
-    routeLine = L.polyline(playbackPoints, {
+    routeLine = L.polyline([], {
         color: "green",
         weight: 4
     }).addTo(map);

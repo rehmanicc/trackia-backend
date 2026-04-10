@@ -90,6 +90,17 @@ window.filterAlerts = function (type) {
 
     window.alertUI.renderAlerts(filtered);
 };
+window.clearAllAlerts = function () {
+    if (!confirm("Clear all alerts?")) return;
+
+    alertList = [];
+    clearedTimestamps.clear();
+
+    localStorage.removeItem("alerts");
+    localStorage.removeItem("clearedAlerts");
+
+    window.alertUI.renderAlerts([]);
+};
 export async function loadInitialAlerts() {
 
     try {

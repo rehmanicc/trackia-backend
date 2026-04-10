@@ -30,25 +30,47 @@ async function detectAlerts(position) {
     const state = vehicleState[deviceId];
 
     // ================= ENGINE ON =================
-    if (speed > 5 && !state.engineOn) {
+    if (!state.engineOn) {
 
-        alerts.push({
-            type: "ENGINE_ON",
-            message: `Vehicle ${deviceId} Engine ON`
-        });
+        if (!state.engineOnCounter) state.engineOnCounter = 0;
 
-        state.engineOn = true;
+        if (speed > 5) {
+            state.engineOnCounter++;
+        } else {
+            state.engineOnCounter = 0;
+        }
+
+        if (state.engineOnCounter >= 3) {  // 🔥 CONFIRMATION
+            alerts.push({
+                type: "ENGINE_ON",
+                message: `Vehicle ${deviceId} Engine ON`
+            });
+
+            state.engineOn = true;
+            state.engineOnCounter = 0;
+        }
     }
 
     // ================= ENGINE OFF =================
-    if (speed === 0 && state.engineOn) {
+    if (state.engineOn) {
 
-        alerts.push({
-            type: "ENGINE_OFF",
-            message: `Vehicle ${deviceId} Engine OFF`
-        });
+        if (!state.engineOffCounter) state.engineOffCounter = 0;
 
-        state.engineOn = false;
+        if (speed === 0) {
+            state.engineOffCounter++;
+        } else {
+            state.engineOffCounter = 0;
+        }
+
+        if (state.engineOffCounter >= 3) {
+            alerts.push({
+                type: "ENGINE_OFF",
+                message: `Vehicle ${deviceId} Engine OFF`
+            });
+
+            state.engineOn = false;
+            state.engineOffCounter = 0;
+        }
     }
 
     // ================= BATTERY DISCONNECTED =================

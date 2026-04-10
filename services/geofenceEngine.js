@@ -52,7 +52,37 @@ async function processPosition(position, io) {
             longitude < minLng || longitude > maxLng ||
             latitude < minLat || latitude > maxLat
         ) {
-            continue;
+            inside = false;
+        } else {
+
+            // 🔥 STEP 2: PRECISE CHECK
+            if (f.type === "Polygon") {
+                inside = turf.booleanPointInPolygon(point, f.geometry);
+            }
+            else if (f.type === "Point") {
+                const [lng, lat] = f.geometry.coordinates;
+                const radius = f.geometry.radius || 100;
+
+                const distance = turf.distance(
+                    [longitude, latitude],
+                    [lng, lat],
+                    { units: "meters" }
+                );
+
+                inside = distance <= radius;
+            }
+            else if (f.type === "Circle" || f.geometry.radius) {
+                const [lng, lat] = f.geometry.coordinates;
+                const radius = f.geometry.radius;
+
+                const distance = turf.distance(
+                    [longitude, latitude],
+                    [lng, lat],
+                    { units: "meters" }
+                );
+
+                inside = distance <= radius;
+            }
         }
 
         // 🔥 STEP 2: PRECISE CHECK
@@ -92,22 +122,20 @@ async function processPosition(position, io) {
 
         if (!vehicleStates[deviceId][geofenceId]) {
 
-            const lastInside = await getLastState(deviceId, geofenceId);
-
+          
             vehicleStates[deviceId][geofenceId] = {
-                inside: lastInside,
+                inside: inside,   // ✅ IMPORTANT FIX
                 lastUpdate: Date.now(),
                 enterCount: 0,
                 exitCount: 0
             };
 
-            console.log("♻️ Restored state:", {
+            console.log("♻️ Initial state set from position:", {
                 deviceId,
                 geofenceId,
-                inside: lastInside
+                inside
             });
         }
-
         const state = vehicleStates[deviceId][geofenceId];
         const previous = state.inside;
         console.log("📊 GEOFENCE CHECK:", {

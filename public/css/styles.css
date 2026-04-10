@@ -317,6 +317,16 @@ body {
     font-size: 11px;
 }
 
+.alert-btn {
+    display: inline-block;
+    padding: 5px 10px;
+    background: #ff4d4f;
+    color: rgb(41, 39, 39);
+    border-radius: 4px;
+    cursor: pointer;
+    border: none;
+    margin-left: 5px;
+}
 /* 🔥 ALERT PANEL UPGRADE */
 .alert-item {
     padding: 10px;

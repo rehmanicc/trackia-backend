@@ -261,7 +261,12 @@
                 <div id="alertPanel" class="vehicle-panel">
 
                     <h3>🚨 Alerts</h3>
-
+                    <div> <button onclick="clearReadAlerts()" class="btn-clear">
+                        🧹 Clear Read
+                    </button>
+                    <button onclick="clearAllAlerts()" class="alert-btn">
+                        ❌ Clear All
+                    </button></div><br>
                     <div style="margin-bottom:10px;">
                         <button onclick="filterAlerts('all')">All</button>
                         <button onclick="filterAlerts('high')">Critical</button>
