@@ -164,7 +164,7 @@ async function fetchTrip() {
 
     const start = document.getElementById("startTime").value;
     const end = document.getElementById("endTime").value;
-    const mileage = document.getElementById("mileage").value;
+    
 
     if (!start || !end) {
         alert("Select start and end time");
@@ -187,16 +187,13 @@ async function fetchTrip() {
     }
 
     drawTrip(data.positions);
-    showAnalytics(data.stats, mileage);
+    showAnalytics(data.stats);
 
     closeAnalyticsModal();
 }
-function showAnalytics(stats, mileage) {
+function showAnalytics(stats) {
     if (!stats) return;
-
-    // Optional mileage input
-    const mileageValue = Number(mileage || 0);
-
+   
     // Convert speed from knots → km/h (if needed)
     const avgSpeed = stats.avgSpeed ? toKmh(stats.avgSpeed) : 0;
     const maxSpeed = stats.maxSpeed ? toKmh(stats.maxSpeed) : 0;
@@ -204,10 +201,9 @@ function showAnalytics(stats, mileage) {
     const distance = stats.distance ? stats.distance.toFixed(2) : 0;
 
     // Fuel estimation (optional logic)
-    let fuelUsed = 0;
-    if (mileageValue > 0) {
-        fuelUsed = (distance / mileageValue).toFixed(2);
-    }
+    const fuelUsed = stats.fuelUsed
+    ? stats.fuelUsed.toFixed(2)
+    : 0;
 
     // 🎯 Update UI (make sure these IDs exist in HTML)
     document.getElementById("tripDistance").innerText = distance + " km";
