@@ -83,8 +83,7 @@ async function processPosition(position, io) {
             lat: latitude,
             lng: longitude
         });
-        // SIMPLE DETECTION (DEBUG MODE)
-
+        
         if (inside && !previous) {
             state.inside = true;
 
@@ -117,7 +116,7 @@ async function emitEvent(io, deviceId, geofenceId, type, position) {
         position
     };
 
-    const saved = await saveGeofenceEvent(event);
+    const saved = await saveGeofenceEvent(event, io);
 
 
     if (!saved) return;
