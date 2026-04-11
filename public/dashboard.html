@@ -237,9 +237,26 @@
 
                     <div style="padding:10px;">
                         <button class="primary-btn" onclick="switchPanel('createDevice')">➕ Add Device</button>
+                        <button onclick="openExpiredDevices()">
+                            🔄 Manage Expired
+                        </button>
                     </div>
 
                     <div id="deviceList"></div>
+
+                </div>
+                <div id="expiredModal" class="modal hidden">
+
+                    <div class="modal-content">
+
+                        <div class="modal-header">
+                            <h3>Expired Devices</h3>
+                            <button class="close-btn" onclick="closeExpiredDevices()">✖</button>
+                        </div>
+
+                        <div id="expiredList" class="modal-body"></div>
+
+                    </div>
 
                 </div>
                 <div id="assignModal">
@@ -262,11 +279,12 @@
 
                     <h3>🚨 Alerts</h3>
                     <div> <button onclick="clearReadAlerts()" class="btn-clear">
-                        🧹 Clear Read
-                    </button>
-                    <button onclick="clearAllAlerts()" class="alert-btn">
-                        ❌ Clear All
-                    </button></div><br>
+                            🧹 Clear Read
+                        </button>
+                        <button onclick="clearAllAlerts()" class="alert-btn">
+                            ❌ Clear All
+                        </button>
+                    </div><br>
                     <div style="margin-bottom:10px;">
                         <button onclick="filterAlerts('all')">All</button>
                         <button onclick="filterAlerts('high')">Critical</button>
@@ -327,23 +345,23 @@
             </div>
         </div>
         <div id="analyticsModal" class="modal">
-    <div class="modal-content">
+            <div class="modal-content">
 
-        <h3>📊 Select Time Range</h3>
+                <h3>📊 Select Time Range</h3>
 
-        <label>Start Time</label>
-        <input type="datetime-local" id="startTime">
+                <label>Start Time</label>
+                <input type="datetime-local" id="startTime">
 
-        <label>End Time</label>
-        <input type="datetime-local" id="endTime">
+                <label>End Time</label>
+                <input type="datetime-local" id="endTime">
 
-        <div class="modal-actions">
-            <button class="btn-generate" onclick="fetchTrip()">Generate</button>
-            <button class="btn-cancel" onclick="closeAnalyticsModal()">Cancel</button>
+                <div class="modal-actions">
+                    <button class="btn-generate" onclick="fetchTrip()">Generate</button>
+                    <button class="btn-cancel" onclick="closeAnalyticsModal()">Cancel</button>
+                </div>
+
+            </div>
         </div>
-
-    </div>
-</div>
 </body>
 
 </html>

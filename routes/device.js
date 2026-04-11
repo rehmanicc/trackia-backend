@@ -36,5 +36,37 @@ router.put("/:id/speed",
       res.status(500).json({ error: "Failed to update speed limit" });
     }
 });
+router.post("/renew/:id", authMiddleware, async (req, res) => {
+  try {
+    const user = req.user;
 
+    if (user.role !== "admin") {
+      return res.status(403).json({ error: "Only admin can renew devices" });
+    }
+
+    const device = await Device.findById(req.params.id);
+
+    if (!device) {
+      return res.status(404).json({ error: "Device not found" });
+    }
+
+    // 🔥 ADD 1 YEAR
+    const newExpiry = new Date(device.expiryDate || new Date());
+    newExpiry.setFullYear(newExpiry.getFullYear() + 1);
+
+    device.expiryDate = newExpiry;
+    device.isActive = true;
+
+    await device.save();
+
+    res.json({
+      message: "Device renewed successfully",
+      expiryDate: newExpiry
+    });
+
+  } catch (err) {
+    console.error("Renew error:", err);
+    res.status(500).json({ error: "Renewal failed" });
+  }
+});
 module.exports = router;

@@ -10,29 +10,55 @@ const { processPosition } = require("../services/geofenceEngine");
 exports.getPositions = async (req, res) => {
   try {
     const response = await traccarAPI.get("/api/positions");
-
     const positions = response.data;
-
-    // 🔥 PREPARE BULK DATA
-    const docs = positions.map(p => ({
-      deviceId: p.deviceId,
-      latitude: p.latitude,
-      longitude: p.longitude,
-      speed: p.speed,
-      deviceTime: p.deviceTime
-    }));
-
-    // 🔥 INSERT (FAST + SAFE)
-    try {
-      await Position.insertMany(docs, { ordered: false });
-    } catch (err) {
-      // ignore duplicates
-    }
 
     const io = require("../socket").getIO();
 
-    // 🔥 FIRST: process geofence + alerts
+    // 🔥 PRELOAD DEVICES (OPTIMIZED)
+    const deviceIds = positions.map(p => p.deviceId);
+    const devices = await Device.find({ traccarId: { $in: deviceIds } });
+
+    const deviceMap = {};
+    devices.forEach(d => {
+      deviceMap[d.traccarId] = d;
+    });
+
+    const activePositions = [];
+
+    // ======================
+    // PROCESS POSITIONS
+    // ======================
     for (const p of positions) {
+
+      const device = deviceMap[p.deviceId];
+
+      if (!device) continue;
+
+      // 🔥 EXPIRY CHECK
+      if (!device.isActive || new Date() > new Date(device.expiryDate)) {
+        console.log(`⛔ Device ${device.traccarId} expired — skipped`);
+        continue;
+      }
+
+      // ✅ SAVE ONLY ACTIVE
+      await Position.updateOne(
+        {
+          deviceId: p.deviceId,
+          deviceTime: p.deviceTime
+        },
+        {
+          $setOnInsert: {
+            deviceId: p.deviceId,
+            latitude: p.latitude,
+            longitude: p.longitude,
+            speed: p.speed,
+            deviceTime: p.deviceTime
+          }
+        },
+        { upsert: true }
+      );
+
+      // ✅ PROCESS ENGINE
       await processPosition({
         deviceId: p.deviceId,
         latitude: p.latitude,
@@ -41,14 +67,17 @@ exports.getPositions = async (req, res) => {
         attributes: p.attributes || {},
         deviceTime: p.deviceTime
       }, io);
+
+      // ✅ SEND ONLY ACTIVE DEVICES
+      activePositions.push(p);
     }
 
-    // 🔥 THEN: emit positions to frontend
-    io.emit("positions", positions);
+    // 🔥 EMIT ONLY ACTIVE DEVICES
+    io.emit("positions", activePositions);
 
-    console.log("📡 EMITTING POSITIONS:", positions.length);
+    console.log("📡 ACTIVE POSITIONS:", activePositions.length);
 
-    res.json(positions);
+    res.json(activePositions);
 
   } catch (error) {
     console.error("Traccar error:", error.message);

@@ -3,80 +3,27 @@ const traccarAPI = require("../services/traccarAPI");
 const Geofence = require("../models/Geofence");
 
 // CREATE DEVICE
-exports.createDevice = async (req, res) => {
+// ======================
+// 4️⃣ SAVE IN MONGO
+// ======================
 
-  const { name, uniqueId, speedLimit, fuelEfficiency } = req.body;
-  const user = req.user;
+const oneYearLater = new Date();
+oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
 
-  if (user.role !== "admin") {
-    return res.status(403).json({
-      error: "Only admin can create devices"
-    });
-  }
+const device = await Device.create({
+  name,
+  uniqueId,
+  traccarId: traccarDevice.id,
+  companyId: user.companyId,
+  createdBy: user._id,
+  assignedTo: [],
+  speedLimit: speedLimit || 70,
+  fuelEfficiency: fuelEfficiency || 12,
 
-  try {
-
-    // ======================
-    // 1️⃣ CHECK MONGO FIRST
-    // ======================
-    const existingMongo = await Device.findOne({ uniqueId });
-
-    if (existingMongo) {
-      return res.status(400).json({
-        error: "Device already exists in system"
-      });
-    }
-
-    // ======================
-    // 2️⃣ CHECK TRACCAR
-    // ======================
-    const traccarRes = await traccarAPI.get("/api/devices");
-    const traccarDevices = traccarRes.data;
-
-    let traccarDevice = traccarDevices.find(d => d.uniqueId === uniqueId);
-
-    // ======================
-    // 3️⃣ CREATE IF NOT EXISTS
-    // ======================
-    if (!traccarDevice) {
-
-      console.log("➕ Creating device in Traccar");
-
-      const response = await traccarAPI.post("/api/devices", {
-        name,
-        uniqueId
-      });
-
-      traccarDevice = response.data;
-
-    } else {
-      console.log("♻️ Reusing existing Traccar device");
-    }
-
-    // ======================
-    // 4️⃣ SAVE IN MONGO
-    // ======================
-    const device = await Device.create({
-      name,
-      uniqueId,
-      traccarId: traccarDevice.id,
-      companyId: user.companyId,
-      createdBy: user._id,
-      assignedTo: [],
-      speedLimit: speedLimit || 70,
-      fuelEfficiency: fuelEfficiency || 12
-    });
-
-    res.json(device);
-
-  } catch (err) {
-    console.error("❌ DEVICE ERROR:", err.response?.data || err.message);
-
-    res.status(500).json({
-      error: err.response?.data?.message || err.message
-    });
-  }
-};
+  // 🔥 NEW FIELD
+  expiryDate: oneYearLater,
+  isActive: true
+});
 exports.getDevices = async (req, res) => {
   try {
     const user = req.user;

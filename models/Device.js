@@ -33,6 +33,14 @@ const deviceSchema = new mongoose.Schema({
             ref: "User"
         }],
         default: []
+    },
+    expiryDate: {
+        type: Date,
+        required: true
+    },
+    isActive: {
+        type: Boolean,
+        default: true
     }
 
 }, { timestamps: true });

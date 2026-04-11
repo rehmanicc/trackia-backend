@@ -1367,6 +1367,55 @@ function populateRoleDropdown() {
         roleSelect.innerHTML = `<option value="user">User</option>`;
     }
 }
+async function openExpiredDevices() {
+document.getElementById("expiredModal").classList.remove("hidden");
+    try {
+        const res = await fetch("/api/devices", {
+            headers: {
+                Authorization: "Bearer " + localStorage.getItem("token")
+            }
+        });
+
+        const devices = await res.json();
+
+        const now = new Date();
+
+        const expired = devices.filter(d =>
+            new Date(d.expiryDate) < now
+        );
+
+        renderExpiredDevices(expired);
+
+    } catch (err) {
+        console.error(err);
+    }
+}
+function renderExpiredDevices(devices) {
+  const container = document.getElementById("expiredList");
+
+  if (devices.length === 0) {
+    container.innerHTML = "<p>No expired devices</p>";
+    return;
+  }
+
+  container.innerHTML = devices.map(d => `
+    <div class="expired-item">
+
+      <span>
+        ${d.name} (ID: ${d.traccarId})
+      </span>
+
+      <div>
+        <button class="btn-renew" onclick="renewDevice('${d._id}')">Renew</button>
+        <button class="btn-delete" onclick="deleteDevice('${d._id}')">Remove</button>
+      </div>
+
+    </div>
+  `).join("");
+}
+function closeExpiredDevices() {
+  document.getElementById("expiredModal").style.display = "none";
+}
 window.showUserPermissions = async function (userId) {
 
     const right = document.getElementById("userContent");
