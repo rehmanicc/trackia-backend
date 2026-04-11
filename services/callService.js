@@ -122,4 +122,4 @@ async function makeCall(call) {
     console.log("📞 Real call sent:", call.number);
 }
 setInterval(processQueue, 2000);
-module.exports = { triggerCall, getPendingCalls, clearCalls };
+module.exports = { triggerCall };
