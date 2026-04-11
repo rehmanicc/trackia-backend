@@ -3,17 +3,12 @@ module.exports = function (requiredPermission) {
 
     const user = req.user;
 
-    // ✅ Owner bypass (super admin)
+    // ✅ Owner = full access
     if (user.role === "owner") {
       return next();
     }
 
-    // ✅ Admin fallback (temporary compatibility)
-    if (user.role === "admin") {
-      return next();
-    }
-
-    // ✅ Check permission
+    // ✅ Everyone else must have permission
     if (!user.permissions || !user.permissions.includes(requiredPermission)) {
       return res.status(403).json({
         error: "Permission denied"

@@ -43,7 +43,8 @@ const PERMISSION_GROUPS = {
         label: "⚙️ System",
         permissions: [
             "EDIT_SPEED",
-            "EDIT_FUEL"
+            "EDIT_FUEL",
+            "RENEW_DEVICE"
         ]
     }
 };
@@ -55,6 +56,7 @@ const PERMISSION_LABELS = {
     VIEW_DEVICE: "View Devices",
     EDIT_DEVICE: "Edit Devices",
     SEND_COMMAND: "Send Commands",
+    RENEW_DEVICE: "Renew Devices",
 
     EDIT_SPEED: "Edit Speed Limit",
     EDIT_FUEL: "Edit Fuel Settings",
@@ -1368,7 +1370,7 @@ function populateRoleDropdown() {
     }
 }
 async function openExpiredDevices() {
-document.getElementById("expiredModal").classList.remove("hidden");
+    document.getElementById("expiredModal").classList.remove("hidden");
     try {
         const res = await fetch("/api/devices", {
             headers: {
@@ -1391,14 +1393,14 @@ document.getElementById("expiredModal").classList.remove("hidden");
     }
 }
 function renderExpiredDevices(devices) {
-  const container = document.getElementById("expiredList");
+    const container = document.getElementById("expiredList");
 
-  if (devices.length === 0) {
-    container.innerHTML = "<p>No expired devices</p>";
-    return;
-  }
+    if (devices.length === 0) {
+        container.innerHTML = "<p>No expired devices</p>";
+        return;
+    }
 
-  container.innerHTML = devices.map(d => `
+    container.innerHTML = devices.map(d => `
     <div class="expired-item">
 
       <span>
@@ -1414,7 +1416,7 @@ function renderExpiredDevices(devices) {
   `).join("");
 }
 function closeExpiredDevices() {
-  document.getElementById("expiredModal").style.display = "none";
+    document.getElementById("expiredModal").classList.add("hidden");
 }
 window.showUserPermissions = async function (userId) {
 
@@ -1604,6 +1606,15 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
     }
     window.userRole = payload?.role;
+    const container = document.getElementById("expiredBtnContainer");
+
+    if (container && hasPermission("RENEW_DEVICE")) {
+        container.innerHTML = `
+        <button onclick="openExpiredDevices()">
+            🔄 Manage Expired
+        </button>
+    `;
+    }
     const userDisplay = document.getElementById("loggedInUser");
 
     if (userDisplay && payload) {
