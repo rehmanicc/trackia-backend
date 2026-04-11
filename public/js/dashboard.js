@@ -13,6 +13,7 @@ let geofenceLayers = {};
 let geofences = [];
 let drawnItems;
 let map;
+let cachedUsers = [];
 let selectedPlaybackDevice = null;
 let routeLine = null;
 let drawControl;
@@ -287,7 +288,7 @@ window.sendCommand = async function (deviceId, type) {
 window.selectDeviceForAnalytics = function (deviceId) {
     window.selectedDeviceId = deviceId;
 
-    document.getElementById("analyticsModal").style.display = "block";
+    document.getElementById("analyticsModal").style.display = "flex";
     // load analytics
     if (window.loadAnalytics) {
         window.loadAnalytics(`deviceId=${deviceId}`);
@@ -598,6 +599,15 @@ async function loadInitialPositions() {
     const positionsArray = Object.values(lastPositions);
     updateVehicleList(positionsArray);
 }
+async function loadUsersCache() {
+    try {
+        console.log("⚡ Loading users cache...");
+        cachedUsers = await apiRequest("/api/users") || [];
+    } catch (err) {
+        console.error("❌ Failed to load users", err);
+        cachedUsers = [];
+    }
+}
 async function initApp() {
     const token = localStorage.getItem("token");
     initSocket(token);
@@ -606,6 +616,7 @@ async function initApp() {
     await fetchAllowedDevices();
     await loadGeofences();
     await loadInitialPositions();
+    await loadUsersCache();
     // POSITIONS
     let positionBuffer = [];
     let processing = false;
@@ -1003,7 +1014,7 @@ async function loadDevices() {
     const container = document.getElementById("deviceList");
 
     try {
-        const devices = await safeApi(() => apiRequest("/api/devices"), []);
+        const devices = Object.values(allowedDevices);
         container.innerHTML = `
     <div class="device-header">
         <input type="text" id="deviceSearch" placeholder="Search devices..." oninput="filterDevices()">
@@ -1136,7 +1147,12 @@ window.openAssign = async function (deviceId) {
 
     selectedDeviceForAssign = deviceId;
 
-    const users = await apiRequest("/api/users");
+    cachedUsers.forEach(u => {
+        const opt = document.createElement("option");
+        opt.value = u._id;
+        opt.textContent = u.name;
+        select.appendChild(opt);
+    });
 
     const select = document.getElementById("assignUserSelect");
 
@@ -1710,4 +1726,5 @@ document.addEventListener("DOMContentLoaded", () => {
             alert("Failed to update speed");
         }
     };
+    initApp();
 });

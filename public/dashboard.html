@@ -326,20 +326,24 @@
                 </div>
             </div>
         </div>
-        <div id="analyticsModal" class="modal" style="display:none;">
-            <div class="modal-content">
-                <h3>Select Time Range</h3>
+        <div id="analyticsModal" class="modal">
+    <div class="modal-content">
 
-                <label>Start:</label>
-                <input type="datetime-local" id="startTime">
+        <h3>📊 Select Time Range</h3>
 
-                <label>End:</label>
-                <input type="datetime-local" id="endTime">
-                <br><br>
-                <button onclick="fetchTrip()">Generate</button>
-                <button onclick="closeAnalyticsModal()">Cancel</button>
-            </div>
+        <label>Start Time</label>
+        <input type="datetime-local" id="startTime">
+
+        <label>End Time</label>
+        <input type="datetime-local" id="endTime">
+
+        <div class="modal-actions">
+            <button class="btn-generate" onclick="fetchTrip()">Generate</button>
+            <button class="btn-cancel" onclick="closeAnalyticsModal()">Cancel</button>
         </div>
+
+    </div>
+</div>
 </body>
 
 </html>
