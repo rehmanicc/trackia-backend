@@ -122,7 +122,7 @@ async function processPosition(position, io) {
 
         if (!vehicleStates[deviceId][geofenceId]) {
 
-          
+
             vehicleStates[deviceId][geofenceId] = {
                 inside: inside,   // ✅ IMPORTANT FIX
                 lastUpdate: Date.now(),
@@ -203,9 +203,13 @@ async function emitEvent(io, deviceId, geofenceId, type, position) {
 
     await createAlert({
         deviceId,
-        type: type === "enter" ? "GEOFENCE_ENTER" : "GEOFENCE_EXIT",
-        message: `Vehicle ${deviceId} ${type.toUpperCase()} geofence`,
-        metadata: { geofenceId }
+        type: type === "ENTER" ? "GEOFENCE_ENTER" : "GEOFENCE_EXIT",
+        message:
+            type === "ENTER"
+                ? `Vehicle ${deviceId} entered geofence`
+                : `Vehicle ${deviceId} exited geofence`,
+        metadata: { geofenceId },
+        priority: type === "EXIT" ? "high" : "medium"
     }, io);
     io.emit("geofenceEvent", {
         deviceId,

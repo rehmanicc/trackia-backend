@@ -652,8 +652,27 @@ async function initApp() {
 
         }, 500); // 🔥 batch every 500ms
     });
-    onGeofence(({ geofenceId, type }) => {
-        updateGeofenceVisual(geofenceId, type);
+    onGeofence(({ geofenceId, type, deviceId }) => {
+
+        const normalizedType = String(type).toLowerCase();
+
+        console.log("📡 Geofence event:", normalizedType);
+
+        // ✅ Fix visual
+        updateGeofenceVisual(geofenceId, normalizedType);
+
+        // ✅ Trigger alert UI (OPTIONAL but recommended)
+        if (window.alertUI) {
+            const message =
+                normalizedType === "enter"
+                    ? "Vehicle entered geofence"
+                    : "Vehicle exited geofence";
+
+            window.alertUI.showToast(
+                message,
+                normalizedType === "enter" ? "success" : "error"
+            );
+        }
     });
 
     const savedPanel = getState().activePanel || "live";
