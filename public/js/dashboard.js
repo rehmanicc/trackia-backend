@@ -398,7 +398,7 @@ function renderVehicleDetails(p) {
         <p><b>Latitude:</b> ${p.latitude}</p>
         <p><b>Longitude:</b> ${p.longitude}</p>
         <p><b>Battery:</b> ${p.attributes.batteryLevel || "N/A"}%</p>
-        <p><b>Last Update:</b> ${new Date(p.deviceTime).toLocaleString()}</p>
+        <p><b>Last Update:</b> ${new Date(p.fixTime || p.deviceTime).toLocaleString()}</p>
 
         <hr>
 

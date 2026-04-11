@@ -59,7 +59,11 @@ exports.getPositions = async (req, res) => {
 exports.getRoute = async (req, res) => {
   try {
 
-    const { deviceId, from, to } = req.query;
+    let { deviceId, from, to } = req.query;
+
+    // 🔥 ADD BUFFER (10 minutes)
+    const bufferMs = 10 * 60 * 1000;
+    to = new Date(new Date(to).getTime() + bufferMs).toISOString();
 
     const response = await traccarAPI.get("/api/reports/route", {
       params: { deviceId, from, to }
