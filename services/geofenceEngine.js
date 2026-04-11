@@ -1,23 +1,9 @@
 const turf = require("@turf/turf");
 const Geofence = require("../models/Geofence");
 const { saveGeofenceEvent } = require("./geofenceEventService");
-const { createAlert } = require("./alert/alertService");
-const { detectAlerts } = require("./alert/alertRules");
 let vehicleStates = {};
-const GeofenceEvent = require("../models/GeofenceEvent");
 const Device = require("../models/Device");
 
-async function getLastState(deviceId, geofenceId) {
-
-    const lastEvent = await GeofenceEvent.findOne({
-        deviceId,
-        geofenceId
-    }).sort({ timestamp: -1 });
-
-    if (!lastEvent) return false;
-
-    return lastEvent.type === "ENTER";
-}
 // MAIN ENGINE
 async function processPosition(position, io) {
     console.log("📍 Processing position:", position.deviceId, position.latitude, position.longitude);
@@ -36,8 +22,6 @@ async function processPosition(position, io) {
     for (const f of geofences) {
 
         const geofenceId = f._id.toString();
-
-        // 🔥 STEP 1: FAST BBOX CHECK
         if (!f || !f.geometry || !f.geometry.coordinates) {
             console.log("❌ Invalid geofence skipped:", f._id);
             continue;
@@ -47,19 +31,15 @@ async function processPosition(position, io) {
             geometry: f.geometry
         });
         const [minLng, minLat, maxLng, maxLat] = bbox;
+        let inside = false;
 
         if (
-            longitude < minLng || longitude > maxLng ||
-            latitude < minLat || latitude > maxLat
+            longitude >= minLng && longitude <= maxLng &&
+            latitude >= minLat && latitude <= maxLat
         ) {
-            inside = false;
-        } else {
-
-            // 🔥 STEP 2: PRECISE CHECK
             if (f.type === "Polygon") {
                 inside = turf.booleanPointInPolygon(point, f.geometry);
-            }
-            else if (f.type === "Point") {
+            } else {
                 const [lng, lat] = f.geometry.coordinates;
                 const radius = f.geometry.radius || 100;
 
@@ -71,49 +51,6 @@ async function processPosition(position, io) {
 
                 inside = distance <= radius;
             }
-            else if (f.type === "Circle" || f.geometry.radius) {
-                const [lng, lat] = f.geometry.coordinates;
-                const radius = f.geometry.radius;
-
-                const distance = turf.distance(
-                    [longitude, latitude],
-                    [lng, lat],
-                    { units: "meters" }
-                );
-
-                inside = distance <= radius;
-            }
-        }
-
-        // 🔥 STEP 2: PRECISE CHECK
-        let inside = false;
-
-        if (f.type === "Polygon") {
-            inside = turf.booleanPointInPolygon(point, f.geometry);
-        }
-        else if (f.type === "Point") {
-            const [lng, lat] = f.geometry.coordinates;
-            const radius = f.geometry.radius || 100;
-
-            const distance = turf.distance(
-                [longitude, latitude],
-                [lng, lat],
-                { units: "meters" }
-            );
-
-            inside = distance <= radius;
-        }
-        else if (f.type === "Circle" || f.geometry.radius) {
-            const [lng, lat] = f.geometry.coordinates;
-            const radius = f.geometry.radius;
-
-            const distance = turf.distance(
-                [longitude, latitude],
-                [lng, lat],
-                { units: "meters" }
-            );
-
-            inside = distance <= radius;
         }
         // ================= STATE INIT =================
         if (!vehicleStates[deviceId]) {
@@ -146,9 +83,6 @@ async function processPosition(position, io) {
             lat: latitude,
             lng: longitude
         });
-        const CONFIRM_COUNT = 3;
-        const COOLDOWN = 10000;
-
         // SIMPLE DETECTION (DEBUG MODE)
 
         if (inside && !previous) {
@@ -169,20 +103,7 @@ async function processPosition(position, io) {
             });
         }
     }
-    const alerts = await detectAlerts(position);
 
-    for (const alert of alerts) {
-        await createAlert({
-            deviceId: position.deviceId,
-            type: alert.type,
-            message: alert.message,
-            metadata: alert.metadata || {},
-
-            ruleId: alert.ruleId,
-            priority: alert.priority
-
-        }, io);
-    }
 }
 // EMIT EVENT
 
@@ -201,16 +122,7 @@ async function emitEvent(io, deviceId, geofenceId, type, position) {
 
     if (!saved) return;
 
-    await createAlert({
-        deviceId,
-        type: type === "ENTER" ? "GEOFENCE_ENTER" : "GEOFENCE_EXIT",
-        message:
-            type === "ENTER"
-                ? `Vehicle ${deviceId} entered geofence`
-                : `Vehicle ${deviceId} exited geofence`,
-        metadata: { geofenceId },
-        priority: type === "EXIT" ? "high" : "medium"
-    }, io);
+
     io.emit("geofenceEvent", {
         deviceId,
         geofenceId,

@@ -1,5 +1,5 @@
 const GeofenceEvent = require("../models/GeofenceEvent");
-
+const { createAlert } = require("./alert/alertService");
 async function saveGeofenceEvent(event) {
     try {
 
@@ -25,8 +25,17 @@ async function saveGeofenceEvent(event) {
             timestamp: event.timestamp,
             position: event.position
         });
-
-        return true;
+        await createAlert({
+            deviceId: event.deviceId,
+            type: event.type === "ENTER" ? "GEOFENCE_ENTER" : "GEOFENCE_EXIT",
+            message:
+                event.type === "ENTER"
+                    ? `Vehicle ${event.deviceId} entered geofence`
+                    : `Vehicle ${event.deviceId} exited geofence`,
+            metadata: { geofenceId: event.geofenceId },
+            priority: event.type === "EXIT" ? "high" : "medium"
+        });
+        if (!saved) return;
 
     } catch (err) {
         console.error("❌ Error saving geofence event:", err.message);
