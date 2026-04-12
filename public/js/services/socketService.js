@@ -18,7 +18,7 @@ export function initSocket(token) {
         reconnectionAttempts: Infinity,
         reconnectionDelay: 1000,
         reconnectionDelayMax: 5000, // 🔥 backoff strategy
-        timeout: 20000,
+        timeout: 10000,
         auth: { token }
     });
 
@@ -32,6 +32,11 @@ export function initSocket(token) {
 
     socket.on("disconnect", (reason) => {
         console.warn("⚠️ Socket disconnected:", reason);
+
+        if (reason === "io server disconnect") {
+            // 🔥 force reconnect
+            socket.connect();
+        }
     });
 
     socket.on("connect_error", (err) => {
@@ -41,42 +46,48 @@ export function initSocket(token) {
     socket.on("reconnect", async () => {
         console.log("🔄 Reconnected");
 
-        try {
-            const token = localStorage.getItem("token");
-
-            const res = await fetch("https://trackia-backend.onrender.com/api/traccar/positions", {
-                headers: {
-                    "Authorization": "Bearer " + token
-                }
-            });
-
-            if (!res.ok) {
-                console.error("❌ Reconnect API failed:", res.status);
-                return;
-            }
-
-            let data = [];
+        // 🔥 small delay for stability
+        setTimeout(async () => {
 
             try {
-                data = await res.json();
+                const token = localStorage.getItem("token");
+
+                const res = await fetch("https://trackia-backend.onrender.com/api/traccar/positions", {
+                    headers: {
+                        "Authorization": "Bearer " + token
+                    }
+                });
+
+                if (!res.ok) {
+                    console.error("❌ Reconnect API failed:", res.status);
+                    return;
+                }
+
+                const data = await res.json();
+
+                console.log("♻️ Reload after reconnect");
+
+                socket.emit("positions", data);
+
             } catch (err) {
-                console.error("❌ Invalid JSON:", err);
-                return;
+                console.error("❌ Reconnect reload failed:", err);
             }
 
-            console.log("♻️ Reload after reconnect");
-
-            socket.emit("positionsReloaded", data);
-
-
-
-        } catch (err) {
-            console.error("❌ Reconnect reload failed:", err);
-        }
+        }, 1000);
     });
-
+    setInterval(() => {
+        if (!socket.connected) {
+            console.warn("⚠️ Socket not connected, retrying...");
+            socket.connect();
+        }
+    }, 15000);
+    socket.on("reconnect_attempt", (attempt) => {
+        console.log("🔄 Reconnect attempt:", attempt);
+    });
     return socket;
+
 }
+
 
 // ===============================
 // SAFE EVENT BINDING (NO DUPLICATES)

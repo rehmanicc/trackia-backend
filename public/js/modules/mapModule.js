@@ -1,5 +1,6 @@
 let map;
 const markers = {};
+let markerCluster;
 const icons = {
     moving: L.icon({
         iconUrl: "/icons/carg.png",
@@ -93,7 +94,8 @@ export function initMap() {
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19
     }).addTo(map);
-
+    markerCluster = L.markerClusterGroup();
+    map.addLayer(markerCluster);
     return map;
 }
 export function updateMarker(id, pos, device) {
@@ -112,12 +114,13 @@ export function updateMarker(id, pos, device) {
     const speed = toKmh(pos.speed);
     if (!markers[id]) {
 
-        markers[id] = L.marker([lat, lng], { icon }).addTo(map);
+        markers[id] = L.marker([lat, lng], { icon });
+        markerCluster.addLayer(markers[id]);
 
     } else {
 
         const marker = markers[id];
-
+        marker.setIcon(icon);
         const prev = marker.getLatLng();
 
         // 🔥 FULL VALIDATION (THIS IS THE KEY FIX)
@@ -132,7 +135,12 @@ export function updateMarker(id, pos, device) {
         }
 
         const distance = map.distance(prev, [lat, lng]);
-
+        if (
+            Math.abs(prev.lat - lat) < 0.00005 &&
+            Math.abs(prev.lng - lng) < 0.00005
+        ) {
+            return; // 🔥 skip tiny movement
+        }
         if (distance > 500) {
             marker.setLatLng([lat, lng]);
             return;
@@ -140,7 +148,7 @@ export function updateMarker(id, pos, device) {
 
         const now = Date.now();
         const last = marker._lastUpdate || now;
-        const duration = Math.min(now - last, 3000);
+        const duration = Math.min(now - last, 1500);
         marker._lastUpdate = now;
 
         // 🔥 SAFE ANGLE CALCULATION

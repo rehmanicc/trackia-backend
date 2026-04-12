@@ -10,9 +10,9 @@ exports.createDevice = async (req, res) => {
   const { name, uniqueId, speedLimit, fuelEfficiency } = req.body;
   const user = req.user;
 
-  if (user.role !== "admin") {
+  if (user.role !== "owner" && user.role !== "admin") {
     return res.status(403).json({
-      error: "Only admin can create devices"
+      error: "Only Owner/Admin can create devices"
     });
   }
 

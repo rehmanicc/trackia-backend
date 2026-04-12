@@ -652,7 +652,7 @@ async function initApp() {
 
             processing = false;
 
-        }, 500); // 🔥 batch every 500ms
+        }, 300); 
     });
     onGeofence(({ geofenceId, type, deviceId }) => {
 
@@ -1006,6 +1006,12 @@ window.switchPanel = function (panel) {
             break;
 
         case "users":
+
+            if (window.userRole === "user") {
+                alert("Access denied");
+                return;
+            }
+
             if (mapEl) mapEl.style.display = "none";
             if (statsBar) statsBar.style.display = "none";
 
@@ -1056,11 +1062,13 @@ async function loadDevices() {
         const tbody = document.getElementById("deviceTableBody");
 
         devices.forEach(d => {
+            const canManageDevices =
+                window.userRole === "owner" ||
+                hasPermission("EDIT_DEVICE");
             const users = (d.assignedTo || []).map(u => u.name || "User").join(", ");
 
             const canEditSpeed =
                 window.userRole === "owner" ||
-                window.userRole === "admin" ||
                 hasPermission?.("EDIT_SPEED");
 
             const row = document.createElement("tr");
@@ -1082,29 +1090,31 @@ async function loadDevices() {
         <td>${users || "-"}</td>
 
         <td>
-            <div class="action-buttons">
-             ${createButton({
+    <div class="action-buttons">
+
+    ${canManageDevices ? createButton({
                 text: "👤",
                 className: "icon-btn assign",
                 onClick: `openAssign('${d._id}')`,
                 title: "Assign"
-            })}
+            }) : ""}
 
-${d.assignedTo?.length ? createButton({
+    ${canManageDevices && d.assignedTo?.length ? createButton({
                 text: "❌",
                 className: "icon-btn unassign",
                 onClick: `unassignDevice('${d._id}')`,
                 title: "Unassign"
             }) : ""}
 
-${createButton({
+    ${canManageDevices ? createButton({
                 text: "🗑",
                 className: "icon-btn delete",
                 onClick: `deleteDevice('${d._id}')`,
                 title: "Delete"
-            })} 
-            </div>
-        </td>
+            }) : ""}
+
+    </div>
+</td>
     `;
 
             tbody.appendChild(row);
@@ -1247,7 +1257,8 @@ window.togglePermission = function (userId, permission, isChecked) {
 }
 window.savePermissions = async function (userId) {
 
-    const inputs = document.querySelectorAll(".permission-item input");
+    const container = document.getElementById("userContent");
+    const inputs = container.querySelectorAll(".permission-item input");
 
     const perms = [];
 
@@ -1311,7 +1322,10 @@ async function loadUserPermissions() {
 function showCreateUserForm() {
 
     const right = document.getElementById("userContent");
-
+    if (window.userRole === "user") {
+        document.getElementById("userContent").innerHTML = "";
+        return;
+    }
     right.innerHTML = `
     <div class="user-form-card">
         <h3>Create User</h3>
@@ -1417,6 +1431,20 @@ function renderExpiredDevices(devices) {
 }
 function closeExpiredDevices() {
     document.getElementById("expiredModal").classList.add("hidden");
+}
+window.renewDevice = async function (deviceId) {
+    try {
+        await apiRequest(`/api/devices/renew/${deviceId}`, {
+            method: "POST"
+        });
+
+        alert("Device renewed");
+        loadDevices();
+
+    } catch (err) {
+        console.error(err);
+        alert("Renew failed");
+    }
 }
 window.showUserPermissions = async function (userId) {
 
@@ -1606,14 +1634,26 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
     }
     window.userRole = payload?.role;
+    if (window.userRole === "user") {
+        const usersBtn = document.getElementById("usersMenuBtn");
+        if (usersBtn) usersBtn.style.display = "none";
+    }
     const container = document.getElementById("expiredBtnContainer");
 
-    if (container && hasPermission("RENEW_DEVICE")) {
+    if (
+        container &&
+        (
+            window.userRole === "owner" ||
+            (window.userRole === "admin" && hasPermission("RENEW_DEVICE"))
+        )
+    ) {
         container.innerHTML = `
         <button onclick="openExpiredDevices()">
             🔄 Manage Expired
         </button>
     `;
+    } else {
+        container.innerHTML = ""; // ❌ hide completely
     }
     const userDisplay = document.getElementById("loggedInUser");
 
