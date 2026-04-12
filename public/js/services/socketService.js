@@ -42,7 +42,6 @@ export function initSocket(token) {
         console.log("🔄 Reconnected");
 
         try {
-            // 🔥 reload latest positions after reconnect
             const token = localStorage.getItem("token");
 
             const res = await fetch("https://trackia-backend.onrender.com/api/traccar/positions", {
@@ -50,12 +49,26 @@ export function initSocket(token) {
                     "Authorization": "Bearer " + token
                 }
             });
-            const data = await res.json();
+
+            if (!res.ok) {
+                console.error("❌ Reconnect API failed:", res.status);
+                return;
+            }
+
+            let data = [];
+
+            try {
+                data = await res.json();
+            } catch (err) {
+                console.error("❌ Invalid JSON:", err);
+                return;
+            }
 
             console.log("♻️ Reload after reconnect");
 
-            // Optional: emit or handle manually if needed
             socket.emit("positionsReloaded", data);
+
+
 
         } catch (err) {
             console.error("❌ Reconnect reload failed:", err);

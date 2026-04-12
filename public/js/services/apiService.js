@@ -14,17 +14,32 @@ export async function apiRequest(path, options = {}) {
             }
         });
 
+        // 🔴 HANDLE AUTH ERROR FIRST (IMPORTANT)
+        if (res.status === 401) {
+            console.warn("⚠️ Session expired. Redirecting to login...");
+
+            localStorage.removeItem("token");
+
+            // redirect to login page
+            window.location.href = "/login.html";
+            return;
+        }
+
         const text = await res.text();
 
         let data;
+
+        // 🔴 SAFE JSON PARSING
         try {
             data = text ? JSON.parse(text) : {};
-        } catch {
-            throw new Error("Invalid JSON response");
+        } catch (err) {
+            console.error("❌ Invalid JSON response:", text);
+            throw new Error("Server returned invalid response");
         }
 
+        // 🔴 HANDLE API ERRORS
         if (!res.ok) {
-            console.error("FULL BACKEND RESPONSE:", data);
+            console.error("❌ FULL BACKEND RESPONSE:", data);
 
             throw new Error(
                 data.message ||
