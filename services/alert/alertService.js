@@ -2,21 +2,13 @@ const Alert = require("../../models/Alert");
 // 🔥 Prevent duplicate spam
 
 const COOLDOWN = 15000; // 15 seconds
+const recent = null;
 const { triggerCall } = require("../callService");
 async function createAlert(alertData, io) {
     try {
+        console.log("📥 createAlert called:", alertData);
 
         const now = new Date();
-
-        const recent = await Alert.findOne({
-            deviceId: alertData.deviceId,
-            type: alertData.type,
-            timestamp: { $gte: new Date(Date.now() - COOLDOWN) }
-        });
-
-        if (recent) {
-            return null;
-        }
 
         const alertDoc = await Alert.create({
             deviceId: alertData.deviceId,
@@ -24,33 +16,19 @@ async function createAlert(alertData, io) {
             message: alertData.message,
             metadata: alertData.metadata || {},
             timestamp: now,
-
-            // 🔥 NEW
             ruleId: alertData.ruleId || null,
             priority: alertData.priority || "medium"
         });
 
-        // ✅ Emit ONLY if new
+        console.log("✅ ALERT SAVED:", alertDoc);
+
+        // ✅ SINGLE EMIT
         if (io) {
-
-            const User = require("../../models/User");
-
-            const users = await User.find({
-                // 🔥 Basic filter (can improve later)
-            });
-
-            users.forEach(user => {
-
-                const prefs = user.alertPreferences || {};
-
-                if (prefs[alertData.type] === false) return;
-
-                // 🔥 Send to specific user
-                io.to(String(user._id)).emit("alert", alertDoc);
-            });
+            io.emit("alert", alertDoc);
         }
 
         console.log("🚨 ALERT:", alertData.type, alertData.deviceId);
+
         if (alertDoc.priority === "high") {
             try {
                 await triggerCall(alertDoc);
@@ -58,10 +36,12 @@ async function createAlert(alertData, io) {
                 console.error("Call trigger failed:", err);
             }
         }
+
         return alertDoc;
 
     } catch (error) {
-        console.error("Alert creation failed:", error);
+        console.error("❌ ALERT CREATION FAILED:", error);
+        return null;
     }
 }
 

@@ -43,7 +43,13 @@ export function initSocket(token) {
 
         try {
             // 🔥 reload latest positions after reconnect
-            const res = await fetch("https://trackia-backend.onrender.com/api/traccar/positions");
+            const token = localStorage.getItem("token");
+
+            const res = await fetch("https://trackia-backend.onrender.com/api/traccar/positions", {
+                headers: {
+                    "Authorization": "Bearer " + token
+                }
+            });
             const data = await res.json();
 
             console.log("♻️ Reload after reconnect");

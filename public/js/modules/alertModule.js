@@ -11,19 +11,23 @@ export function initAlertModule() {
     onAlert((alert) => {
 
         console.log("🚨 ALERT RECEIVED:", alert);
-        const exists = alertList.find(a =>
-            a.deviceId === alert.deviceId &&
-            a.type === alert.type &&
-            new Date(a.timestamp).getTime() === new Date(alert.timestamp).getTime()
-        );
+        const key = `${alert.deviceId}_${alert.type}_${alert.timestamp}`;
 
-        if (exists) return;
+        if (alertList.some(a =>
+            `${a.deviceId}_${a.type}_${a.timestamp}` === key
+        )) {
+            return;
+        }
         alert.read = false;
         alertList.unshift(alert);
         saveAlertsToStorage();
-        window.alertUI.renderAlerts(alertList);
+        if (window.alertUI?.renderAlerts) {
+            window.alertUI.renderAlerts(alertList);
+        }
         const type = alert.priority === "high" ? "error" : "success";
-        window.alertUI.showToast(alert.message, type);
+        if (window.alertUI?.showToast) {
+            window.alertUI.showToast(alert.message, type);
+        }
     });
 }
 window.markAlertRead = function (timestamp) {
@@ -37,7 +41,9 @@ window.markAlertRead = function (timestamp) {
 
     saveAlertsToStorage();
 
+    if (window.alertUI?.renderAlerts) {
     window.alertUI.renderAlerts(alertList);
+}
 };
 window.clearReadAlerts = function () {
 
@@ -49,7 +55,9 @@ window.clearReadAlerts = function () {
     alertList = alertList.filter(a => !a.read);
     saveAlertsToStorage();
     saveCleared();
+    if (window.alertUI?.renderAlerts) {
     window.alertUI.renderAlerts(alertList);
+}
 };
 function saveCleared() {
     localStorage.setItem("clearedAlerts", JSON.stringify([...clearedTimestamps]));
@@ -88,7 +96,9 @@ window.filterAlerts = function (type) {
         filtered = filtered.filter(a => a.read === false);
     }
 
+    if (window.alertUI?.renderAlerts) {
     window.alertUI.renderAlerts(filtered);
+}
 };
 window.clearAllAlerts = function () {
     if (!confirm("Clear all alerts?")) return;
@@ -99,7 +109,9 @@ window.clearAllAlerts = function () {
     localStorage.removeItem("alerts");
     localStorage.removeItem("clearedAlerts");
 
+    if (window.alertUI?.renderAlerts) {
     window.alertUI.renderAlerts([]);
+}
 };
 export async function loadInitialAlerts() {
 
@@ -122,7 +134,9 @@ export async function loadInitialAlerts() {
                 };
             });
 
-        window.alertUI.renderAlerts(alertList);
+        if (window.alertUI?.renderAlerts) {
+    window.alertUI.renderAlerts(alertList);
+}
 
     } catch (err) {
         console.error("❌ Failed to load alerts", err);

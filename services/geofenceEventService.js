@@ -4,7 +4,7 @@ async function saveGeofenceEvent(event, io) {
     try {
 
         const lastEvent = await GeofenceEvent.findOne({
-            deviceId: event.deviceId,
+            deviceId: String(event.deviceId),
             geofenceId: event.geofenceId,
             type: event.type
         }).sort({ timestamp: -1 });
@@ -19,16 +19,17 @@ async function saveGeofenceEvent(event, io) {
         }
 
         await GeofenceEvent.create({
-            deviceId: event.deviceId,
+            deviceId: String(event.deviceId),
             geofenceId: event.geofenceId,
             type: event.type,
             timestamp: event.timestamp,
             position: event.position
         });
 
-        // ✅ FIX: pass io
-        await createAlert({
-            deviceId: event.deviceId,
+        console.log("🚨 EVENT REACHED:", event);
+
+        const result = await createAlert({
+            deviceId: String(event.deviceId),
             type: event.type === "ENTER" ? "GEOFENCE_ENTER" : "GEOFENCE_EXIT",
             message:
                 event.type === "ENTER"
@@ -38,7 +39,8 @@ async function saveGeofenceEvent(event, io) {
             priority: event.type === "EXIT" ? "high" : "medium"
         }, io);
 
-        return true; // ✅ VERY IMPORTANT
+        console.log("🚨 ALERT RESULT:", result);
+        return true;
 
     } catch (err) {
         console.error("❌ Error saving geofence event:", err.message);
