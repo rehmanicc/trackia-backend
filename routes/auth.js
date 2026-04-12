@@ -120,14 +120,30 @@ router.post("/login", async (req, res) => {
 router.put("/permissions/:userId", authMiddleware, async (req, res) => {
   const { permissions } = req.body;
 
-  // only admin allowed
-  if (req.user.role !== "admin") {
-    return res.status(403).json({ error: "Only admin allowed" });
+  // ✅ Owner + Admin allowed
+  if (req.user.role !== "admin" && req.user.role !== "owner") {
+    return res.status(403).json({ error: "Access denied" });
   }
 
   const user = await User.findById(req.params.userId);
 
   if (!user) return res.status(404).json({ error: "User not found" });
+
+  // 🔥 BUSINESS RULE
+  if (permissions.includes("RENEW_DEVICE")) {
+
+    if (req.user.role !== "owner") {
+      return res.status(403).json({
+        error: "Only owner can assign renew permission"
+      });
+    }
+
+    if (user.role !== "admin") {
+      return res.status(403).json({
+        error: "Renew permission can only be given to admin"
+      });
+    }
+  }
 
   user.permissions = permissions;
   await user.save();

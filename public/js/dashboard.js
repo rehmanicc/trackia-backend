@@ -652,7 +652,7 @@ async function initApp() {
 
             processing = false;
 
-        }, 300); 
+        }, 300);
     });
     onGeofence(({ geofenceId, type, deviceId }) => {
 
@@ -677,7 +677,7 @@ async function initApp() {
         }
     });
 
-    const savedPanel = getState().activePanel || "live";
+    const savedPanel = "live";
 
     setTimeout(() => {
         switchPanel(savedPanel);
@@ -1476,6 +1476,17 @@ onchange="toggleGroup('${userId}', '${key}', this.checked)">
         `;
 
         group.permissions.forEach(p => {
+
+            if (p === "RENEW_DEVICE" && window.userRole === "admin") {
+                return;
+            }
+            if (
+                p === "RENEW_DEVICE" &&
+                window.userRole === "owner" &&
+                user.role !== "admin"
+            ) {
+                return;
+            }
 
             const checked = user.permissions?.includes(p) ? "checked" : "";
 
