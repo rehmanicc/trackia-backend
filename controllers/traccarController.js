@@ -3,6 +3,7 @@ const Position = require("../models/Position");
 const TRACCAR_URL = process.env.TRACCAR_URL;
 const EMAIL = process.env.TRACCAR_EMAIL;
 const PASSWORD = process.env.TRACCAR_PASSWORD;
+const Device = require("../models/Device");
 const traccarAPI = require("../services/traccarAPI");
 const { processPosition } = require("../services/geofenceEngine");
 
