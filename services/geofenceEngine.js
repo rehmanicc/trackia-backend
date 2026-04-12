@@ -80,7 +80,6 @@ async function processPosition(position, io) {
         // 🔥 HANDLE FIRST REAL STATE (NO EVENT)
         if (!state.initialized) {
             state.initialized = true;
-            state.inside = inside;
 
             console.log("⏭️ First state synced (no event)", {
                 deviceId,
@@ -88,7 +87,9 @@ async function processPosition(position, io) {
                 inside
             });
 
-            continue; // ❗ skip event detection
+            // 🔥 CRITICAL FIX
+            state.inside = inside;   // sync baseline
+            continue;                // skip THIS cycle only
         }
         console.log("📊 GEOFENCE CHECK:", {
             deviceId,
