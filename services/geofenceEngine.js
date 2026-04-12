@@ -59,22 +59,37 @@ async function processPosition(position, io) {
 
         if (!vehicleStates[deviceId][geofenceId]) {
 
-
             vehicleStates[deviceId][geofenceId] = {
-                inside: inside,   // ✅ IMPORTANT FIX
+                inside: inside,
+                initialized: false,   // 🔥 ADD THIS
                 lastUpdate: Date.now(),
                 enterCount: 0,
                 exitCount: 0
             };
 
-            console.log("♻️ Initial state set from position:", {
+            console.log("♻️ Initial state set (NO EVENT):", {
                 deviceId,
                 geofenceId,
                 inside
             });
+
+            continue; // 🔥 IMPORTANT → skip first cycle
         }
         const state = vehicleStates[deviceId][geofenceId];
         const previous = state.inside;
+        // 🔥 HANDLE FIRST REAL STATE (NO EVENT)
+        if (!state.initialized) {
+            state.initialized = true;
+            state.inside = inside;
+
+            console.log("⏭️ First state synced (no event)", {
+                deviceId,
+                geofenceId,
+                inside
+            });
+
+            continue; // ❗ skip event detection
+        }
         console.log("📊 GEOFENCE CHECK:", {
             deviceId,
             geofenceId,
@@ -83,7 +98,7 @@ async function processPosition(position, io) {
             lat: latitude,
             lng: longitude
         });
-        
+
         if (inside && !previous) {
             state.inside = true;
 
