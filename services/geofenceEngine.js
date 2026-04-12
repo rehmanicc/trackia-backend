@@ -15,6 +15,24 @@ async function processPosition(position, io) {
     const { latitude, longitude } = position;
     const point = turf.point([longitude, latitude]);
     const geofences = await Geofence.find({ deviceId });
+    // 🔥 LOAD LAST EVENTS ONCE (PER DEVICE)
+    const GeofenceEvent = require("../models/GeofenceEvent");
+
+    const lastEvents = await GeofenceEvent.aggregate([
+        { $match: { deviceId: String(position.deviceId) } },
+        { $sort: { timestamp: -1 } },
+        {
+            $group: {
+                _id: "$geofenceId",
+                lastEvent: { $first: "$type" }
+            }
+        }
+    ]);
+
+    const lastEventMap = {};
+    lastEvents.forEach(e => {
+        lastEventMap[e._id.toString()] = e.lastEvent;
+    });
     position.deviceConfig = {
         speedLimit: device?.speedLimit || 60
     };
@@ -59,38 +77,34 @@ async function processPosition(position, io) {
 
         if (!vehicleStates[deviceId][geofenceId]) {
 
+            const lastEventType = lastEventMap[geofenceId];
+
+            let lastInside = inside;
+
+            if (lastEventType) {
+                lastInside = lastEventType === "ENTER";
+            }
+
             vehicleStates[deviceId][geofenceId] = {
-                inside: inside,
-                initialized: false,   // 🔥 ADD THIS
+                inside: lastInside,
+                initialized: true,
                 lastUpdate: Date.now(),
                 enterCount: 0,
                 exitCount: 0
             };
 
-            console.log("♻️ Initial state set (NO EVENT):", {
+            console.log("♻️ State restored from DB:", {
                 deviceId,
                 geofenceId,
-                inside
+                lastInside
             });
 
-            continue; // 🔥 IMPORTANT → skip first cycle
+            continue;
         }
         const state = vehicleStates[deviceId][geofenceId];
         const previous = state.inside;
         // 🔥 HANDLE FIRST REAL STATE (NO EVENT)
-        if (!state.initialized) {
-            state.initialized = true;
 
-            console.log("⏭️ First state synced (no event)", {
-                deviceId,
-                geofenceId,
-                inside
-            });
-
-            // 🔥 CRITICAL FIX
-            state.inside = inside;   // sync baseline
-            continue;                // skip THIS cycle only
-        }
         console.log("📊 GEOFENCE CHECK:", {
             deviceId,
             geofenceId,
