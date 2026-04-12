@@ -3,27 +3,69 @@ const traccarAPI = require("../services/traccarAPI");
 const Geofence = require("../models/Geofence");
 
 // CREATE DEVICE
-// ======================
-// 4️⃣ SAVE IN MONGO
-// ======================
 
-const oneYearLater = new Date();
-oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
 
-const device = await Device.create({
-  name,
-  uniqueId,
-  traccarId: traccarDevice.id,
-  companyId: user.companyId,
-  createdBy: user._id,
-  assignedTo: [],
-  speedLimit: speedLimit || 70,
-  fuelEfficiency: fuelEfficiency || 12,
+exports.createDevice = async (req, res) => {
 
-  // 🔥 NEW FIELD
-  expiryDate: oneYearLater,
-  isActive: true
-});
+  const { name, uniqueId, speedLimit, fuelEfficiency } = req.body;
+  const user = req.user;
+
+  if (user.role !== "admin") {
+    return res.status(403).json({
+      error: "Only admin can create devices"
+    });
+  }
+
+  try {
+
+    const existingMongo = await Device.findOne({ uniqueId });
+
+    if (existingMongo) {
+      return res.status(400).json({
+        error: "Device already exists in system"
+      });
+    }
+
+    const traccarRes = await traccarAPI.get("/api/devices");
+    const traccarDevices = traccarRes.data;
+
+    let traccarDevice = traccarDevices.find(d => d.uniqueId === uniqueId);
+
+    if (!traccarDevice) {
+      const response = await traccarAPI.post("/api/devices", {
+        name,
+        uniqueId
+      });
+      traccarDevice = response.data;
+    }
+
+    // ✅ EXPIRY LOGIC (CORRECT PLACE)
+    const oneYearLater = new Date();
+    oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
+
+    const device = await Device.create({
+      name,
+      uniqueId,
+      traccarId: traccarDevice.id,
+      companyId: user.companyId,
+      createdBy: user._id,
+      assignedTo: [],
+      speedLimit: speedLimit || 70,
+      fuelEfficiency: fuelEfficiency || 12,
+      expiryDate: oneYearLater,
+      isActive: true
+    });
+
+    res.json(device);
+
+  } catch (err) {
+    console.error("❌ DEVICE ERROR:", err.response?.data || err.message);
+
+    res.status(500).json({
+      error: err.response?.data?.message || err.message
+    });
+  }
+};
 exports.getDevices = async (req, res) => {
   try {
     const user = req.user;
