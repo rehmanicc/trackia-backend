@@ -41,6 +41,10 @@ const deviceSchema = new mongoose.Schema({
     isActive: {
         type: Boolean,
         default: true
+    },
+    engineControlEnabled: {
+        type: Boolean,
+        default: false
     }
 
 }, { timestamps: true });

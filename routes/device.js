@@ -5,9 +5,23 @@ const checkPermission = require("../middleware/checkPermission");
 const PERMISSIONS = require("../config/permissions");
 const Device = require("../models/Device");
 
-router.get("/", auth, ctrl.getDevices);
-router.post("/:id/assign", auth, ctrl.assignDevice);
-router.post("/:id/unassign", auth, ctrl.unassignDevice);
+router.get("/",
+  auth,
+  checkPermission(PERMISSIONS.VIEW_DEVICE),
+  ctrl.getDevices
+);
+
+router.post("/:id/assign",
+  auth,
+  checkPermission(PERMISSIONS.EDIT_DEVICE),
+  ctrl.assignDevice
+);
+
+router.post("/:id/unassign",
+  auth,
+  checkPermission(PERMISSIONS.EDIT_DEVICE),
+  ctrl.unassignDevice
+);
 router.post("/",
   auth,
   checkPermission(PERMISSIONS.EDIT_DEVICE),
@@ -35,7 +49,7 @@ router.put("/:id/speed",
     } catch (err) {
       res.status(500).json({ error: "Failed to update speed limit" });
     }
-});
+  });
 router.post(
   "/renew/:id",
   auth,
@@ -67,5 +81,11 @@ router.post(
       res.status(500).json({ error: "Renewal failed" });
     }
   }
+);
+router.post(
+  "/:id/toggle-engine-access",
+  auth,
+  checkPermission(PERMISSIONS.EDIT_DEVICE),
+  ctrl.toggleEngineAccess
 );
 module.exports = router;

@@ -9,13 +9,7 @@ exports.createDevice = async (req, res) => {
 
   const { name, uniqueId, speedLimit, fuelEfficiency } = req.body;
   const user = req.user;
-
-  if (user.role !== "owner" && user.role !== "admin") {
-    return res.status(403).json({
-      error: "Only Owner/Admin can create devices"
-    });
-  }
-
+  
   try {
 
     const existingMongo = await Device.findOne({ uniqueId });
@@ -110,11 +104,6 @@ exports.deleteDevice = async (req, res) => {
     const device = await Device.findById(req.params.id);
 
     if (!device) return res.status(404).json({ error: "Not found" });
-
-    if (req.user.role !== "admin") {
-      return res.status(403).json({ error: "Not allowed" });
-    }
-
     await traccarAPI.delete(`/api/devices/${device.traccarId}`);
 
     await Geofence.deleteMany({
@@ -154,11 +143,7 @@ exports.assignDevice = async (req, res) => {
     if (!device) {
       return res.status(404).json({ error: "Device not found" });
     }
-
-    if (req.user.role !== "admin") {
-      return res.status(403).json({ error: "Not allowed" });
-    }
-
+    
     // ✅ FORCE ARRAY (IMPORTANT)
     if (!Array.isArray(device.assignedTo)) {
       device.assignedTo = [];
@@ -203,4 +188,25 @@ exports.unassignDevice = async (req, res) => {
   await device.save();
 
   res.json(device);
+};
+exports.toggleEngineAccess = async (req, res) => {
+  try {
+    const device = await Device.findById(req.params.id);
+
+    if (!device) {
+      return res.status(404).json({ error: "Device not found" });
+    }
+
+    device.engineControlEnabled = !device.engineControlEnabled;
+
+    await device.save();
+
+    res.json({
+      message: "Engine control updated",
+      engineControlEnabled: device.engineControlEnabled
+    });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };

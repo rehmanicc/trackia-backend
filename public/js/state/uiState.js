@@ -4,19 +4,20 @@ const state = {
     mode: "live"
 };
 
-const listeners = [];
+const listeners = new Set();
 
 export function getState() {
     return state;
 }
 
 export function setState(newState) {
+    const prevState = { ...state }; 
+
     Object.assign(state, newState);
 
-    // notify all listeners
-    listeners.forEach(fn => fn(state));
+    listeners.forEach(fn => fn(state, prevState)); 
 }
 
 export function subscribe(fn) {
-    listeners.push(fn);
+    listeners.add(fn);
 }

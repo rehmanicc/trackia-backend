@@ -17,6 +17,7 @@ let collapsedDevices = Object.create(null);
 let selectedGeofenceId = null;
 const lastRenderedData = new Map();
 const vehicleCardMap = new Map();
+const vehicleRefsMap = new Map();
 // ===============================
 // PERMISSION GROUPS (v2.4)
 // ===============================
@@ -79,9 +80,10 @@ import {
     onGeofence
 } from "./services/socketService.js";
 import { getState, setState } from "./state/uiState.js";
-import { createVehicleCard } from "./components/vehicleCard.js";
+import { createVehicleCardElement } from "./components/vehicleCard.js";
 import { apiRequest } from "./services/apiService.js";
 import { hasPermission } from "./components/permissions.js";
+import { subscribe } from "./state/uiState.js";
 import {
     parseLatLng,
     toKmh,
@@ -102,6 +104,28 @@ import {
 } from "./modules/playbackModule.js";
 const $ = (id) => document.getElementById(id);
 const headerTitle = document.querySelector(".header h2");
+
+subscribe((state, prevState) => {
+
+    // 🔥 Only re-render when UI state changes
+    if (
+        state.activePanel !== prevState.activePanel ||
+        state.selectedVehicleId !== prevState.selectedVehicleId
+    ) {
+        scheduleVehicleListRender();
+    }
+});
+let renderScheduled = false;
+function scheduleVehicleListRender() {
+    if (renderScheduled) return;
+    renderScheduled = true;
+    requestAnimationFrame(() => {
+        const positionsArray = Object.values(lastPositions);
+        updateVehicleList(positionsArray);
+        renderScheduled = false;
+    });
+}
+
 function createButton({ text, className = "", onClick = "", title = "" }) {
     return `
         <button 
@@ -179,13 +203,12 @@ window.sendCommand = async function (deviceId, type) {
 window.selectDeviceForAnalytics = function (deviceId) {
 
     const id = String(deviceId);
+    setState({
+        selectedVehicleId: id,
+        activePanel: "analytics" // 🔥 CRITICAL
+    });
 
-    console.log("✅ Selected for analytics:", id);
-
-    // ✅ ONLY state (single source of truth)
-    setState({ selectedVehicleId: id });
-
-    console.log("✅ State now:", getState().selectedVehicleId);
+    switchPanel("analytics");
 
     document.getElementById("analyticsModal").style.display = "flex";
 
@@ -197,7 +220,6 @@ window.selectDeviceForAnalytics = function (deviceId) {
 window.closeAnalyticsModal = function () {
     document.getElementById("analyticsModal").style.display = "none";
 }
-
 
 window.openPlaybackModal = function (deviceId) {
     setState({ selectedVehicleId: deviceId });
@@ -441,26 +463,29 @@ async function loadInitialPositions() {
     try {
         const positions = await apiRequest("/api/traccar/positions");
 
+        const tempPositions = [];
+
+        // ✅ FIRST PASS → prepare data (FAST)
         positions.forEach(pos => {
 
             const id = String(pos.deviceId);
-
             const coords = parseLatLng(pos);
             if (!coords) return;
 
-            const { lat, lng } = coords;
-
             lastPositions[id] = pos;
-            updateMarker(id, pos, allowedDevices[id]);
+            tempPositions.push(pos);
         });
-
-        // ✅ Update sidebar also
+        updateVehicleList(tempPositions);
+        setTimeout(() => {
+            tempPositions.forEach(pos => {
+                const id = String(pos.deviceId);
+                updateMarker(id, pos, allowedDevices[id]);
+            });
+        }, 0);
 
     } catch (err) {
         console.error("❌ Initial load error:", err);
     }
-    const positionsArray = Object.values(lastPositions);
-    updateVehicleList(positionsArray);
 }
 async function loadUsersCache() {
     try {
@@ -508,8 +533,7 @@ async function initApp() {
                 updateMarker(id, pos);
             });
 
-            const positionsArray = Object.values(lastPositions);
-            updateVehicleList(positionsArray);
+            scheduleVehicleListRender();
 
             processing = false;
 
@@ -696,27 +720,47 @@ function updateVehicleList(positions) {
         visibleIds.add(id);
 
         let card = vehicleCardMap.get(id);
+        const state = getState();
+        const isAnalytics = state.activePanel === "analytics";
 
+        // 🔥 Detect panel change (force rebuild)
+        const prevPanel = card?.dataset.panel;
+        const currentPanel = state.activePanel;
+
+        if (card && prevPanel !== currentPanel) {
+            card.remove();
+            vehicleCardMap.delete(id);
+            vehicleRefsMap.delete(id);
+            lastRenderedData.delete(id);
+            card = null; // force recreate
+        }
         const statusClass = {
             online: "status-online",
             offline: "status-offline",
             unknown: "status-unknown"
         }[status] || "status-unknown";
 
-        const state = getState();
-        const isAnalytics = state.activePanel === "analytics";
-
         if (!card) {
-            // 🆕 CREATE ONLY IF NOT EXISTS
             card = document.createElement("div");
             card.className = "vehicle-card";
             card.dataset.id = id;
-
+            card.dataset.panel = state.activePanel;
             card.onclick = async () => {
                 await selectVehicle(id);
             };
 
+            const { root, refs } = createVehicleCardElement({
+                pos,
+                device,
+                isAnalytics,
+                statusClass
+            });
+
+            card.appendChild(root);
+
             vehicleCardMap.set(id, card);
+            vehicleRefsMap.set(id, refs);
+
             container.appendChild(card);
         }
 
@@ -730,12 +774,17 @@ function updateVehicleList(positions) {
             (device.name || "");
 
         if (prev !== newData) {
-            card.innerHTML = createVehicleCard({
-                pos,
-                device,
-                isAnalytics,
-                statusClass
-            });
+            const refs = vehicleRefsMap.get(id);
+
+            if (refs) {
+                refs.speedEl.innerHTML = `Speed: <b>${pos.speedKmh || 0} km/h</b>`;
+
+                const minutesAgo = Math.floor((Date.now() - new Date(pos.deviceTime)) / 60000);
+                refs.timeEl.innerText = `Last update: ${minutesAgo} min ago`;
+
+                refs.statusEl.innerText = status;
+                refs.statusEl.className = "status-badge " + statusClass;
+            }
 
             lastRenderedData.set(id, newData);
         }
@@ -746,6 +795,7 @@ function updateVehicleList(positions) {
         if (!visibleIds.has(id)) {
             card.remove();
             vehicleCardMap.delete(id);
+            vehicleRefsMap.delete(id); // ✅ IMPORTANT
             lastRenderedData.delete(id);
         }
     });
@@ -822,8 +872,6 @@ function resetUI() {
 }
 window.switchPanel = function (panel) {
 
-    if (headerTitle) headerTitle.innerText = "Live Tracking";
-    setState({ activePanel: panel });
     resetUI();
     closeAssign();
 
@@ -847,11 +895,14 @@ window.switchPanel = function (panel) {
             break;
 
         case "analytics":
+
             $("vehicleList").closest(".vehicle-panel").classList.add("active");
             if (headerTitle) headerTitle.innerText = "Trip Analytics";
-
             const tripStats = $("tripStatsPanel");
             if (tripStats) tripStats.style.display = "flex";
+            const statsBar = document.querySelector(".stats-bar");
+            if (statsBar) statsBar.style.display = "flex";
+            if (mapEl) mapEl.style.display = "block";
             break;
 
         case "devices":
@@ -891,10 +942,8 @@ window.switchPanel = function (panel) {
             if (headerTitle) headerTitle.innerText = "Create Device";
             break;
     }
-
-    // ✅ 6. REFRESH VEHICLE LIST
-    const positionsArray = Object.values(lastPositions);
-    updateVehicleList(positionsArray);
+    setState({ activePanel: panel });
+    
 }
 window.closeAssign = function () {
     const modal = document.getElementById("assignModal");
@@ -1650,13 +1699,11 @@ document.addEventListener("DOMContentLoaded", () => {
         await loadGeofences();
     });
     document.getElementById("searchInput")?.addEventListener("input", () => {
-        const positionsArray = Object.values(lastPositions);
-        updateVehicleList(positionsArray);
+        scheduleVehicleListRender();
     });
 
     document.getElementById("statusFilter")?.addEventListener("change", () => {
-        const positionsArray = Object.values(lastPositions);
-        updateVehicleList(positionsArray);
+        scheduleVehicleListRender();
     });
 
 

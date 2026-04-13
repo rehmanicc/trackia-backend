@@ -141,17 +141,58 @@ exports.getTrips = async (req, res) => {
 
   }
 };
-//commands
+
 // SEND COMMAND
 exports.sendCommand = async (req, res) => {
   try {
     const { deviceId, type } = req.body;
 
-    // Validate input
     if (!deviceId || !type) {
       return res.status(400).json({
         error: "deviceId and type are required"
       });
+    }
+
+    const device = await Device.findOne({
+      traccarId: deviceId,
+      companyId: req.user.companyId
+    });
+
+    if (!device) {
+      return res.status(404).json({
+        error: "Device not found"
+      });
+    }
+
+    // 🔐 ROLE CHECK
+    const isOwnerOrAdmin =
+      req.user.role === "owner" || req.user.role === "admin";
+
+    // 🔐 GENERAL COMMAND PERMISSION
+    if (!isOwnerOrAdmin && !req.user.permissions?.includes("SEND_COMMAND")) {
+      return res.status(403).json({
+        error: "No command permission"
+      });
+    }
+
+    // 🔥 ENGINE CONTROL CHECK
+    const ENGINE_COMMANDS = ["engineStop", "engineResume"];
+
+    if (ENGINE_COMMANDS.includes(type)) {
+
+      // ❌ Users need permission
+      if (!isOwnerOrAdmin && !req.user.permissions?.includes("ENGINE_CONTROL")) {
+        return res.status(403).json({
+          error: "No engine control permission"
+        });
+      }
+
+      // ❌ Block if disabled
+      if (!device.engineControlEnabled) {
+        return res.status(403).json({
+          error: "Engine control disabled by admin/owner"
+        });
+      }
     }
 
     const response = await traccarAPI.post("/api/commands/send", {
@@ -162,14 +203,8 @@ exports.sendCommand = async (req, res) => {
     res.json(response.data);
 
   } catch (error) {
-    console.error("COMMAND ERROR:", error.message);
-
-    if (error.response) {
-      console.error("Traccar Response:", error.response.data);
-    }
-
     res.status(500).json({
-      error: error.message || "Failed to send command"
+      error: error.message
     });
   }
 };
