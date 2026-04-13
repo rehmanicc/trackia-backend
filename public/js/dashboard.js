@@ -3,6 +3,7 @@ window.setActiveMenu = function (element) {
     document.querySelectorAll(".sidebar li").forEach(li => li.classList.remove("active"));
     element.classList.add("active");
 }
+
 let allowedDevices = {};
 let lastPositions = {};
 let activeCard = null;
@@ -28,7 +29,8 @@ const PERMISSION_GROUPS = {
         permissions: [
             "VIEW_DEVICE",
             "EDIT_DEVICE",
-            "SEND_COMMAND"
+            "SEND_COMMAND",
+            "ENGINE_CONTROL"
         ]
     },
     GEOFENCE: {
@@ -58,6 +60,7 @@ const PERMISSION_LABELS = {
     EDIT_DEVICE: "Edit Devices",
     SEND_COMMAND: "Send Commands",
     RENEW_DEVICE: "Renew Devices",
+    ENGINE_CONTROL: "Engine Control (ON/OFF)",
 
     EDIT_SPEED: "Edit Speed Limit",
     EDIT_FUEL: "Edit Fuel Settings",
@@ -182,7 +185,12 @@ window.createUser = async function () {
     }
 }
 //command function
+
 window.sendCommand = async function (deviceId, type) {
+    if (!deviceId || !type) {
+        alert("Invalid command");
+        return;
+    }
     try {
         const data = await apiRequest("/api/traccar/command", {
             method: "POST",
@@ -271,40 +279,6 @@ window.confirmPlayback = function () {
 
     startPlayback(getState().selectedVehicleId, date);
 }
-
-function renderVehicleDetails(p) {
-
-    const container = document.getElementById("vehicleDetails");
-
-    container.innerHTML = `
-    <div style="border:1px solid #ccc;padding:10px;background:#fff;">
-        <h4>Vehicle ${p.deviceId}</h4>
-
-        <p><b>Speed:</b>${p.speedKmh || 0} km/h</p>
-        <p><b>Latitude:</b> ${p.latitude}</p>
-        <p><b>Longitude:</b> ${p.longitude}</p>
-        <p><b>Battery:</b> ${p.attributes.batteryLevel || "N/A"}%</p>
-        <p><b>Last Update:</b> ${new Date(p.fixTime || p.deviceTime).toLocaleString()}</p>
-
-        <hr>
-
-        <div style="margin-top:10px;">
-            ${createButton({
-        text: "🔴 Engine OFF",
-        className: "btn-danger",
-        onClick: `sendCommand(${p.deviceId}, 'engineStop')`
-    })}
-
-${createButton({
-        text: "🟢 Engine ON",
-        className: "btn-success",
-        onClick: `sendCommand(${p.deviceId}, 'engineResume')`
-    })}
-        </div>
-    </div>
-`;
-}
-
 async function fetchAllowedDevices() {
     try {
         const devices = await safeApi(() => apiRequest("/api/devices"), []);
@@ -316,7 +290,9 @@ async function fetchAllowedDevices() {
     } catch (err) {
         console.error("❌ Error fetching devices:", err);
     }
+    window.allowedDevices = allowedDevices;
 }
+
 window.openGeofence = function () {
     setState({ activePanel: "geofence", mode: "geofence" });
     headerTitle.innerText = "Geofencing";
@@ -924,7 +900,7 @@ window.switchPanel = function (panel) {
 
         case "users":
 
-            if (window.userRole === "user") {
+            if (!hasPermission("EDIT_DEVICE") && window.userRole !== "owner") {
                 alert("Access denied");
                 return;
             }
@@ -943,7 +919,7 @@ window.switchPanel = function (panel) {
             break;
     }
     setState({ activePanel: panel });
-    
+
 }
 window.closeAssign = function () {
     const modal = document.getElementById("assignModal");
@@ -977,15 +953,9 @@ async function loadDevices() {
         const tbody = document.getElementById("deviceTableBody");
 
         devices.forEach(d => {
-            const canManageDevices =
-                window.userRole === "owner" ||
-                hasPermission("EDIT_DEVICE");
+            const canManageDevices = hasPermission("EDIT_DEVICE");
             const users = (d.assignedTo || []).map(u => u.name || "User").join(", ");
-
-            const canEditSpeed =
-                window.userRole === "owner" ||
-                hasPermission?.("EDIT_SPEED");
-
+            const canEditSpeed = hasPermission("EDIT_SPEED");
             const row = document.createElement("tr");
 
             row.innerHTML = `

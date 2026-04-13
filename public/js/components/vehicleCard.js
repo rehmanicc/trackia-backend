@@ -1,8 +1,20 @@
+import { hasPermission } from "./permissions.js";
 export function createVehicleCardElement({ pos, device, isAnalytics, statusClass }) {
 
     const speed = pos.speedKmh || 0;
     const minutesAgo = Math.floor((Date.now() - new Date(pos.deviceTime)) / 60000);
+    const deviceData = window.allowedDevices?.[pos.deviceId];
 
+    // 🔥 FINAL ENGINE PERMISSION LOGIC
+    const canUseEngine =
+        window.userRole === "owner" ||
+        (
+            deviceData?.engineControlEnabled &&
+            (
+                window.userRole === "admin" ||
+                hasPermission("ENGINE_CONTROL")
+            )
+        );
     // ✅ ACTION BUTTON (MOVE HERE)
     let actionButton;
 
@@ -23,7 +35,29 @@ export function createVehicleCardElement({ pos, device, isAnalytics, statusClass
             openPlaybackModal(pos.deviceId);
         };
     }
+    let engineButtons = [];
 
+    if (canUseEngine) {
+
+        const offBtn = document.createElement("button");
+        offBtn.className = "btn-action btn-danger";
+        offBtn.innerText = "🔴 Off";
+        offBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (!confirm("Are you sure you want to turn OFF the engine?")) return;
+            sendCommand(pos.deviceId, "engineStop");
+        };
+
+        const onBtn = document.createElement("button");
+        onBtn.className = "btn-action btn-success";
+        onBtn.innerText = "🟢 On";
+        onBtn.onclick = (e) => {
+            e.stopPropagation();
+            sendCommand(pos.deviceId, "engineResume");
+        };
+
+        engineButtons.push(offBtn, onBtn);
+    }
     // 🔹 ROOT
     const root = document.createElement("div");
 
@@ -60,7 +94,16 @@ export function createVehicleCardElement({ pos, device, isAnalytics, statusClass
     body.appendChild(left);
 
     // ACTION
-    body.appendChild(actionButton);
+    const actionContainer = document.createElement("div");
+    actionContainer.style.display = "flex";
+    actionContainer.style.gap = "6px";
+
+    actionContainer.appendChild(actionButton);
+
+    // 🔥 add engine buttons
+    engineButtons.forEach(btn => actionContainer.appendChild(btn));
+
+    body.appendChild(actionContainer);
 
     // ROOT
     root.appendChild(header);
