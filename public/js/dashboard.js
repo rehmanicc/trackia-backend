@@ -917,6 +917,7 @@ window.switchPanel = function (panel) {
         case "createDevice":
             $("createDevicePanel").classList.add("active");
             if (headerTitle) headerTitle.innerText = "Create Device";
+            loadAdminsForDevice();
             break;
     }
     setState({ activePanel: panel });
@@ -1044,17 +1045,23 @@ window.filterDevices = function () {
     });
 }
 window.submitNewDevice = async function () {
+
     const name = document.getElementById("deviceNameInput").value;
     const uniqueId = document.getElementById("deviceUniqueInput").value;
+    const adminId = document.getElementById("deviceAdminSelect").value;
 
-    if (!name || !uniqueId) {
-        alert("Fill all fields");
+    if (!name || !uniqueId || !adminId) {
+        alert("Fill all fields including admin");
         return;
     }
 
     await apiRequest("/api/devices", {
         method: "POST",
-        body: JSON.stringify({ name, uniqueId })
+        body: JSON.stringify({
+            name,
+            uniqueId,
+            adminId // ✅ FIX
+        })
     });
 
     alert("Device added");
@@ -1875,3 +1882,31 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     initApp();
 });
+async function loadAdminsForDevice() {
+    try {
+        const users = await apiRequest("/api/users");
+
+        const dropdown = document.getElementById("deviceAdminSelect");
+        if (!dropdown) return;
+
+        // ✅ 👉 ADD THIS HERE
+        if (window.userRole !== "owner") {
+            dropdown.parentElement.style.display = "none";
+            return; // stop further execution
+        }
+
+        dropdown.innerHTML = `<option value="">-- Select Admin --</option>`;
+
+        users
+            .filter(u => u.role === "admin")
+            .forEach(admin => {
+                const opt = document.createElement("option");
+                opt.value = admin._id;
+                opt.textContent = admin.name;
+                dropdown.appendChild(opt);
+            });
+
+    } catch (err) {
+        console.error("Failed to load admins", err);
+    }
+}

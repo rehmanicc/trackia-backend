@@ -6,7 +6,7 @@ const User = require("../models/User");
 // CREATE DEVICE
 
 
-exports.createDevice = async (req, res) => {
+exports.createDevice = async (req, res, next) => {
 
   const { name, uniqueId, speedLimit, fuelEfficiency } = req.body;
   const user = req.user;
@@ -78,7 +78,7 @@ exports.createDevice = async (req, res) => {
   } catch (err) {
     console.error("❌ DEVICE ERROR:", err.response?.data || err.message);
 
-    res.status(500).json({
+    return res.status(500).json({
       error: err.response?.data?.message || err.message
     });
   }
