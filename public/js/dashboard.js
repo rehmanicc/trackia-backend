@@ -284,7 +284,7 @@ async function fetchAllowedDevices() {
         const devices = await safeApi(() => apiRequest("/api/devices"), []);
         allowedDevices = {};
         devices.forEach(device => {
-            allowedDevices[device.traccarId] = device;
+            allowedDevices[String(device.traccarId)] = device;
         });
 
     } catch (err) {
@@ -500,7 +500,7 @@ async function initApp() {
 
                 const id = String(pos.deviceId);
 
-                if (!allowedDevices[id]) return;
+                if (!pos) return;
 
                 const coords = parseLatLng(pos);
                 if (!coords) return;
@@ -680,11 +680,12 @@ function updateVehicleList(positions) {
     positions.forEach(pos => {
 
         const id = String(pos.deviceId);
+        const device = allowedDevices[id] || {
+            name: "Device " + id,
+            status: "offline"
+        };
 
-        if (!allowedDevices[id]) return;
-
-        const device = allowedDevices[id];
-        const status = device?.status || "offline";
+        const status = device.status || "offline";
 
         counts[status]++;
 
@@ -877,7 +878,6 @@ window.switchPanel = function (panel) {
             if (headerTitle) headerTitle.innerText = "Trip Analytics";
             const tripStats = $("tripStatsPanel");
             if (tripStats) tripStats.style.display = "flex";
-            const statsBar = document.querySelector(".stats-bar");
             if (statsBar) statsBar.style.display = "flex";
             if (mapEl) mapEl.style.display = "block";
             break;
@@ -933,7 +933,7 @@ async function loadDevices() {
     const container = document.getElementById("deviceList");
 
     try {
-        const devices = Object.values(allowedDevices);
+        const devices = await apiRequest("/api/devices");
         container.innerHTML = `
     <div class="device-header">
         <input type="text" id="deviceSearch" placeholder="Search devices..." oninput="filterDevices()">
@@ -955,7 +955,14 @@ async function loadDevices() {
 
         devices.forEach(d => {
             const canManageDevices = hasPermission("EDIT_DEVICE");
-            const users = (d.assignedTo || []).map(u => u.name || "User").join(", ");
+            let users = "-";
+
+            if (Array.isArray(d.assignedTo)) {
+                users = d.assignedTo.map(u => u.name || "User").join(", ");
+            }
+            else if (d.assignedTo && typeof d.assignedTo === "object") {
+                users = d.assignedTo.name || "User";
+            }
             const canEditSpeed = hasPermission("EDIT_SPEED");
             const row = document.createElement("tr");
 
@@ -985,7 +992,7 @@ async function loadDevices() {
                 title: "Assign"
             }) : ""}
 
-    ${canManageDevices && d.assignedTo?.length ? createButton({
+    ${canManageDevices && Array.isArray(d.assignedTo) && d.assignedTo.lengthd.assignedTo?.length ? createButton({
                 text: "❌",
                 className: "icon-btn unassign",
                 onClick: `unassignDevice('${d._id}')`,
@@ -1007,7 +1014,13 @@ async function loadDevices() {
         });
 
     } catch (err) {
-        container.innerHTML = "<p style='color:red'>Failed to load devices</p>";
+        console.error(err);
+        container.innerHTML = `
+    <p style='color:red'>
+        Failed to load devices<br>
+        ${err.message || ""}
+    </p>
+`;
     }
 }
 window.unassignDevice = async function (deviceId) {
@@ -1064,59 +1077,178 @@ window.openAssign = async function (deviceId) {
 
     selectedDeviceForAssign = deviceId;
 
-    const select = document.getElementById("assignUserSelect");
-    if (!select) return;
+    const adminSelect = document.getElementById("assignAdminSelect");
+    const userSelect = document.getElementById("assignUserSelect");
 
-    // clear previous
-    select.innerHTML = "";
+    if (!adminSelect || !userSelect) return;
 
-    // default option
-    const defaultOpt = document.createElement("option");
-    defaultOpt.value = "";
-    defaultOpt.textContent = "-- Select User --";
-    select.appendChild(defaultOpt);
+    // reset
+    adminSelect.innerHTML = "<option value=''>-- Select Admin --</option>";
+    userSelect.innerHTML = "<option value=''>-- Select User --</option>";
 
-    // use ONLY cachedUsers
-    cachedUsers.forEach(u => {
-        const opt = document.createElement("option");
-        opt.value = u._id;
-        opt.textContent = u.name;
-        select.appendChild(opt);
-    });
+    const device = Object.values(allowedDevices)
+        .find(d => d._id === deviceId);
+    // 🔥 Pre-fill current selections
+    let currentUserId = null;
+
+    if (Array.isArray(device.assignedTo) && device.assignedTo.length) {
+        currentUserId = device.assignedTo[0]._id;
+    }
+    else if (device.assignedTo && typeof device.assignedTo === "object") {
+        currentUserId = device.assignedTo._id;
+    }
+
+    // Set selected user
+    if (currentUserId) {
+        setTimeout(() => {
+            const userSelect = document.getElementById("assignUserSelect");
+            if (userSelect) userSelect.value = currentUserId;
+        }, 0);
+    }
+    if (!device) {
+        alert("Device not found");
+        return;
+    }
+
+    // 🔥 DEBUG (optional)
+    console.log("Users:", cachedUsers);
+
+    // =========================
+    // 👑 OWNER → BOTH LISTS
+    // =========================
+    if (window.userRole === "owner") {
+
+        // ✅ Admin list
+        cachedUsers
+            .filter(u => String(u.role).toLowerCase() === "admin")
+            .forEach(u => {
+                const opt = document.createElement("option");
+                opt.value = u._id;
+                opt.textContent = u.name;
+                adminSelect.appendChild(opt);
+            });
+
+        // ✅ User list
+        cachedUsers
+            .filter(u => String(u.role).toLowerCase() === "user")
+            .forEach(u => {
+                const opt = document.createElement("option");
+                opt.value = u._id;
+                opt.textContent = u.name;
+                userSelect.appendChild(opt);
+            });
+    }
+
+    // =========================
+    // 🏢 ADMIN → USERS ONLY
+    // =========================
+    else if (window.userRole === "admin") {
+
+        // hide admin dropdown
+        document.getElementById("adminAssignBlock").style.display = "none";
+
+        cachedUsers
+            .filter(u =>
+                String(u.role).toLowerCase() === "user" &&
+                u.adminId === device.adminId
+            )
+            .forEach(u => {
+                const opt = document.createElement("option");
+                opt.value = u._id;
+                opt.textContent = u.name;
+                userSelect.appendChild(opt);
+            });
+    }
+
+    else {
+        alert("Access denied");
+        return;
+    }
 
     document.getElementById("assignModal").style.display = "flex";
 };
 
 window.submitAssign = async function () {
 
-    const select = document.getElementById("assignUserSelect");
+    const adminId = document.getElementById("assignAdminSelect")?.value;
+    const userId = document.getElementById("assignUserSelect")?.value;
 
-    // ✅ Check select exists
-    if (!select) {
-        alert("User selector not found");
-        return;
+    const device = Object.values(allowedDevices)
+        .find(d => d._id === selectedDeviceForAssign);
+
+    let currentUserId = null;
+
+    if (Array.isArray(device?.assignedTo) && device.assignedTo.length) {
+        currentUserId = device.assignedTo[0]._id;
+    } else if (device?.assignedTo && typeof device.assignedTo === "object") {
+        currentUserId = device.assignedTo._id;
     }
 
-    const userId = select.value;
+    let payload = {};
 
-    console.log("Assigning userId:", userId);
+    // 👑 OWNER
+    if (window.userRole === "owner") {
 
-    // ✅ IMPORTANT FIX
-    if (!userId || userId === "undefined") {
-        alert("Please select a user");
-        return;
+        if (adminId && adminId !== "") {
+            payload.adminId = adminId;
+        }
+
+        if (userId && userId !== "") {
+            payload.userId = userId;
+        }
+
+        if (!payload.adminId && !payload.userId) {
+            alert("Select admin or user");
+            return;
+        }
     }
 
-    await apiRequest(`/api/devices/${selectedDeviceForAssign}/assign`, {
-        method: "POST",
-        body: JSON.stringify({ userId })
-    });
+    // 🏢 ADMIN
+    else if (window.userRole === "admin") {
 
-    alert("Assigned");
+        if (!userId || userId === "") {
+            alert("Select user");
+            return;
+        }
 
-    closeAssign();
-    loadDevices();
-}
+        payload.userId = userId;
+    }
+
+    try {
+
+        // 🔥 Step 1: Unassign if needed
+        if (currentUserId && (payload.userId || payload.adminId)) {
+
+            console.log("🔄 Unassigning:", currentUserId);
+
+            try {
+                await apiRequest(`/api/devices/${selectedDeviceForAssign}/unassign`, {
+                    method: "POST",
+                    body: JSON.stringify({ userId: currentUserId })
+                });
+            } catch (err) {
+                console.warn("Unassign failed (safe ignore):", err.message);
+            }
+        }
+
+        // 🔥 Step 2: Assign NEW (THIS WAS MISSING)
+        console.log("📤 Assign payload:", payload);
+
+        await apiRequest(`/api/devices/${selectedDeviceForAssign}/assign`, {
+            method: "POST",
+            body: JSON.stringify(payload)
+        });
+
+        alert("Assigned successfully");
+
+        closeAssign();
+        loadDevices();
+
+    } catch (err) {
+        console.error(err);
+        alert(err.message || "Assign failed");
+    }
+};
 
 
 let permissionChanges = {};

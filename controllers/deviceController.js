@@ -174,9 +174,7 @@ exports.assignDevice = async (req, res) => {
       return res.status(404).json({ error: "Not found" });
     }
     if (device.assignedTo) {
-      return res.status(400).json({
-        error: "Device already assigned. Unassign first."
-      });
+      console.log("♻️ Overwriting assignment for device:", device._id);
     }
     if (String(device.adminId) !== String(user.adminId)) {
       return res.status(400).json({
@@ -206,14 +204,32 @@ exports.assignDevice = async (req, res) => {
 };
 // UNASSIGN DEVICE
 exports.unassignDevice = async (req, res) => {
-  const { userId } = req.body;
+  try {
+    const device = await Device.findById(req.params.id);
 
-  const device = await Device.findById(req.params.id);
+    if (!device) {
+      return res.status(404).json({ error: "Device not found" });
+    }
 
-  device.assignedTo = null;
-  await device.save();
+    if (!device.assignedTo) {
+      return res.json({ message: "Already unassigned" });
+    }
 
-  res.json(device);
+    console.log("🔄 Unassigning device:", device._id);
+
+    device.assignedTo = null;
+
+    // 🔥 OPTIONAL (recommended)
+    // device.adminId = null;
+
+    await device.save();
+
+    res.json({ message: "Device unassigned successfully" });
+
+  } catch (err) {
+    console.error("❌ UNASSIGN ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
 };
 exports.toggleEngineAccess = async (req, res) => {
   try {

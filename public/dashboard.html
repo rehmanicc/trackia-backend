@@ -267,9 +267,19 @@
 
                         <h3>Assign Device</h3>
 
-                        <select id="assignUserSelect">
-                            <option value="">-- Select User --</option>
-                        </select>
+                        <div id="adminAssignBlock">
+                            <label>Assign Admin</label>
+                            <select id="assignAdminSelect">
+                                <option value="">-- Select Admin --</option>
+                            </select>
+                        </div>
+
+                        <div id="userAssignBlock">
+                            <label>Assign User</label>
+                            <select id="assignUserSelect">
+                                <option value="">-- Select User --</option>
+                            </select>
+                        </div>
 
                         <div class="assign-actions">
                             <button class="assign-btn" onclick="submitAssign()">Assign</button>

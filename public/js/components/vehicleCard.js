@@ -8,14 +8,12 @@ export function createVehicleCardElement({ pos, device, isAnalytics, statusClass
     // 🔥 FINAL ENGINE PERMISSION LOGIC
     const canUseEngine =
         window.userRole === "owner" ||
+        window.userRole === "admin" ||
         (
             deviceData?.engineControlEnabled &&
-            (
-                window.userRole === "admin" ||
-                hasPermission("ENGINE_CONTROL")
-            )
+            hasPermission("ENGINE_CONTROL")
         );
-    // ✅ ACTION BUTTON (MOVE HERE)
+    
     let actionButton;
 
     if (isAnalytics) {

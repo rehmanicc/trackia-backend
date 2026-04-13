@@ -11,6 +11,8 @@ export function getUserPermissions() {
 }
 
 export function hasPermission(permission) {
+  if (window.userRole === "owner") return true;
+
   const perms = getUserPermissions();
   return perms.includes(permission);
 }
