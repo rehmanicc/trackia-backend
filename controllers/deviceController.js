@@ -1,6 +1,7 @@
 const Device = require("../models/Device");
 const traccarAPI = require("../services/traccarAPI");
 const Geofence = require("../models/Geofence");
+const User = require("../models/User");
 
 // CREATE DEVICE
 
@@ -9,9 +10,31 @@ exports.createDevice = async (req, res) => {
 
   const { name, uniqueId, speedLimit, fuelEfficiency } = req.body;
   const user = req.user;
-  
+
   try {
 
+    // 🔥 FIX 1: Owner must provide adminId
+    if (user.role === "owner" && !req.body.adminId) {
+      return res.status(400).json({
+        error: "adminId is required when owner creates device"
+      });
+    }
+
+    // 🔥 FIX 2: Verify admin exists
+    if (user.role === "owner") {
+      const adminExists = await User.findOne({
+        _id: req.body.adminId,
+        role: "admin"
+      });
+
+      if (!adminExists) {
+        return res.status(400).json({
+          error: "Invalid adminId"
+        });
+      }
+    }
+
+    // ⬇️ YOUR EXISTING CODE CONTINUES
     const existingMongo = await Device.findOne({ uniqueId });
 
     if (existingMongo) {
@@ -20,6 +43,7 @@ exports.createDevice = async (req, res) => {
       });
     }
 
+    // ✅ CONTINUE createDevice (YOU LOST THIS PART)
     const traccarRes = await traccarAPI.get("/api/devices");
     const traccarDevices = traccarRes.data;
 
@@ -33,7 +57,6 @@ exports.createDevice = async (req, res) => {
       traccarDevice = response.data;
     }
 
-    // ✅ EXPIRY LOGIC (CORRECT PLACE)
     const oneYearLater = new Date();
     oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
 
@@ -41,9 +64,9 @@ exports.createDevice = async (req, res) => {
       name,
       uniqueId,
       traccarId: traccarDevice.id,
-      companyId: user.companyId,
+      adminId: user.role === "admin" ? user._id : req.body.adminId,
       createdBy: user._id,
-      assignedTo: [],
+      assignedTo: null,
       speedLimit: speedLimit || 70,
       fuelEfficiency: fuelEfficiency || 12,
       expiryDate: oneYearLater,
@@ -59,20 +82,26 @@ exports.createDevice = async (req, res) => {
       error: err.response?.data?.message || err.message
     });
   }
-};
+}; // ✅ THIS LINE FIXES YOUR ERROR
 exports.getDevices = async (req, res) => {
   try {
     const user = req.user;
 
     let devices;
 
-    if (user.role === "owner" || user.role === "admin") {
-      devices = await Device.find({ companyId: user.companyId })
+    if (user.role === "owner") {
+      // 👑 Owner → ALL devices
+      devices = await Device.find()
         .populate("assignedTo", "name");
-    } else {
+    }
+    else if (user.role === "admin") {
+      devices = await Device.find({ adminId: user.id })
+        .populate("assignedTo", "name");
+    }
+    else {
+
       devices = await Device.find({
-        assignedTo: user.id,
-        companyId: user.companyId
+        assignedTo: user.id
       }).populate("assignedTo", "name");
     }
 
@@ -139,35 +168,32 @@ exports.assignDevice = async (req, res) => {
     }
 
     const device = await Device.findById(deviceId);
+    const user = await User.findById(userId);
 
-    if (!device) {
-      return res.status(404).json({ error: "Device not found" });
+    if (!device || !user) {
+      return res.status(404).json({ error: "Not found" });
     }
-    
-    // ✅ FORCE ARRAY (IMPORTANT)
-    if (!Array.isArray(device.assignedTo)) {
-      device.assignedTo = [];
-    }
-
-    // ✅ CLEAN NULL VALUES
-    device.assignedTo = (device.assignedTo || []).filter(u => u);
-
-    // ✅ SAFE DUPLICATE CHECK
-    const alreadyAssigned = device.assignedTo.some(
-      u => u && u.toString() === userId
-    );
-
-    if (alreadyAssigned) {
+    if (device.assignedTo) {
       return res.status(400).json({
-        error: "Device already assigned"
+        error: "Device already assigned. Unassign first."
+      });
+    }
+    if (String(device.adminId) !== String(user.adminId)) {
+      return res.status(400).json({
+        error: "User and device belong to different admins"
+      });
+    }
+    if (
+      req.user.role === "admin" &&
+      String(device.adminId) !== String(req.user.id)
+    ) {
+      return res.status(403).json({
+        error: "Not allowed to assign this device"
       });
     }
 
-    // ✅ ASSIGN
-    device.assignedTo.push(new mongoose.Types.ObjectId(userId));
-
+    device.assignedTo = userId;
     await device.save();
-
     res.json({
       message: "Device assigned successfully",
       assignedTo: device.assignedTo
@@ -184,7 +210,7 @@ exports.unassignDevice = async (req, res) => {
 
   const device = await Device.findById(req.params.id);
 
-  device.assignedTo.pull(userId);
+  device.assignedTo = null;
   await device.save();
 
   res.json(device);

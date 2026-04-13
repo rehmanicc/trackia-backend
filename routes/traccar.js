@@ -37,12 +37,11 @@ router.post("/assign-device", authMiddleware, async (req, res) => {
             return res.status(404).json({ error: "Device not found" });
         }
 
-        // 🔐 Same company check
-        if (device.companyId.toString() !== req.user.companyId) {
+        if (String(device.adminId) !== req.user.id) {
             return res.status(403).json({ error: "Not allowed" });
         }
 
-        device.assignedTo.addToSet(userId);
+        device.assignedTo = userId;
         await device.save();
 
         res.json({ success: true, device });

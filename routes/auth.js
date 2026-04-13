@@ -11,8 +11,7 @@ if (!process.env.JWT_SECRET) {
 // REGISTER
 router.post("/register", authMiddleware, async (req, res) => {
 
-  const Company = require("../models/Company");
-  const { name, phoneNumber, password, role } = req.body;
+    const { name, phoneNumber, password, role } = req.body;
 
   console.log("📥 BODY:", req.body);
   console.log("👤 USER:", req.user);
@@ -39,16 +38,11 @@ router.post("/register", authMiddleware, async (req, res) => {
 
       const hash = await bcrypt.hash(password, 10);
 
-      const company = await Company.create({
-        name: name + " Company"
-      });
-
       const user = new User({
         name,
         phoneNumber,
         password: hash,
-        role: "admin",
-        companyId: company._id
+        role: "admin"
       });
 
       await user.save();
@@ -66,7 +60,7 @@ router.post("/register", authMiddleware, async (req, res) => {
         phoneNumber,
         password: hash,
         role: "user",
-        companyId: req.user.companyId
+        adminId: req.user.id
       });
 
       await user.save();
@@ -106,7 +100,7 @@ router.post("/login", async (req, res) => {
       id: user._id,
       name: user.name,
       role: user.role,
-      companyId: user.companyId,
+      adminId: user.adminId || user._id,
       permissions: user.permissions || []
     },
     SECRET,

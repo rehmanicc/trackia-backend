@@ -153,15 +153,17 @@ exports.sendCommand = async (req, res) => {
       });
     }
 
-    const device = await Device.findOne({
-      traccarId: deviceId,
-      companyId: req.user.companyId
-    });
+    const device = await Device.findOne({ traccarId: deviceId });
 
     if (!device) {
-      return res.status(404).json({
-        error: "Device not found"
-      });
+      return res.status(404).json({ error: "Device not found" });
+    }
+
+    if (
+      req.user.role === "admin" &&
+      String(device.adminId) !== req.user.id
+    ) {
+      return res.status(403).json({ error: "Access denied" });
     }
 
     // 🔐 ROLE CHECK

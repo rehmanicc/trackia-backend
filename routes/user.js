@@ -11,13 +11,13 @@ router.get("/", authMiddleware, async (req, res) => {
     if (req.user.role === "owner") {
       // owner sees all
       users = await User.find().select("-password");
-    } 
+    }
     else if (req.user.role === "admin") {
       // admin sees company users
       users = await User.find({
-        companyId: req.user.companyId
+        adminId: req.user.id
       }).select("-password");
-    } 
+    }
     else {
       return res.status(403).json({ error: "Access denied" });
     }
@@ -39,7 +39,7 @@ router.get("/:id", authMiddleware, async (req, res) => {
     // 🔐 SECURITY: admin can only see same company users
     if (
       req.user.role === "admin" &&
-      String(user.companyId) !== String(req.user.companyId)
+      String(user.adminId) !== String(req.user.id)
     ) {
       return res.status(403).json({ error: "Access denied" });
     }
@@ -64,7 +64,7 @@ router.put("/:id", authMiddleware, async (req, res) => {
     // 🔐 Admin restriction (same company)
     if (
       req.user.role === "admin" &&
-      String(user.companyId) !== String(req.user.companyId)
+      String(user.adminId) !== String(req.user.id)
     ) {
       return res.status(403).json({ error: "Access denied" });
     }

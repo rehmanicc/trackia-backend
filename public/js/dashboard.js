@@ -552,6 +552,7 @@ async function initApp() {
         });
     }
 }
+window.initDashboard = initApp;
 window.showRoute = async function (deviceIdParam) {
 
     const deviceId = deviceIdParam || getState().selectedVehicleId;

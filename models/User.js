@@ -17,9 +17,13 @@ const userSchema = new mongoose.Schema({
     enum: ["owner", "admin", "user"],
     default: "user"
   },
-  companyId: {
+  adminId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Company"
+    ref: "User",
+    required: function () {
+      return this.role === "user";
+    },
+    index: true
   },
   permissions: {
     type: [String],
@@ -36,7 +40,7 @@ const userSchema = new mongoose.Schema({
       BATTERY_DISCONNECTED: true
     }
   },
-  
+
   callEnabled: {
     type: Boolean,
     default: false
@@ -46,8 +50,14 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ["low", "medium", "high"],
     default: "high"
+  },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User"
   }
 
 });
+userSchema.index({ adminId: 1 });
+userSchema.index({ role: 1 });
 
 module.exports = mongoose.model("User", userSchema);
