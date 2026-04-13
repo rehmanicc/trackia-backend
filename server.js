@@ -182,6 +182,13 @@ app.delete("/api/reset", async (req, res) => {
     return res.status(500).json({ error: err.message });
   }
 });
+app.use((err, req, res, next) => {
+  console.error("🔥 GLOBAL ERROR:", err);
+
+  res.status(500).json({
+    error: err.message || "Internal Server Error"
+  });
+});
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
