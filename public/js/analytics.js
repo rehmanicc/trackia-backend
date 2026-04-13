@@ -1,11 +1,12 @@
 let deviceMap = {};
 let geofenceMap = {};
 let dailyChart, geoChart, deviceChart;
-const token = localStorage.getItem("token");
-const API_BASE = "https://trackia-backend.onrender.com";
+
+
 import { getMap, drawTrip } from "./modules/mapModule.js";
 import { apiRequest } from "./services/apiService.js";
-
+import { getState } from "./state/uiState.js";
+import { toKmh } from "./modules/mapModule.js";
 const map = getMap();
 async function loadAnalytics(query = "") {
 
@@ -31,18 +32,23 @@ async function loadAnalytics(query = "") {
 
     tbody.innerHTML = "";
 
+    const fragment = document.createDocumentFragment();
+
     data.sessions.forEach(s => {
-        const row = `
-        <tr>
-            <td>${deviceMap[s.deviceId] || s.deviceId}</td>
-            <td>${geofenceMap[s.geofenceId] || s.geofenceId}</td>
-            <td>${new Date(s.enterTime).toLocaleString()}</td>
-            <td>${new Date(s.exitTime).toLocaleString()}</td>
-            <td>${s.durationMinutes}</td>
-        </tr>
+        const tr = document.createElement("tr");
+
+        tr.innerHTML = `
+        <td>${deviceMap[s.deviceId] || s.deviceId}</td>
+        <td>${geofenceMap[s.geofenceId] || s.geofenceId}</td>
+        <td>${new Date(s.enterTime).toLocaleString()}</td>
+        <td>${new Date(s.exitTime).toLocaleString()}</td>
+        <td>${s.durationMinutes}</td>
     `;
-        tbody.innerHTML += row;
+
+        fragment.appendChild(tr);
     });
+
+    tbody.appendChild(fragment);
 }
 function openAnalytics() {
 
@@ -68,7 +74,12 @@ async function loadDailyChart(query = "") {
         console.error("❌ API error:", err.message);
         return;
     }
-    if (dailyChart) dailyChart.destroy();
+    if (dailyChart) {
+        dailyChart.data.labels = data.map(d => d.date);
+        dailyChart.data.datasets[0].data = data.map(d => d.totalTimeMinutes);
+        dailyChart.update();
+        return;
+    }
     dailyChart = new Chart(document.getElementById("dailyChart"), {
         type: "line",
         data: {
@@ -90,8 +101,12 @@ async function loadGeofenceChart(query = "") {
         console.error("❌ API error:", err.message);
         return;
     }
-    if (geoChart) geoChart.destroy();
-
+    if (geoChart) {
+        geoChart.data.labels = data.map(d => geofenceMap[d._id] || d._id);
+        geoChart.data.datasets[0].data = data.map(d => d.visits);
+        geoChart.update();
+        return;
+    }
     geoChart = new Chart(document.getElementById("geofenceChart"), {
         type: "bar",
         data: {
@@ -114,7 +129,12 @@ async function loadDeviceChart(query = "") {
         return;
     }
 
-    if (deviceChart) deviceChart.destroy();
+    if (deviceChart) {
+        deviceChart.data.labels = data.map(d => deviceMap[d._id] || d._id);
+        deviceChart.data.datasets[0].data = data.map(d => d.totalEvents);
+        deviceChart.update();
+        return;
+    }
 
     deviceChart = new Chart(document.getElementById("deviceChart"), {
         type: "bar",
@@ -157,14 +177,18 @@ async function init() {
     console.log("✅ Analytics module ready");
 }
 async function fetchTrip() {
-    if (!window.selectedDeviceId) {
+
+
+    const deviceId = getState().selectedVehicleId;
+
+    if (!deviceId) {
         alert("Please select a vehicle first");
         return;
     }
 
     const start = document.getElementById("startTime").value;
     const end = document.getElementById("endTime").value;
-    
+
 
     if (!start || !end) {
         alert("Select start and end time");
@@ -174,7 +198,7 @@ async function fetchTrip() {
     let data;
     try {
         data = await apiRequest(
-            `/api/analytics/trip/${window.selectedDeviceId}?start=${start}&end=${end}`
+            `/api/analytics/trip/${deviceId}?start=${start}&end=${end}`
         );
     } catch (err) {
         console.error("❌ API error:", err.message);
@@ -193,17 +217,17 @@ async function fetchTrip() {
 }
 function showAnalytics(stats) {
     if (!stats) return;
-   
+
     // Convert speed from knots → km/h (if needed)
-    const avgSpeed = stats.avgSpeed ? toKmh(stats.avgSpeed) : 0;
-    const maxSpeed = stats.maxSpeed ? toKmh(stats.maxSpeed) : 0;
+    const avgSpeed = stats.avgSpeedKmh ?? (stats.avgSpeed ? toKmh(stats.avgSpeed) : 0);
+    const maxSpeed = stats.maxSpeedKmh ?? (stats.maxSpeed ? toKmh(stats.maxSpeed) : 0);
     // Distance already in KM (your backend uses Haversine)
     const distance = stats.distance ? stats.distance.toFixed(2) : 0;
 
     // Fuel estimation (optional logic)
     const fuelUsed = stats.fuelUsed
-    ? stats.fuelUsed.toFixed(2)
-    : 0;
+        ? stats.fuelUsed.toFixed(2)
+        : 0;
 
     // 🎯 Update UI (make sure these IDs exist in HTML)
     document.getElementById("tripDistance").innerText = distance + " km";

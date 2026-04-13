@@ -1,17 +1,17 @@
 import { toKmh } from "../modules/mapModule.js";
 export function createVehicleCard({ pos, device, isAnalytics, statusClass }) {
 
-    const speed = toKmh(pos.speed);
+    const speed = pos.speedKmh || 0;
     const minutesAgo = Math.floor((new Date() - new Date(pos.deviceTime)) / 60000);
 
     const actionButton = isAnalytics
         ? `<button 
-            onclick="selectDeviceForAnalytics('${pos.deviceId}')"
+            onclick="event.stopPropagation(); selectDeviceForAnalytics('${pos.deviceId}')"
             class="btn-action btn-analytics">
             📊 Trip Details
            </button>`
         : `<button 
-            onclick="openPlaybackModal('${pos.deviceId}')"
+            onclick="event.stopPropagation(); openPlaybackModal('${pos.deviceId}')"
             class="btn-action btn-playback">
             ▶ Playback
            </button>`;

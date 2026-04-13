@@ -24,7 +24,7 @@ if(response.ok && data.token){
 
     alert("Login successful")
 
-    location.reload() // ✅ reload dashboard
+    window.location.href = "/index.html";
 
 }else{
     alert(data.error || "Login failed")

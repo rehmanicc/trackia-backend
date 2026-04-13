@@ -111,7 +111,8 @@ export function updateMarker(id, pos, device) {
         ? icons.moving
         : icons.offline;
 
-    const speed = toKmh(pos.speed);
+    pos.speedKmh = pos.speedKmh ?? toKmh(pos.speed);
+    const speed = pos.speedKmh;
     if (!markers[id]) {
 
         markers[id] = L.marker([lat, lng], { icon });
