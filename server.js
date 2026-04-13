@@ -7,7 +7,6 @@ const deviceRoutes = require("./routes/device");
 const { getPendingCalls, clearCalls } = require("./services/callService");
 const Geofence = require("./models/Geofence");
 const GeofenceEvent = require("./models/GeofenceEvent");
-const Company = require("./models/Company");
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
