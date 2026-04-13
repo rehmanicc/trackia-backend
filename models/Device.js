@@ -55,28 +55,18 @@ const deviceSchema = new mongoose.Schema({
 deviceSchema.index({ adminId: 1 });
 deviceSchema.index({ assignedTo: 1 });
 deviceSchema.index({ traccarId: 1 });
-deviceSchema.pre("save", async function (next) {
-    try {
+deviceSchema.pre("save", async function () {
 
-        if (!this.assignedTo) {
-            return next(); // ✅ safe exit
-        }
+    if (!this.assignedTo) return;
 
-        const user = await mongoose.model("User").findById(this.assignedTo);
+    const user = await mongoose.model("User").findById(this.assignedTo);
 
-        if (!user) {
-            return next(new Error("Assigned user not found"));
-        }
+    if (!user) {
+        throw new Error("Assigned user not found");
+    }
 
-        if (String(user.adminId) !== String(this.adminId)) {
-            return next(new Error("User and Device admin mismatch"));
-        }
-
-        return next();
-
-    } catch (err) {
-        console.error("❌ Device pre-save error:", err);
-        return next(err);
+    if (String(user.adminId) !== String(this.adminId)) {
+        throw new Error("User and Device admin mismatch");
     }
 });
 module.exports = mongoose.model("Device", deviceSchema);
