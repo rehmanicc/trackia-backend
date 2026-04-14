@@ -77,6 +77,7 @@ const DOM = {
     countStopped: document.getElementById("countStopped"),
     countOffline: document.getElementById("countOffline")
 };
+import { appState } from "./state/appState.js";
 import {
     initSocket,
     onPositions,
@@ -105,6 +106,54 @@ import {
     startPlayback,
     togglePlayback
 } from "./modules/playbackModule.js";
+import {
+    loadUserPermissions,
+    showCreateUserForm,
+    deleteUser,
+    showUserPermissions,
+    showEditUser,
+    updateUser,
+    savePermissions,
+    togglePermission,
+    toggleGroup
+} from "./modules/userModule.js";
+import {
+    loadDevices,
+    deleteDevice,
+    filterDevices,
+    submitNewDevice,
+    updateSpeed,
+    openAssign,
+    submitAssign,
+    unassignDevice,
+    closeAssign
+} from "./modules/deviceModule.js";
+import {
+    openExpiredDevices,
+    closeExpiredDevices,
+    renewDevice
+} from "./modules/expiredModule.js";
+window.deleteUser = deleteUser;
+window.loadUserPermissions = loadUserPermissions;
+window.showCreateUserForm = showCreateUserForm;
+window.showUserPermissions = showUserPermissions;
+window.showEditUser = showEditUser;
+window.updateUser = updateUser;
+window.savePermissions = savePermissions;
+window.togglePermission = togglePermission;
+window.toggleGroup = toggleGroup;
+window.loadDevices = loadDevices;
+window.deleteDevice = deleteDevice;
+window.filterDevices = filterDevices;
+window.submitNewDevice = submitNewDevice;
+window.updateSpeed = updateSpeed;
+window.openAssign = openAssign;
+window.submitAssign = submitAssign;
+window.unassignDevice = unassignDevice;
+window.closeAssign = closeAssign;
+window.openExpiredDevices = openExpiredDevices;
+window.closeExpiredDevices = closeExpiredDevices;
+window.renewDevice = renewDevice;
 const $ = (id) => document.getElementById(id);
 const headerTitle = document.querySelector(".header h2");
 
@@ -473,7 +522,6 @@ async function loadUsersCache() {
     }
 }
 async function initApp() {
-    window.userRole = localStorage.getItem("userRole");
     const token = localStorage.getItem("token");
     initSocket(token);
     initAlertModule();
@@ -905,7 +953,7 @@ window.switchPanel = function (panel) {
 
         case "users":
 
-            if (!hasPermission("EDIT_DEVICE") && window.userRole !== "owner") {
+            if (!hasPermission("EDIT_DEVICE") && appState.userRole !== "owner") {
                 alert("Access denied");
                 return;
             }
@@ -927,750 +975,7 @@ window.switchPanel = function (panel) {
     setState({ activePanel: panel });
 
 }
-window.closeAssign = function () {
-    const modal = document.getElementById("assignModal");
-    if (modal) {
-        modal.style.display = "none";
-    }
-}
-async function loadDevices() {
-    const devices = await apiRequest("/api/devices");
 
-    console.log("Devices from API:", devices);
-    console.log("🚀 loadDevices called");
-    const container = document.getElementById("deviceList");
-
-    try {
-        const devices = await apiRequest("/api/devices");
-        window.allDevices = devices;
-        container.innerHTML = `
-    <div class="device-header">
-        <input type="text" id="deviceSearch" placeholder="Search devices..." oninput="filterDevices()">
-    </div>
-
-    <table class="device-table">
-        <thead>
-            <th>Name</th>
-<th>Tra ID</th>
-<th>Speed</th>
-<th>Assigned Users</th>
-<th>Actions</th>                   
-        </thead>
-        <tbody id="deviceTableBody"></tbody>
-    </table>
-`;
-
-        const tbody = document.getElementById("deviceTableBody");
-
-        devices.forEach(d => {
-            const canManageDevices = hasPermission("EDIT_DEVICE");
-            let users = "-";
-
-            if (Array.isArray(d.assignedTo)) {
-                users = d.assignedTo.map(u => u.name || "User").join(", ");
-            }
-            else if (d.assignedTo && typeof d.assignedTo === "object") {
-                users = d.assignedTo.name || "User";
-            }
-            const canEditSpeed = hasPermission("EDIT_SPEED");
-            const row = document.createElement("tr");
-
-            row.innerHTML = `
-        <td>${d.name}</td>
-        <td>${d.traccarId}</td>
-
-        <td>
-            <input 
-                type="number" 
-                value="${d.speedLimit ?? 70}" 
-                onchange="updateSpeed('${d._id}', this.value)"
-                style="width:70px;"
-                ${canEditSpeed ? "" : "disabled"}
-            >
-        </td>
-
-        <td>${users || "-"}</td>
-
-        <td>
-    <div class="action-buttons">
-
-    ${canManageDevices ? createButton({
-                text: "👤",
-                className: "icon-btn assign",
-                onClick: `openAssign('${d._id}')`,
-                title: "Assign"
-            }) : ""}
-
-    ${canManageDevices && Array.isArray(d.assignedTo) && Array.isArray(d.assignedTo) && d.assignedTo.length > 0 ? createButton({
-                text: "❌",
-                className: "icon-btn unassign",
-                onClick: `unassignDevice('${d._id}')`,
-                title: "Unassign"
-            }) : ""}
-
-    ${canManageDevices ? createButton({
-                text: "🗑",
-                className: "icon-btn delete",
-                onClick: `deleteDevice('${d._id}')`,
-                title: "Delete"
-            }) : ""}
-
-    </div>
-</td>
-    `;
-
-            tbody.appendChild(row);
-        });
-
-    } catch (err) {
-        console.error(err);
-        container.innerHTML = `
-    <p style='color:red'>
-        Failed to load devices<br>
-        ${err.message || ""}
-    </p>
-`;
-    }
-}
-window.unassignDevice = async function (deviceId) {
-    const userId = document.getElementById("assignUserSelect").value;
-
-    await apiRequest(`/api/devices/${deviceId}/unassign`, {
-        method: "POST",
-        body: JSON.stringify({ userId })
-    });
-
-    alert("Unassigned");
-    loadDevices();
-}
-window.filterDevices = function () {
-    const search = document.getElementById("deviceSearch").value.toLowerCase();
-    const rows = document.querySelectorAll("#deviceTableBody tr");
-
-    rows.forEach(row => {
-        const text = row.innerText.toLowerCase();
-        row.style.display = text.includes(search) ? "" : "none";
-    });
-}
-window.submitNewDevice = async function () {
-
-    const name = document.getElementById("deviceNameInput").value.trim();
-    const uniqueId = document.getElementById("deviceUniqueInput").value.trim();
-    const adminId = document.getElementById("deviceAdminSelect").value;
-
-    const speedInput = document.getElementById("deviceSpeedInput").value;
-    const mileageInput = document.getElementById("deviceMileageInput").value;
-
-    if (!name || !uniqueId || !adminId) {
-        alert("Fill all required fields");
-        return;
-    }
-
-    // ✅ Build payload dynamically
-    const payload = {
-        name,
-        uniqueId,
-        adminId
-    };
-
-    if (speedInput) {
-        payload.speedLimit = Number(speedInput);
-    }
-
-    if (mileageInput) {
-        payload.fuelEfficiency = Number(mileageInput);
-    }
-
-    try {
-
-        console.log("📤 Payload:", payload);
-
-        await apiRequest("/api/devices", {
-            method: "POST",
-            body: JSON.stringify(payload)
-        });
-
-        alert("✅ Device created");
-
-        switchPanel("devices");
-        loadDevices();
-
-    } catch (err) {
-        console.error(err);
-        alert(err.message || "Failed");
-    }
-};
-window.deleteDevice = async function (id) {
-    if (!confirm("Delete this device?")) return;
-
-    await apiRequest(`/api/devices/${id}`, {
-        method: "DELETE"
-    });
-
-    alert("Deleted");
-    loadDevices();
-}
-let selectedDeviceForAssign = null;
-
-window.openAssign = async function (deviceId) {
-
-    selectedDeviceForAssign = deviceId;
-
-    const adminSelect = document.getElementById("assignAdminSelect");
-    const userSelect = document.getElementById("assignUserSelect");
-
-    if (!adminSelect || !userSelect) return;
-
-    // 🔄 Reset dropdowns
-    adminSelect.innerHTML = "<option value=''>-- Select Admin --</option>";
-    userSelect.innerHTML = "<option value=''>-- Select User --</option>";
-
-    // ✅ Get device from global state
-    const device = window.allDevices?.find(d => String(d._id) === String(deviceId));
-
-    if (!device) {
-        console.error("❌ Device not found", deviceId);
-        alert("Device not found. Please refresh.");
-        return;
-    }
-
-    // =========================
-    // 🔍 Detect current assigned user
-    // =========================
-    let currentUserId = null;
-
-    if (Array.isArray(device.assignedTo) && device.assignedTo.length > 0) {
-        currentUserId = device.assignedTo[0]?._id;
-    }
-    else if (device.assignedTo && typeof device.assignedTo === "object") {
-        currentUserId = device.assignedTo._id;
-    }
-
-    // =========================
-    // 👑 OWNER → Admin + Users
-    // =========================
-    if (window.userRole === "owner") {
-
-        // Admin dropdown
-        cachedUsers
-            .filter(u => String(u.role).toLowerCase() === "admin")
-            .forEach(u => {
-                const opt = document.createElement("option");
-                opt.value = u._id;
-                opt.textContent = u.name;
-                adminSelect.appendChild(opt);
-            });
-
-        // User dropdown
-        cachedUsers
-            .filter(u => String(u.role).toLowerCase() === "user")
-            .forEach(u => {
-                const opt = document.createElement("option");
-                opt.value = u._id;
-                opt.textContent = u.name;
-                userSelect.appendChild(opt);
-            });
-    }
-
-    // =========================
-    // 🏢 ADMIN → Users only
-    // =========================
-    else if (window.userRole === "admin") {
-
-        const adminBlock = document.getElementById("adminAssignBlock");
-        if (adminBlock) adminBlock.style.display = "none";
-
-        cachedUsers
-            .filter(u =>
-                String(u.role).toLowerCase() === "user" &&
-                String(u.adminId) === String(device.adminId)
-            )
-            .forEach(u => {
-                const opt = document.createElement("option");
-                opt.value = u._id;
-                opt.textContent = u.name;
-                userSelect.appendChild(opt);
-            });
-    }
-
-    else {
-        alert("Access denied");
-        return;
-    }
-
-    // =========================
-    // 🎯 Pre-select assigned user (if any)
-    // =========================
-    if (currentUserId) {
-        setTimeout(() => {
-            const userSelect = document.getElementById("assignUserSelect");
-            if (userSelect) userSelect.value = currentUserId;
-        }, 0);
-    }
-
-    // =========================
-    // 🪟 Open modal
-    // =========================
-    const modal = document.getElementById("assignModal");
-    if (modal) modal.style.display = "flex";
-};
-
-window.submitAssign = async function () {
-
-    const adminId = document.getElementById("assignAdminSelect")?.value;
-    const userId = document.getElementById("assignUserSelect")?.value;
-
-    const device = Object.values(allowedDevices)
-        .find(d => d._id === selectedDeviceForAssign);
-
-    let currentUserId = null;
-
-    if (Array.isArray(device?.assignedTo) && device.assignedTo.length) {
-        currentUserId = device.assignedTo[0]._id;
-    } else if (device?.assignedTo && typeof device.assignedTo === "object") {
-        currentUserId = device.assignedTo._id;
-    }
-
-    let payload = {};
-
-    // 👑 OWNER
-    if (window.userRole === "owner") {
-
-        if (adminId && adminId !== "") {
-            payload.adminId = adminId;
-        }
-
-        if (userId && userId !== "") {
-            payload.userId = userId;
-        }
-
-        if (!payload.adminId && !payload.userId) {
-            alert("Select admin or user");
-            return;
-        }
-    }
-
-    // 🏢 ADMIN
-    else if (window.userRole === "admin") {
-
-        if (!userId || userId === "") {
-            alert("Select user");
-            return;
-        }
-
-        payload.userId = userId;
-    }
-
-    try {
-
-        // 🔥 Step 1: Unassign if needed
-        if (currentUserId && (payload.userId || payload.adminId)) {
-
-            console.log("🔄 Unassigning:", currentUserId);
-
-            try {
-                await apiRequest(`/api/devices/${selectedDeviceForAssign}/unassign`, {
-                    method: "POST",
-                    body: JSON.stringify({ userId: currentUserId })
-                });
-            } catch (err) {
-                console.warn("Unassign failed (safe ignore):", err.message);
-            }
-        }
-
-        // 🔥 Step 2: Assign NEW (THIS WAS MISSING)
-        console.log("📤 Assign payload:", payload);
-
-        await apiRequest(`/api/devices/${selectedDeviceForAssign}/assign`, {
-            method: "POST",
-            body: JSON.stringify(payload)
-        });
-
-        alert("Assigned successfully");
-
-        closeAssign();
-        loadDevices();
-
-    } catch (err) {
-        console.error(err);
-        alert(err.message || "Assign failed");
-    }
-};
-
-
-let permissionChanges = {};
-window.togglePermission = function (userId, permission, isChecked) {
-
-    if (!permissionChanges[userId]) {
-        permissionChanges[userId] = new Set();
-    }
-
-    if (isChecked) {
-        permissionChanges[userId].add(permission);
-    } else {
-        permissionChanges[userId].delete(permission);
-    }
-}
-window.savePermissions = async function (userId) {
-
-    const container = document.getElementById("userContent");
-    const inputs = container.querySelectorAll(".permission-item input");
-
-    const perms = [];
-
-    inputs.forEach(input => {
-        if (input.checked) {
-            const perm = input.dataset.permission;
-            if (perm) perms.push(perm);
-        }
-    });
-
-    await apiRequest(`/api/auth/permissions/${userId}`, {
-        method: "PUT",
-        body: JSON.stringify({ permissions: perms })
-    });
-
-    window.alertUI?.showToast("Permissions updated", "success");
-
-    loadUserPermissions(); // ✅ correct call
-};
-async function loadUserPermissions() {
-
-    console.log("🔥 Loading users...");
-
-    const users = await safeApi(() => apiRequest("/api/users"), []);
-    console.log("✅ Users:", users);
-
-    const list = document.getElementById("userList");
-
-    list.innerHTML = "";
-
-    if (!users || users.length === 0) {
-        list.innerHTML = "<p>No users found</p>";
-        return;
-    }
-
-    users.forEach(user => {
-
-        const div = document.createElement("div");
-
-        // 🎨 role-based class
-        const roleClass =
-            user.role === "owner" ? "user-owner" :
-                user.role === "admin" ? "user-admin" :
-                    "user-normal";
-
-        div.className = `user-card ${roleClass}`;
-
-        const isOwner = window.userRole === "owner";
-        const isAdmin = window.userRole === "admin";
-
-        const canDelete =
-            isOwner ||
-            (isAdmin && user.role === "user");
-
-        div.innerHTML = `
-        <div class="user-card-header">
-            <div>
-                <div class="user-name">${user.name}</div>
-                <div class="user-role">${user.role}</div>
-            </div>
-
-            <div class="user-actions">
-
-                <button class="btn-icon"
-                    onclick="showEditUser('${user._id}')">
-                    ✏️
-                </button>
-
-                <button class="btn-icon"
-                    onclick="showUserPermissions('${user._id}')">
-                    🔐
-                </button>
-
-                ${canDelete ? `
-                    <button class="btn-icon btn-delete"
-                        onclick="deleteUser('${user._id}')">
-                        🗑
-                    </button>
-                ` : ""}
-
-            </div>
-        </div>
-    `;
-
-        list.appendChild(div);
-    });
-    showCreateUserForm();
-}
-window.showCreateUserForm = function () {
-
-    const right = document.getElementById("userContent");
-    if (window.userRole === "user") {
-        document.getElementById("userContent").innerHTML = "";
-        return;
-    }
-    right.innerHTML = `
-    <div class="user-form-card">
-        <h3>Create User</h3>
-
-        <div class="form-group">
-            <label>Full Name</label>
-            <input id="newUserName" placeholder="Enter full name">
-        </div>
-
-        <div class="form-group">
-        <label>Mobile Number</label>
-        <input id="newUserPhone" type="text" placeholder="03XXXXXXXXX">
-        </div>
-
-        <div class="form-group">
-            <label>Password</label>
-            <input id="newUserPassword" type="password" placeholder="Enter password">
-        </div>
-
-        <div class="form-group">
-            <label>Role</label>
-            <select id="newUserRole"></select>
-        </div>
-
-        <button class="btn-create-user" onclick="createUser()">
-            Create User
-        </button>
-    </div>
-`;
-
-    // 🔥 IMPORTANT: populate role dropdown again
-    populateRoleDropdown();
-}
-function populateRoleDropdown() {
-
-    const roleSelect = document.getElementById("newUserRole");
-    if (!roleSelect) return;
-
-    roleSelect.innerHTML = "";
-
-    const currentRole = window.userRole;
-
-    // 👑 OWNER → Admin + User
-    if (currentRole === "owner") {
-
-        const adminOption = document.createElement("option");
-        adminOption.value = "admin";
-        adminOption.textContent = "Admin";
-        roleSelect.appendChild(adminOption);
-
-        const userOption = document.createElement("option");
-        userOption.value = "user";
-        userOption.textContent = "User";
-        roleSelect.appendChild(userOption);
-    }
-
-    // 🏢 ADMIN → Only User
-    else if (currentRole === "admin") {
-
-        const userOption = document.createElement("option");
-        userOption.value = "user";
-        userOption.textContent = "User";
-        roleSelect.appendChild(userOption);
-    }
-}
-async function openExpiredDevices() {
-    document.getElementById("expiredModal").classList.remove("hidden");
-    try {
-        const res = await fetch("/api/devices", {
-            headers: {
-                Authorization: "Bearer " + localStorage.getItem("token")
-            }
-        });
-
-        const devices = await res.json();
-
-        const now = new Date();
-
-        const expired = devices.filter(d =>
-            new Date(d.expiryDate) < now
-        );
-
-        renderExpiredDevices(expired);
-
-    } catch (err) {
-        console.error(err);
-    }
-}
-function renderExpiredDevices(devices) {
-    const container = document.getElementById("expiredList");
-
-    if (devices.length === 0) {
-        container.innerHTML = "<p>No expired devices</p>";
-        return;
-    }
-
-    container.innerHTML = devices.map(d => `
-    <div class="expired-item">
-
-      <span>
-        ${d.name} (ID: ${d.traccarId})
-      </span>
-
-      <div>
-        <button class="btn-renew" onclick="renewDevice('${d._id}')">Renew</button>
-        <button class="btn-delete" onclick="deleteDevice('${d._id}')">Remove</button>
-      </div>
-
-    </div>
-  `).join("");
-}
-function closeExpiredDevices() {
-    document.getElementById("expiredModal").classList.add("hidden");
-}
-window.renewDevice = async function (deviceId) {
-    try {
-        await apiRequest(`/api/devices/renew/${deviceId}`, {
-            method: "POST"
-        });
-
-        alert("Device renewed");
-        loadDevices();
-
-    } catch (err) {
-        console.error(err);
-        alert("Renew failed");
-    }
-}
-window.showUserPermissions = async function (userId) {
-
-    const right = document.getElementById("userContent");
-    if (!right) return;
-
-    const user = await apiRequest(`/api/users/${userId}`);
-
-    let html = `<div class="permission-container">
-    <h3>${user.name} Permissions</h3>`;
-
-    Object.entries(PERMISSION_GROUPS).forEach(([key, group]) => {
-        const allChecked = group.permissions.every(p =>
-            user.permissions?.includes(p)
-        );
-        html += `
-                <div class="permission-card">
-<div class="permission-header">
-    <span>${group.label}</span>
-
-    <label class="switch">
-        <input type="checkbox"
-${allChecked ? "checked" : ""}
-onchange="toggleGroup('${userId}', '${key}', this.checked)">
-        <span class="slider"></span>
-    </label>
-</div>
-                <div class="permission-list">
-        `;
-
-        group.permissions.forEach(p => {
-
-            if (p === "RENEW_DEVICE" && window.userRole === "admin") {
-                return;
-            }
-            if (
-                p === "RENEW_DEVICE" &&
-                window.userRole === "owner" &&
-                user.role !== "admin"
-            ) {
-                return;
-            }
-
-            const checked = user.permissions?.includes(p) ? "checked" : "";
-
-            html += `
-        <label class="permission-item">
-        <span>${PERMISSION_LABELS[p]}</span>
-        <label class="switch">
-            <input type="checkbox"
-data-permission="${p}"
-${checked}
-onchange="togglePermission('${userId}','${p}', this.checked)">
-            <span class="slider"></span>
-            </label>
-        </label>
-        `;
-        });
-
-        html += `</div></div>`;
-    });
-
-    html += `
-    <button class="btn-save-permissions" onclick="savePermissions('${userId}')">            💾 Save Permissions
-        </button>
-    `;
-
-    right.innerHTML = html;
-}
-window.showEditUser = async function (userId) {
-
-    const right = document.getElementById("userContent");
-
-    // 🔥 FIRST render HTML
-    right.innerHTML = `
-        <div class="user-form-card">
-            <h3>Edit User</h3>
-
-            <div class="form-group">
-                <label>Full Name</label>
-                <input id="editUserName" placeholder="Update Name">
-            </div>
-
-            <div class="form-group">
-                <label>Mobile Number</label>
-                <input id="editUserPhone" placeholder="03XXXXXXXXX">
-            </div>
-
-            <button class="btn-save-user" onclick="updateUser('${userId}')">
-                Save Changes
-            </button>
-        </div>
-    `;
-
-    // 🔥 THEN fetch user
-    const user = await apiRequest(`/api/users/${userId}`);
-
-    // 🔥 NOW elements exist
-    document.getElementById("editUserName").value = user.name || "";
-    document.getElementById("editUserPhone").value = user.phoneNumber || "";
-
-
-    window.originalPhone = (user.phoneNumber || "").trim();
-}
-window.updateUser = async function (userId) {
-
-    const name = document.getElementById("editUserName").value.trim();
-    const phone = document.getElementById("editUserPhone").value
-        .trim()
-        .replace(/\s+/g, "");
-    console.log("Phone raw:", document.getElementById("editUserPhone").value);
-    console.log("Phone trimmed:", phone);
-    console.log("Length:", phone.length);
-    if (!name || !phone) {
-        alert("Fill all fields");
-        return;
-    }
-    if (phone !== window.originalPhone) {
-        if (!phone.match(/^03\\d{9}$/)) {
-            alert("Enter valid mobile number");
-            return;
-        }
-    }
-    await apiRequest(`/api/users/${userId}`, {
-        method: "PUT",
-        body: JSON.stringify({
-            name,
-            phoneNumber: phone
-        })
-    });
-
-    alert("User updated");
-    loadUserPermissions();
-}
 async function selectVehicle(deviceId) {
 
     const id = String(deviceId);
@@ -1746,9 +1051,10 @@ document.addEventListener("DOMContentLoaded", () => {
         location.reload();                  // 🔥 ADD THIS
         return;
     }
-    window.userRole = payload?.role;
+
+    appState.userRole = payload?.role;
     setState({ userRole: payload?.role });
-    if (window.userRole === "user") {
+    if (appState.userRole === "user") {
         const usersBtn = document.getElementById("usersMenuBtn");
         if (usersBtn) usersBtn.style.display = "none";
     }
@@ -1757,8 +1063,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (
         container &&
         (
-            window.userRole === "owner" ||
-            (window.userRole === "admin" && hasPermission("RENEW_DEVICE"))
+            appState.userRole === "owner" ||
+            (appState.userRole === "admin" && hasPermission("RENEW_DEVICE"))
         )
     ) {
         container.innerHTML = `
@@ -1893,52 +1199,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
 
-
-    window.toggleGroup = function (userId, groupKey, isChecked) {
-
-        const group = PERMISSION_GROUPS[groupKey];
-
-        // 🔥 Update permissionChanges
-        if (!permissionChanges[userId]) {
-            permissionChanges[userId] = new Set();
-        }
-
-        group.permissions.forEach(p => {
-            if (isChecked) {
-                permissionChanges[userId].add(p);
-            } else {
-                permissionChanges[userId].delete(p);
-            }
-        });
-
-        // 🔥 ALSO update UI instantly
-        group.permissions.forEach(p => {
-            const inputs = document.querySelectorAll(`input[data-permission="${p}"]`);
-            inputs.forEach(input => input.checked = isChecked);
-        });
-    };
-
-    window.updateSpeed = async function (deviceId, speed) {
-        try {
-            await apiRequest(`/api/devices/${deviceId}/speed`, {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    speedLimit: Number(speed)
-                })
-            });
-
-            window.alertUI?.showToast("Speed updated", "success");
-
-            loadDevices(); // ✅ refresh UI
-
-        } catch (err) {
-            console.error(err);
-            alert("Failed to update speed");
-        }
-    };
     initApp();
 });
 async function loadAdminsForDevice() {
@@ -1949,7 +1209,7 @@ async function loadAdminsForDevice() {
         if (!dropdown) return;
 
         // ✅ 👉 ADD THIS HERE
-        if (window.userRole !== "owner") {
+        if (appState.userRole !== "owner") {
             dropdown.parentElement.style.display = "none";
             return; // stop further execution
         }
@@ -1969,20 +1229,3 @@ async function loadAdminsForDevice() {
         console.error("Failed to load admins", err);
     }
 }
-window.deleteUser = async function (userId) {
-
-    if (!confirm("Are you sure you want to delete this user?")) return;
-
-    try {
-        await apiRequest(`/api/users/${userId}`, {
-            method: "DELETE"
-        });
-
-        alert("User deleted");
-        loadUserPermissions();
-
-    } catch (err) {
-        console.error(err);
-        alert(err.message || "Delete failed");
-    }
-};

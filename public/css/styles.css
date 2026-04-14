@@ -2054,3 +2054,8 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 .btn-delete:hover {
     background: #fecaca;
 }
+
+.expired-card {
+    background: #fff5f5;
+    border-left: 5px solid #dc3545;
+}
