@@ -935,6 +935,7 @@ async function loadDevices() {
 
     try {
         const devices = await apiRequest("/api/devices");
+        window.allDevices = devices;
         container.innerHTML = `
     <div class="device-header">
         <input type="text" id="deviceSearch" placeholder="Search devices..." oninput="filterDevices()">
@@ -1089,43 +1090,37 @@ window.openAssign = async function (deviceId) {
 
     if (!adminSelect || !userSelect) return;
 
-    // reset
+    // 🔄 Reset dropdowns
     adminSelect.innerHTML = "<option value=''>-- Select Admin --</option>";
     userSelect.innerHTML = "<option value=''>-- Select User --</option>";
 
-    const device = Object.values(allowedDevices)
-        .find(d => d._id === deviceId);
-    // 🔥 Pre-fill current selections
+    // ✅ Get device from global state
+    const device = window.allDevices?.find(d => String(d._id) === String(deviceId));
+
+    if (!device) {
+        console.error("❌ Device not found", deviceId);
+        alert("Device not found. Please refresh.");
+        return;
+    }
+
+    // =========================
+    // 🔍 Detect current assigned user
+    // =========================
     let currentUserId = null;
 
-    if (Array.isArray(device.assignedTo) && device.assignedTo.length) {
-        currentUserId = device.assignedTo[0]._id;
-    }
+    if (Array.isArray(device.assignedTo) && device.assignedTo.length > 0) {
+        currentUserId = device.assignedTo[0]?._id;
+    } 
     else if (device.assignedTo && typeof device.assignedTo === "object") {
         currentUserId = device.assignedTo._id;
     }
 
-    // Set selected user
-    if (currentUserId) {
-        setTimeout(() => {
-            const userSelect = document.getElementById("assignUserSelect");
-            if (userSelect) userSelect.value = currentUserId;
-        }, 0);
-    }
-    if (!device) {
-        alert("Device not found");
-        return;
-    }
-
-    // 🔥 DEBUG (optional)
-    console.log("Users:", cachedUsers);
-
     // =========================
-    // 👑 OWNER → BOTH LISTS
+    // 👑 OWNER → Admin + Users
     // =========================
     if (window.userRole === "owner") {
 
-        // ✅ Admin list
+        // Admin dropdown
         cachedUsers
             .filter(u => String(u.role).toLowerCase() === "admin")
             .forEach(u => {
@@ -1135,7 +1130,7 @@ window.openAssign = async function (deviceId) {
                 adminSelect.appendChild(opt);
             });
 
-        // ✅ User list
+        // User dropdown
         cachedUsers
             .filter(u => String(u.role).toLowerCase() === "user")
             .forEach(u => {
@@ -1147,17 +1142,17 @@ window.openAssign = async function (deviceId) {
     }
 
     // =========================
-    // 🏢 ADMIN → USERS ONLY
+    // 🏢 ADMIN → Users only
     // =========================
     else if (window.userRole === "admin") {
 
-        // hide admin dropdown
-        document.getElementById("adminAssignBlock").style.display = "none";
+        const adminBlock = document.getElementById("adminAssignBlock");
+        if (adminBlock) adminBlock.style.display = "none";
 
         cachedUsers
             .filter(u =>
                 String(u.role).toLowerCase() === "user" &&
-                u.adminId === device.adminId
+                String(u.adminId) === String(device.adminId)
             )
             .forEach(u => {
                 const opt = document.createElement("option");
@@ -1172,7 +1167,21 @@ window.openAssign = async function (deviceId) {
         return;
     }
 
-    document.getElementById("assignModal").style.display = "flex";
+    // =========================
+    // 🎯 Pre-select assigned user (if any)
+    // =========================
+    if (currentUserId) {
+        setTimeout(() => {
+            const userSelect = document.getElementById("assignUserSelect");
+            if (userSelect) userSelect.value = currentUserId;
+        }, 0);
+    }
+
+    // =========================
+    // 🪟 Open modal
+    // =========================
+    const modal = document.getElementById("assignModal");
+    if (modal) modal.style.display = "flex";
 };
 
 window.submitAssign = async function () {

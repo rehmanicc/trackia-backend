@@ -13,7 +13,7 @@ export function createVehicleCardElement({ pos, device, isAnalytics, statusClass
             deviceData?.engineControlEnabled &&
             hasPermission("ENGINE_CONTROL")
         );
-    
+
     let actionButton;
 
     if (isAnalytics) {
@@ -97,7 +97,28 @@ export function createVehicleCardElement({ pos, device, isAnalytics, statusClass
     actionContainer.style.gap = "6px";
 
     actionContainer.appendChild(actionButton);
+    // 🔥 Assign Button (FIX)
+    const assignBtn = document.createElement("button");
+    assignBtn.className = "btn-action";
+    assignBtn.innerText = "👤 Assign";
 
+    assignBtn.onclick = (e) => {
+        e.stopPropagation();
+
+        // Convert traccarId → Mongo _id
+        const fullDevice = window.allDevices?.find(
+            d => String(d.traccarId) === String(pos.deviceId)
+        );
+
+        if (!fullDevice) {
+            alert("Device not found");
+            return;
+        }
+
+        openAssign(fullDevice._id); // ✅ correct ID
+    };
+
+    actionContainer.appendChild(assignBtn);
     // 🔥 add engine buttons
     engineButtons.forEach(btn => actionContainer.appendChild(btn));
 

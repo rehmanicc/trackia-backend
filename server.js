@@ -173,7 +173,7 @@ app.delete("/api/reset", async (req, res) => {
     await Alert.deleteMany({});
     await Geofence.deleteMany({});
     await GeofenceEvent.deleteMany({});
-    await Company.deleteMany({});
+    
 
     return res.json({ message: "Database reset successful" });
 
