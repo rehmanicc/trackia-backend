@@ -70,7 +70,10 @@ exports.getPositions = async (req, res) => {
       }, io);
 
       // ✅ SEND ONLY ACTIVE DEVICES
-      activePositions.push(p);
+      activePositions.push({
+        ...p,
+        engineOn: p.attributes?.ignition === true
+      });
     }
 
     // 🔥 EMIT ONLY ACTIVE DEVICES
@@ -189,11 +192,36 @@ exports.sendCommand = async (req, res) => {
         });
       }
 
-      // ❌ Block if disabled
+      // ❌ Block if feature disabled
       if (!device.engineControlEnabled) {
         return res.status(403).json({
           error: "Engine control disabled by admin/owner"
         });
+      }
+
+      // ❌ Block user if admin locked engine
+      if (
+        type === "engineResume" &&
+        !isOwnerOrAdmin &&
+        device.engineLockedByAdmin
+      ) {
+        return res.status(403).json({
+          error: "Engine locked by admin"
+        });
+      }
+
+      // 🔒 Admin turns OFF → lock engine
+      if (type === "engineStop" && isOwnerOrAdmin) {
+        device.engineLockedByAdmin = true;
+        device.engineLockedBy = req.user.id;
+        await device.save();
+      }
+
+      // 🔓 Admin turns ON → unlock engine
+      if (type === "engineResume" && isOwnerOrAdmin) {
+        device.engineLockedByAdmin = false;
+        device.engineLockedBy = null;
+        await device.save();
       }
     }
 

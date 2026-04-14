@@ -473,7 +473,6 @@ async function loadUsersCache() {
     }
 }
 async function initApp() {
-    initMap();
     window.userRole = localStorage.getItem("userRole");
     const token = localStorage.getItem("token");
     initSocket(token);
@@ -679,12 +678,15 @@ function updateVehicleList(positions) {
         offline: 0
     };
 
-    positions.forEach(pos => {
+    Object.values(allowedDevices).forEach(device => {
 
-        const id = String(pos.deviceId);
-        const device = allowedDevices[id] || {
-            name: "Device " + id,
-            status: "offline"
+        const id = String(device.traccarId);
+
+        // ✅ Use position if exists
+        const pos = lastPositions[id] || {
+            deviceId: id,
+            speedKmh: 0,
+            deviceTime: new Date().toISOString()
         };
 
         const status = device.status || "offline";
@@ -703,7 +705,6 @@ function updateVehicleList(positions) {
         const state = getState();
         const isAnalytics = state.activePanel === "analytics";
 
-        // 🔥 Detect panel change (force rebuild)
         const prevPanel = card?.dataset.panel;
         const currentPanel = state.activePanel;
 
@@ -712,8 +713,9 @@ function updateVehicleList(positions) {
             vehicleCardMap.delete(id);
             vehicleRefsMap.delete(id);
             lastRenderedData.delete(id);
-            card = null; // force recreate
+            card = null;
         }
+
         const statusClass = {
             online: "status-online",
             offline: "status-offline",
@@ -725,6 +727,7 @@ function updateVehicleList(positions) {
             card.className = "vehicle-card";
             card.dataset.id = id;
             card.dataset.panel = state.activePanel;
+
             card.onclick = async () => {
                 await selectVehicle(id);
             };
@@ -744,7 +747,6 @@ function updateVehicleList(positions) {
             container.appendChild(card);
         }
 
-        // 🔄 UPDATE ONLY CONTENT
         const prev = lastRenderedData.get(id);
 
         const newData =
@@ -932,6 +934,9 @@ window.closeAssign = function () {
     }
 }
 async function loadDevices() {
+    const devices = await apiRequest("/api/devices");
+
+    console.log("Devices from API:", devices);
     console.log("🚀 loadDevices called");
     const container = document.getElementById("deviceList");
 
@@ -996,7 +1001,7 @@ async function loadDevices() {
                 title: "Assign"
             }) : ""}
 
-    ${canManageDevices && Array.isArray(d.assignedTo) && Array.isArray(d.assignedTo) && d.assignedTo.length > 0? createButton({
+    ${canManageDevices && Array.isArray(d.assignedTo) && Array.isArray(d.assignedTo) && d.assignedTo.length > 0 ? createButton({
                 text: "❌",
                 className: "icon-btn unassign",
                 onClick: `unassignDevice('${d._id}')`,
@@ -1049,28 +1054,52 @@ window.filterDevices = function () {
 }
 window.submitNewDevice = async function () {
 
-    const name = document.getElementById("deviceNameInput").value;
-    const uniqueId = document.getElementById("deviceUniqueInput").value;
+    const name = document.getElementById("deviceNameInput").value.trim();
+    const uniqueId = document.getElementById("deviceUniqueInput").value.trim();
     const adminId = document.getElementById("deviceAdminSelect").value;
 
+    const speedInput = document.getElementById("deviceSpeedInput").value;
+    const mileageInput = document.getElementById("deviceMileageInput").value;
+
     if (!name || !uniqueId || !adminId) {
-        alert("Fill all fields including admin");
+        alert("Fill all required fields");
         return;
     }
 
-    await apiRequest("/api/devices", {
-        method: "POST",
-        body: JSON.stringify({
-            name,
-            uniqueId,
-            adminId // ✅ FIX
-        })
-    });
+    // ✅ Build payload dynamically
+    const payload = {
+        name,
+        uniqueId,
+        adminId
+    };
 
-    alert("Device added");
-    switchPanel("devices");
-    loadDevices();
-}
+    if (speedInput) {
+        payload.speedLimit = Number(speedInput);
+    }
+
+    if (mileageInput) {
+        payload.fuelEfficiency = Number(mileageInput);
+    }
+
+    try {
+
+        console.log("📤 Payload:", payload);
+
+        await apiRequest("/api/devices", {
+            method: "POST",
+            body: JSON.stringify(payload)
+        });
+
+        alert("✅ Device created");
+
+        switchPanel("devices");
+        loadDevices();
+
+    } catch (err) {
+        console.error(err);
+        alert(err.message || "Failed");
+    }
+};
 window.deleteDevice = async function (id) {
     if (!confirm("Delete this device?")) return;
 
@@ -1112,7 +1141,7 @@ window.openAssign = async function (deviceId) {
 
     if (Array.isArray(device.assignedTo) && device.assignedTo.length > 0) {
         currentUserId = device.assignedTo[0]?._id;
-    } 
+    }
     else if (device.assignedTo && typeof device.assignedTo === "object") {
         currentUserId = device.assignedTo._id;
     }
@@ -1346,7 +1375,7 @@ async function loadUserPermissions() {
     });
     showCreateUserForm();
 }
-function showCreateUserForm() {
+window.showCreateUserForm = function () {
 
     const right = document.getElementById("userContent");
     if (window.userRole === "user") {

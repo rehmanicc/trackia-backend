@@ -2,15 +2,22 @@ const mongoose = require("mongoose");
 
 const deviceSchema = new mongoose.Schema({
 
-    name: String,
+    name: {
+        type: String,
+        required: true
+    },
     uniqueId: {
         type: String,
+        unique: true,
+        required: true,
         index: true
     },
 
     traccarId: {
         type: Number,
-        required: true
+        required: true,
+        unique: true,
+        index: true
     },
 
     adminId: {
@@ -49,6 +56,16 @@ const deviceSchema = new mongoose.Schema({
     engineControlEnabled: {
         type: Boolean,
         default: false
+    },
+    engineLockedByAdmin: {
+        type: Boolean,
+        default: false,
+        index: true
+    },
+    engineLockedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null
     }
 
 }, { timestamps: true });
@@ -56,6 +73,9 @@ deviceSchema.index({ adminId: 1 });
 deviceSchema.index({ assignedTo: 1 });
 deviceSchema.index({ traccarId: 1 });
 deviceSchema.pre("save", async function () {
+
+    // ✅ Only validate when assignment changes
+    if (!this.isModified("assignedTo")) return;
 
     if (!this.assignedTo) return;
 
@@ -65,6 +85,12 @@ deviceSchema.pre("save", async function () {
         throw new Error("Assigned user not found");
     }
 
+    // ✅ Role restriction
+    if (user.role !== "user") {
+        throw new Error("Device can only be assigned to a user");
+    }
+
+    // ✅ Admin match check
     if (String(user.adminId) !== String(this.adminId)) {
         throw new Error("User and Device admin mismatch");
     }

@@ -37,24 +37,61 @@ export function createVehicleCardElement({ pos, device, isAnalytics, statusClass
 
     if (canUseEngine) {
 
-        const offBtn = document.createElement("button");
-        offBtn.className = "btn-action btn-danger";
-        offBtn.innerText = "🔴 Off";
-        offBtn.onclick = (e) => {
+        let engineState = pos?.engineOn; // ✅ initialize properly
+        const isAdmin = window.userRole === "admin" || window.userRole === "owner";
+
+        const btn = document.createElement("button");
+        btn.className = "btn-action";
+
+        function updateButton() {
+
+            if (engineState === true) {
+                btn.classList.add("btn-success");
+                btn.classList.remove("btn-danger");
+                btn.innerText = "🟢 ON";
+                btn.title = "Press to turn OFF engine";
+            } else {
+                btn.classList.add("btn-danger");
+                btn.classList.remove("btn-success");
+                btn.innerText = "🔴 OFF";
+                btn.title = isAdmin
+                    ? "Press to turn ON engine"
+                    : "Engine disabled by admin";
+            }
+        }
+
+        updateButton();
+
+        btn.onclick = async (e) => {
             e.stopPropagation();
-            if (!confirm("Are you sure you want to turn OFF the engine?")) return;
-            sendCommand(pos.deviceId, "engineStop");
+
+            // 🔐 USER RESTRICTION
+            if (engineState !== true && device.engineLockedByAdmin && !isAdmin) {
+                alert("Engine is locked by admin. You cannot turn it ON.");
+                return;
+            }
+
+            const command = engineState === true ? "engineStop" : "engineResume";
+
+            if (command === "engineStop") {
+                if (!confirm("Are you sure you want to turn OFF the engine?")) return;
+            }
+
+            btn.disabled = true;
+
+            try {
+                await sendCommand(pos.deviceId, command);
+
+                alert(`${command === "engineStop" ? "OFF" : "ON"} command sent`);
+            } catch (err) {
+                console.error(err);
+                alert("Command failed");
+            } finally {
+                btn.disabled = false;
+            }
         };
 
-        const onBtn = document.createElement("button");
-        onBtn.className = "btn-action btn-success";
-        onBtn.innerText = "🟢 On";
-        onBtn.onclick = (e) => {
-            e.stopPropagation();
-            sendCommand(pos.deviceId, "engineResume");
-        };
-
-        engineButtons.push(offBtn, onBtn);
+        engineButtons.push(btn);
     }
     // 🔹 ROOT
     const root = document.createElement("div");
@@ -97,28 +134,6 @@ export function createVehicleCardElement({ pos, device, isAnalytics, statusClass
     actionContainer.style.gap = "6px";
 
     actionContainer.appendChild(actionButton);
-    // 🔥 Assign Button (FIX)
-    const assignBtn = document.createElement("button");
-    assignBtn.className = "btn-action";
-    assignBtn.innerText = "👤 Assign";
-
-    assignBtn.onclick = (e) => {
-        e.stopPropagation();
-
-        // Convert traccarId → Mongo _id
-        const fullDevice = window.allDevices?.find(
-            d => String(d.traccarId) === String(pos.deviceId)
-        );
-
-        if (!fullDevice) {
-            alert("Device not found");
-            return;
-        }
-
-        openAssign(fullDevice._id); // ✅ correct ID
-    };
-
-    actionContainer.appendChild(assignBtn);
     // 🔥 add engine buttons
     engineButtons.forEach(btn => actionContainer.appendChild(btn));
 
