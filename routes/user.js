@@ -143,5 +143,51 @@ router.put("/transfer/:userId", authMiddleware, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+router.delete("/:id", authMiddleware, async (req, res) => {
+  try {
+    const userId = req.params.id;
 
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // ❌ Prevent deleting owner
+    if (user.role === "owner") {
+      return res.status(403).json({ error: "Cannot delete owner" });
+    }
+
+    // ❌ Admin cannot delete admin
+    if (req.user.role === "admin" && user.role === "admin") {
+      return res.status(403).json({
+        error: "Admins cannot delete admins"
+      });
+    }
+
+    // ❌ Admin can only delete own users
+    if (
+      req.user.role === "admin" &&
+      String(user.adminId) !== String(req.user.id)
+    ) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    // 🔥 Unassign devices before delete
+    const Device = require("../models/Device");
+
+    await Device.updateMany(
+      { assignedTo: user._id },
+      { assignedTo: null }
+    );
+
+    await User.findByIdAndDelete(userId);
+
+    res.json({ success: true });
+
+  } catch (err) {
+    console.error("❌ DELETE USER ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 module.exports = router;

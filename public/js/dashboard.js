@@ -1353,23 +1353,51 @@ async function loadUserPermissions() {
     users.forEach(user => {
 
         const div = document.createElement("div");
-        div.className = "user-item";
+
+        // 🎨 role-based class
+        const roleClass =
+            user.role === "owner" ? "user-owner" :
+                user.role === "admin" ? "user-admin" :
+                    "user-normal";
+
+        div.className = `user-card ${roleClass}`;
+
+        const isOwner = window.userRole === "owner";
+        const isAdmin = window.userRole === "admin";
+
+        const canDelete =
+            isOwner ||
+            (isAdmin && user.role === "user");
 
         div.innerHTML = `
-            <div class="user-row">
-
-            <div class="user-line">
-                <b>${user.name}</b>
-                <button onclick="showEditUser('${user._id}')">Edit</button>
+        <div class="user-card-header">
+            <div>
+                <div class="user-name">${user.name}</div>
+                <div class="user-role">${user.role}</div>
             </div>
 
-            <div class="user-line">
-                <small>${user.role}</small>
-                <button onclick="showUserPermissions('${user._id}')">Permissions</button>
-            </div>
+            <div class="user-actions">
 
+                <button class="btn-icon"
+                    onclick="showEditUser('${user._id}')">
+                    ✏️
+                </button>
+
+                <button class="btn-icon"
+                    onclick="showUserPermissions('${user._id}')">
+                    🔐
+                </button>
+
+                ${canDelete ? `
+                    <button class="btn-icon btn-delete"
+                        onclick="deleteUser('${user._id}')">
+                        🗑
+                    </button>
+                ` : ""}
+
+            </div>
         </div>
-        `;
+    `;
 
         list.appendChild(div);
     });
@@ -1420,23 +1448,31 @@ function populateRoleDropdown() {
     const roleSelect = document.getElementById("newUserRole");
     if (!roleSelect) return;
 
-    const token = localStorage.getItem("token");
-
-    let role = null;
-
-    try {
-        const payload = JSON.parse(atob(token.split(".")[1]));
-        role = payload.role;
-    } catch (e) {
-        console.error("Role parse error");
-    }
-
     roleSelect.innerHTML = "";
 
-    if (role === "owner") {
-        roleSelect.innerHTML = `<option value="admin">Admin</option>`;
-    } else if (role === "admin") {
-        roleSelect.innerHTML = `<option value="user">User</option>`;
+    const currentRole = window.userRole;
+
+    // 👑 OWNER → Admin + User
+    if (currentRole === "owner") {
+
+        const adminOption = document.createElement("option");
+        adminOption.value = "admin";
+        adminOption.textContent = "Admin";
+        roleSelect.appendChild(adminOption);
+
+        const userOption = document.createElement("option");
+        userOption.value = "user";
+        userOption.textContent = "User";
+        roleSelect.appendChild(userOption);
+    }
+
+    // 🏢 ADMIN → Only User
+    else if (currentRole === "admin") {
+
+        const userOption = document.createElement("option");
+        userOption.value = "user";
+        userOption.textContent = "User";
+        roleSelect.appendChild(userOption);
     }
 }
 async function openExpiredDevices() {
@@ -1744,24 +1780,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     const adminPanel = document.getElementById("adminPanel");
     const userPanel = document.getElementById("userPanel");
-
     const roleSelect = document.getElementById("newUserRole");
-
-    if (roleSelect) {
-
-        roleSelect.innerHTML = "";
-
-        if (window.userRole === "owner") {
-            roleSelect.innerHTML = `<option value="admin">Admin</option>`;
-        }
-        else if (userRole === "admin") {
-            roleSelect.innerHTML = `<option value="user">User</option>`;
-        }
-        else {
-            roleSelect.style.display = "none";
-        }
-
-    }
 
     const startIcon = L.icon({
         iconUrl: "https://maps.google.com/mapfiles/ms/icons/green-dot.png",
@@ -1950,3 +1969,20 @@ async function loadAdminsForDevice() {
         console.error("Failed to load admins", err);
     }
 }
+window.deleteUser = async function (userId) {
+
+    if (!confirm("Are you sure you want to delete this user?")) return;
+
+    try {
+        await apiRequest(`/api/users/${userId}`, {
+            method: "DELETE"
+        });
+
+        alert("User deleted");
+        loadUserPermissions();
+
+    } catch (err) {
+        console.error(err);
+        alert(err.message || "Delete failed");
+    }
+};
