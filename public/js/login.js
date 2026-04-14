@@ -24,6 +24,17 @@ async function handleLogin() {
 
             localStorage.setItem("token", data.token);
 
+            try {
+                const payload = JSON.parse(atob(data.token.split(".")[1]));
+
+                window.userRole = payload.role;
+                localStorage.setItem("userRole", payload.role);
+
+                console.log("User role:", window.userRole);
+
+            } catch (e) {
+                console.error("Token parse error");
+            }
             alert("Login successful");
 
             // ✅ switch UI
@@ -32,7 +43,7 @@ async function handleLogin() {
 
             window.location.reload();
 
-        } 
+        }
         // ❌ FAILURE
         else {
             alert(data.error || "Login failed");

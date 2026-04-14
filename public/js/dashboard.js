@@ -473,6 +473,8 @@ async function loadUsersCache() {
     }
 }
 async function initApp() {
+    initMap();
+    window.userRole = localStorage.getItem("userRole");
     const token = localStorage.getItem("token");
     initSocket(token);
     initAlertModule();
@@ -994,7 +996,7 @@ async function loadDevices() {
                 title: "Assign"
             }) : ""}
 
-    ${canManageDevices && Array.isArray(d.assignedTo) && d.assignedTo.lengthd.assignedTo?.length ? createButton({
+    ${canManageDevices && Array.isArray(d.assignedTo) && Array.isArray(d.assignedTo) && d.assignedTo.length > 0? createButton({
                 text: "❌",
                 className: "icon-btn unassign",
                 onClick: `unassignDevice('${d._id}')`,

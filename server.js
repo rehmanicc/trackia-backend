@@ -130,7 +130,7 @@ io.on("connection", async (socket) => {
     }
 
     if (decoded.role === "admin") {
-      socket.join(`company_${decoded.companyId}`);
+      socket.join(`company_${decoded.adminId}`);
     }
 
     if (decoded.role === "user") {

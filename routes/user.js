@@ -3,6 +3,7 @@ const router = express.Router();
 const authMiddleware = require("../middleware/authMiddleware");
 const User = require("../models/User");
 
+
 // ✅ GET USERS (ROLE BASED)
 router.get("/", authMiddleware, async (req, res) => {
   try {
@@ -85,4 +86,62 @@ router.put("/:id", authMiddleware, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+router.put("/transfer/:userId", authMiddleware, async (req, res) => {
+  try {
+    // 🔐 Only owner allowed
+    if (req.user.role !== "owner") {
+      return res.status(403).json({ error: "Only owner can transfer users" });
+    }
+
+    const { newAdminId } = req.body;
+    const mongoose = require("mongoose");
+
+    if (!mongoose.Types.ObjectId.isValid(newAdminId)) {
+      return res.status(400).json({ error: "Invalid adminId format" });
+    }
+    if (!newAdminId) {
+      return res.status(400).json({ error: "newAdminId required" });
+    }
+
+    const user = await User.findById(req.params.userId);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    const admin = await User.findOne({
+      _id: newAdminId,
+      role: "admin"
+    });
+
+    if (!admin) {
+      return res.status(400).json({ error: "Invalid adminId" });
+    }
+    if (String(user.adminId) === String(newAdminId)) {
+      return res.status(400).json({ error: "User already belongs to this admin" });
+    }
+
+    if (user.role !== "user") {
+      return res.status(400).json({ error: "Only users can be transferred" });
+    }
+
+    // 🔥 STEP 1: Unassign all devices
+    const Device = require("../models/Device");
+
+    await Device.updateMany(
+      { assignedTo: user._id },
+      { assignedTo: null }
+    );
+
+    // 🔥 STEP 2: Change admin
+    user.adminId = newAdminId;
+    await user.save();
+
+    res.json({ message: "User transferred successfully" });
+
+  } catch (err) {
+    console.error("TRANSFER USER ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

@@ -3,8 +3,7 @@ module.exports = function (requiredPermission) {
 
     const user = req.user;
 
-    // ✅ Owner = full access
-    if (user.role === "owner") {
+    if (user.role === "owner" || user.role === "admin") {
       return next();
     }
 
