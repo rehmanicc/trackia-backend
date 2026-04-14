@@ -4,8 +4,9 @@ const PERMISSION_GROUPS = {
     DEVICES: {
         label: "🚗 Devices",
         permissions: [
-            "VIEW_DEVICE",
             "EDIT_DEVICE",
+            "DELETE_DEVICE",
+            "ASSIGN_DEVICE",
             "SEND_COMMAND",
             "ENGINE_CONTROL"
         ]
@@ -33,8 +34,9 @@ const PERMISSION_GROUPS = {
 // HUMAN READABLE LABELS
 // ===============================
 const PERMISSION_LABELS = {
-    VIEW_DEVICE: "View Devices",
     EDIT_DEVICE: "Edit Devices",
+    DELETE_DEVICE: "Delete Devices",
+    ASSIGN_DEVICE: "Assign Devices",
     SEND_COMMAND: "Send Commands",
     RENEW_DEVICE: "Renew Devices",
     ENGINE_CONTROL: "Engine Control (ON/OFF)",
@@ -111,18 +113,34 @@ export function showCreateUserForm() {
     }
 
     right.innerHTML = `
-        <div class="user-form-card">
-            <h3>Create User</h3>
+    <div class="user-form-card">
+        <h3>Create User</h3>
 
+        <div class="form-group">
+            <label>Name</label>
             <input id="newUserName" placeholder="Name">
-            <input id="newUserPhone" placeholder="03XXXXXXXXX">
-            <input id="newUserPassword" type="password">
-
-            <select id="newUserRole"></select>
-
-            <button onclick="createUser()">Create</button>
         </div>
-    `;
+
+        <div class="form-group">
+            <label>Phone</label>
+            <input id="newUserPhone" placeholder="03XXXXXXXXX">
+        </div>
+
+        <div class="form-group">
+            <label>Password</label>
+            <input id="newUserPassword" type="password">
+        </div>
+
+        <div class="form-group">
+            <label>Role</label>
+            <select id="newUserRole"></select>
+        </div>
+
+        <button class="btn-primary" onclick="createUser()">
+            ➕ Create User
+        </button>
+    </div>
+`;
 
     populateRoleDropdown();
 }
@@ -146,72 +164,82 @@ export async function showUserPermissions(userId) {
     const user = await apiRequest(`/api/users/${userId}`);
 
     let html = `<div class="permission-container">
-    <h3>${user.name} Permissions</h3>`;
+        <h3>${user.name} Permissions</h3>`;
 
     Object.entries(PERMISSION_GROUPS).forEach(([key, group]) => {
+
         const allChecked = group.permissions.every(p =>
             user.permissions?.includes(p)
         );
-        html += `
-                <div class="permission-card">
-<div class="permission-header">
-    <span>${group.label}</span>
 
-    <label class="switch">
-        <input type="checkbox"
-${allChecked ? "checked" : ""}
-onchange="toggleGroup('${userId}', '${key}', this.checked)">
-        <span class="slider"></span>
-    </label>
-</div>
+        html += `
+            <div class="permission-card">
+                <div class="permission-header">
+                    <span>${group.label}</span>
+
+                    <label class="switch">
+                        <input type="checkbox"
+                            ${allChecked ? "checked" : ""}
+                            onchange="toggleGroup('${userId}', '${key}', this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
                 <div class="permission-list">
         `;
 
+        // ✅ SINGLE LOOP (CORRECT)
         group.permissions.forEach(p => {
 
-            if (p === "RENEW_DEVICE" && appState.userRole === "admin") {
-                return;
-            }
-            if (
-                p === "RENEW_DEVICE" &&
-                appState.userRole === "owner" &&
-                user.role !== "admin"
-            ) {
-                return;
+            // ✅ ADMIN RESTRICTIONS
+            if (appState.userRole === "admin") {
+                if (
+                    p === "EDIT_DEVICE" ||
+                    p === "DELETE_DEVICE" ||
+                    p === "ASSIGN_DEVICE" ||
+                    p === "RENEW_DEVICE"
+                ) {
+                    return;
+                }
             }
 
             const checked = user.permissions?.includes(p) ? "checked" : "";
 
             html += `
-        <label class="permission-item">
-        <span>${PERMISSION_LABELS[p]}</span>
-        <label class="switch">
-            <input type="checkbox"
-data-permission="${p}"
-${checked}
-onchange="togglePermission('${userId}','${p}', this.checked)">
-            <span class="slider"></span>
-            </label>
-        </label>
-        `;
+                <label class="permission-item">
+                    <span>${PERMISSION_LABELS[p]}</span>
+                    <label class="switch">
+                        <input type="checkbox"
+                            data-permission="${p}"
+                            ${checked}
+                            onchange="togglePermission('${userId}','${p}', this.checked)">
+                        <span class="slider"></span>
+                    </label>
+                </label>
+            `;
         });
 
-        html += `</div></div>`;
+        html += `
+                </div>
+            </div>
+        `;
     });
 
     html += `
-    <button class="btn-save-permissions" onclick="savePermissions('${userId}')">            💾 Save Permissions
+        <button class="btn-save-permissions" onclick="savePermissions('${userId}')">
+            💾 Save Permissions
         </button>
+    </div>
     `;
 
     right.innerHTML = html;
 }
 export async function showEditUser(userId) {
 
-    const right = document.getElementById("userContent");
+        const right = document.getElementById("userContent");
 
-    // 🔥 FIRST render HTML
-    right.innerHTML = `
+        // 🔥 FIRST render HTML
+        right.innerHTML = `
         <div class="user-form-card">
             <h3>Edit User</h3>
 
@@ -231,132 +259,132 @@ export async function showEditUser(userId) {
         </div>
     `;
 
-    // 🔥 THEN fetch user
-    const user = await apiRequest(`/api/users/${userId}`);
+        // 🔥 THEN fetch user
+        const user = await apiRequest(`/api/users/${userId}`);
 
-    // 🔥 NOW elements exist
-    document.getElementById("editUserName").value = user.name || "";
-    document.getElementById("editUserPhone").value = user.phoneNumber || "";
-    originalPhone = user.phoneNumber;
-}
-export async function updateUser(userId) {
-
-    const name = document.getElementById("editUserName").value.trim();
-    const phone = document.getElementById("editUserPhone").value
-        .trim()
-        .replace(/\s+/g, "");
-    console.log("Phone raw:", document.getElementById("editUserPhone").value);
-    console.log("Phone trimmed:", phone);
-    console.log("Length:", phone.length);
-    if (!name || !phone) {
-        alert("Fill all fields");
-        return;
+        // 🔥 NOW elements exist
+        document.getElementById("editUserName").value = user.name || "";
+        document.getElementById("editUserPhone").value = user.phoneNumber || "";
+        originalPhone = user.phoneNumber;
     }
-    if (phone !== originalPhone) {
-        if (!phone.match(/^03\\d{9}$/)) {
-            alert("Enter valid mobile number");
+    export async function updateUser(userId) {
+
+        const name = document.getElementById("editUserName").value.trim();
+        const phone = document.getElementById("editUserPhone").value
+            .trim()
+            .replace(/\s+/g, "");
+        console.log("Phone raw:", document.getElementById("editUserPhone").value);
+        console.log("Phone trimmed:", phone);
+        console.log("Length:", phone.length);
+        if (!name || !phone) {
+            alert("Fill all fields");
             return;
         }
+        if (phone !== originalPhone) {
+            if (!phone.match(/^03\\d{9}$/)) {
+                alert("Enter valid mobile number");
+                return;
+            }
+        }
+        await apiRequest(`/api/users/${userId}`, {
+            method: "PUT",
+            body: JSON.stringify({
+                name,
+                phoneNumber: phone
+            })
+        });
+
+        alert("User updated");
+        loadUserPermissions();
     }
-    await apiRequest(`/api/users/${userId}`, {
-        method: "PUT",
-        body: JSON.stringify({
-            name,
-            phoneNumber: phone
-        })
-    });
+    export function toggleGroup(userId, groupKey, isChecked) {
 
-    alert("User updated");
-    loadUserPermissions();
-}
-export function toggleGroup(userId, groupKey, isChecked) {
+        const group = PERMISSION_GROUPS[groupKey];
 
-    const group = PERMISSION_GROUPS[groupKey];
+        // 🔥 Update permissionChanges
+        if (!permissionChanges[userId]) {
+            permissionChanges[userId] = new Set();
+        }
 
-    // 🔥 Update permissionChanges
-    if (!permissionChanges[userId]) {
-        permissionChanges[userId] = new Set();
-    }
+        group.permissions.forEach(p => {
+            if (isChecked) {
+                permissionChanges[userId].add(p);
+            } else {
+                permissionChanges[userId].delete(p);
+            }
+        });
 
-    group.permissions.forEach(p => {
+        // 🔥 ALSO update UI instantly
+        group.permissions.forEach(p => {
+            const inputs = document.querySelectorAll(`input[data-permission="${p}"]`);
+            inputs.forEach(input => input.checked = isChecked);
+        });
+    };
+    export function togglePermission(userId, permission, isChecked) {
+
+        if (!permissionChanges[userId]) {
+            permissionChanges[userId] = new Set();
+        }
+
         if (isChecked) {
-            permissionChanges[userId].add(p);
+            permissionChanges[userId].add(permission);
         } else {
-            permissionChanges[userId].delete(p);
+            permissionChanges[userId].delete(permission);
         }
-    });
-
-    // 🔥 ALSO update UI instantly
-    group.permissions.forEach(p => {
-        const inputs = document.querySelectorAll(`input[data-permission="${p}"]`);
-        inputs.forEach(input => input.checked = isChecked);
-    });
-};
-export function togglePermission(userId, permission, isChecked) {
-
-    if (!permissionChanges[userId]) {
-        permissionChanges[userId] = new Set();
     }
+    export async function savePermissions(userId) {
 
-    if (isChecked) {
-        permissionChanges[userId].add(permission);
-    } else {
-        permissionChanges[userId].delete(permission);
-    }
-}
-export async function savePermissions(userId) {
+        const container = document.getElementById("userContent");
+        const inputs = container.querySelectorAll(".permission-item input");
 
-    const container = document.getElementById("userContent");
-    const inputs = container.querySelectorAll(".permission-item input");
+        const perms = [];
 
-    const perms = [];
+        inputs.forEach(input => {
+            if (input.checked) {
+                const perm = input.dataset.permission;
+                if (perm) perms.push(perm);
+            }
+        });
 
-    inputs.forEach(input => {
-        if (input.checked) {
-            const perm = input.dataset.permission;
-            if (perm) perms.push(perm);
+        await apiRequest(`/api/auth/permissions/${userId}`, {
+            method: "PUT",
+            body: JSON.stringify({ permissions: perms })
+        });
+
+        const alertUI = window.alertUI;
+        alertUI?.showToast("Permissions updated", "success");
+
+        loadUserPermissions(); // ✅ correct call
+    };
+
+    export function populateRoleDropdown() {
+
+        const roleSelect = document.getElementById("newUserRole");
+        if (!roleSelect) return;
+
+        roleSelect.innerHTML = "";
+
+        const currentRole = appState.userRole;
+        // 👑 OWNER → Admin + User
+        if (currentRole === "owner") {
+
+            const adminOption = document.createElement("option");
+            adminOption.value = "admin";
+            adminOption.textContent = "Admin";
+            roleSelect.appendChild(adminOption);
+
+            const userOption = document.createElement("option");
+            userOption.value = "user";
+            userOption.textContent = "User";
+            roleSelect.appendChild(userOption);
         }
-    });
 
-    await apiRequest(`/api/auth/permissions/${userId}`, {
-        method: "PUT",
-        body: JSON.stringify({ permissions: perms })
-    });
+        // 🏢 ADMIN → Only User
+        else if (currentRole === "admin") {
 
-    const alertUI = window.alertUI;
-    alertUI?.showToast("Permissions updated", "success");
-
-    loadUserPermissions(); // ✅ correct call
-};
-
-export function populateRoleDropdown() {
-
-    const roleSelect = document.getElementById("newUserRole");
-    if (!roleSelect) return;
-
-    roleSelect.innerHTML = "";
-
-    const currentRole = appState.userRole;
-    // 👑 OWNER → Admin + User
-    if (currentRole === "owner") {
-
-        const adminOption = document.createElement("option");
-        adminOption.value = "admin";
-        adminOption.textContent = "Admin";
-        roleSelect.appendChild(adminOption);
-
-        const userOption = document.createElement("option");
-        userOption.value = "user";
-        userOption.textContent = "User";
-        roleSelect.appendChild(userOption);
+            const userOption = document.createElement("option");
+            userOption.value = "user";
+            userOption.textContent = "User";
+            roleSelect.appendChild(userOption);
+        }
     }
-
-    // 🏢 ADMIN → Only User
-    else if (currentRole === "admin") {
-
-        const userOption = document.createElement("option");
-        userOption.value = "user";
-        userOption.textContent = "User";
-        roleSelect.appendChild(userOption);
-    }
-}

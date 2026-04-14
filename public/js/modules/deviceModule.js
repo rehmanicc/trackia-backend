@@ -1,6 +1,7 @@
 import { apiRequest } from "../services/apiService.js";
 import { appState } from "../state/appState.js";
-const hasPermission = window.hasPermission;
+import { hasPermission } from "../components/permissions.js";
+
 const getUsers = () => window.cachedUsers || [];
 const switchPanel = window.switchPanel;
 const alertUI = window.alertUI;
@@ -11,7 +12,7 @@ export async function loadDevices() {
     try {
         const devices = await apiRequest("/api/devices");
         window.allDevices = devices;
-
+        appState.allDevices = devices;
         container.innerHTML = `
             <div class="device-header">
                 <input type="text" id="deviceSearch" placeholder="Search devices..." oninput="filterDevices()">
@@ -33,8 +34,12 @@ export async function loadDevices() {
 
         devices.forEach(d => {
 
-            const canManageDevices = hasPermission?.("EDIT_DEVICE");
-            const canEditSpeed = hasPermission?.("EDIT_SPEED");
+            const canManageDevices =
+                appState.userRole === "owner" ||
+                hasPermission?.("EDIT_DEVICE");
+            const canEditSpeed =
+                appState.userRole === "owner" ||
+                hasPermission?.("EDIT_SPEED");
 
             let users = "-";
 
@@ -148,7 +153,7 @@ export async function submitNewDevice() {
     });
 
     alert("Device created");
-    switchPanel("devices");
+    window.switchPanel("devices");
     loadDevices();
 }
 
@@ -180,38 +185,58 @@ export async function openAssign(deviceId) {
     const adminSelect = document.getElementById("assignAdminSelect");
     const userSelect = document.getElementById("assignUserSelect");
 
+    // Reset dropdowns
     adminSelect.innerHTML = "<option value=''>-- Select Admin --</option>";
     userSelect.innerHTML = "<option value=''>-- Select User --</option>";
 
-   const device = window.allDevices?.find(d => d._id === deviceId);
+    // Get device
+    const device = appState.allDevices?.find(d => d._id === deviceId);
 
     if (!device) {
         alert("Device not found");
         return;
     }
 
-    const users = getUsers();
+    // Ensure users are loaded
+    if (!appState.cachedUsers || appState.cachedUsers.length === 0) {
+        console.log("⚡ Loading users inside assign...");
+        appState.cachedUsers = await apiRequest("/api/users") || [];
+    }
 
+    const users = appState.cachedUsers;
+
+    console.log("Assign users:", users);
+
+    // Populate dropdowns
     if (appState.userRole === "owner") {
 
-        users.filter(u => u.role === "admin")
+        users
+            .filter(u => u.role?.toLowerCase() === "admin")
             .forEach(u => {
                 adminSelect.innerHTML += `<option value="${u._id}">${u.name}</option>`;
             });
 
-        users.filter(u => u.role === "user")
+        users
+            .filter(u => u.role?.toLowerCase() === "user")
             .forEach(u => {
                 userSelect.innerHTML += `<option value="${u._id}">${u.name}</option>`;
             });
 
-   } else if (appState.userRole === "admin") {
+    } else if (appState.userRole === "admin") {
 
-        users.filter(u => u.role === "user")
+        users
+            .filter(u => u.role?.toLowerCase() === "user")
             .forEach(u => {
                 userSelect.innerHTML += `<option value="${u._id}">${u.name}</option>`;
             });
     }
 
+    // ✅ PRE-SELECT ADMIN (AFTER options are populated)
+    if (device.adminId) {
+        adminSelect.value = device.adminId;
+    }
+
+    // Open modal (ONLY ONCE, at end)
     document.getElementById("assignModal").style.display = "flex";
 }
 

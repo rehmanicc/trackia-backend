@@ -9,7 +9,6 @@ const User = require("../models/User");
 
 router.get("/",
   auth,
-  checkPermission(PERMISSIONS.VIEW_DEVICE),
   ctrl.getDevices
 );
 

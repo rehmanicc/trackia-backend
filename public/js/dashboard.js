@@ -11,7 +11,6 @@ let geofenceLayers = {};
 let geofences = [];
 let drawnItems;
 let map;
-let cachedUsers = [];
 let routeLine = null;
 let drawControl;
 let collapsedDevices = Object.create(null);
@@ -78,6 +77,7 @@ const DOM = {
     countOffline: document.getElementById("countOffline")
 };
 import { appState } from "./state/appState.js";
+
 import {
     initSocket,
     onPositions,
@@ -515,10 +515,10 @@ async function loadInitialPositions() {
 async function loadUsersCache() {
     try {
         console.log("⚡ Loading users cache...");
-        cachedUsers = await apiRequest("/api/users") || [];
+        appState.cachedUsers = await apiRequest("/api/users") || [];
     } catch (err) {
         console.error("❌ Failed to load users", err);
-        cachedUsers = [];
+        appState.cachedUsers = [];
     }
 }
 async function initApp() {
@@ -953,7 +953,7 @@ window.switchPanel = function (panel) {
 
         case "users":
 
-            if (!hasPermission("EDIT_DEVICE") && appState.userRole !== "owner") {
+            if (appState.userRole === "user") {
                 alert("Access denied");
                 return;
             }

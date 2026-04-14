@@ -1,18 +1,10 @@
-export function getUserPermissions() {
-  const token = localStorage.getItem("token");
-  if (!token) return [];
-
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return payload.permissions || [];
-  } catch {
-    return [];
-  }
-}
+import { appState } from "../state/appState.js";
 
 export function hasPermission(permission) {
-  if (window.userRole === "owner") return true;
 
-  const perms = getUserPermissions();
-  return perms.includes(permission);
+    // ✅ Owner bypass
+    if (appState.userRole === "owner") return true;
+
+    // ✅ Use centralized permissions
+    return appState.userPermissions.includes(permission);
 }

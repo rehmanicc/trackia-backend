@@ -1,14 +1,15 @@
 import { hasPermission } from "./permissions.js";
-export function createVehicleCardElement({ pos, device, isAnalytics, statusClass }) {
+import { appState } from "../state/appState.js";
 
+export function createVehicleCardElement({ pos, device, isAnalytics, statusClass }) {
     const speed = pos.speedKmh || 0;
     const minutesAgo = Math.floor((Date.now() - new Date(pos.deviceTime)) / 60000);
     const deviceData = window.allowedDevices?.[pos.deviceId];
 
     // 🔥 FINAL ENGINE PERMISSION LOGIC
     const canUseEngine =
-        window.userRole === "owner" ||
-        window.userRole === "admin" ||
+        appState.userRole === "owner" ||
+        appState.userRole === "admin" ||
         (
             deviceData?.engineControlEnabled &&
             hasPermission("ENGINE_CONTROL")
@@ -38,8 +39,7 @@ export function createVehicleCardElement({ pos, device, isAnalytics, statusClass
     if (canUseEngine) {
 
         let engineState = pos?.engineOn; // ✅ initialize properly
-        const isAdmin = window.userRole === "admin" || window.userRole === "owner";
-
+        const isAdmin = appState.userRole === "admin" || appState.userRole === "owner";
         const btn = document.createElement("button");
         btn.className = "btn-action";
 

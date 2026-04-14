@@ -27,7 +27,8 @@ async function handleLogin() {
             try {
                 const payload = JSON.parse(atob(data.token.split(".")[1]));
 
-                window.userRole = payload.role;
+                appState.userRole = payload.role;
+                appState.userPermissions = payload.permissions || [];
                 localStorage.setItem("userRole", payload.role);
 
                 console.log("User role:", window.userRole);

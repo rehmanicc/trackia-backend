@@ -2059,3 +2059,106 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     background: #fff5f5;
     border-left: 5px solid #dc3545;
 }
+
+/* ===== ASSIGN MODAL ===== */
+#assignModal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+}
+
+/* Modal Box */
+#assignModal>div {
+    background: #fff;
+    padding: 25px 30px;
+    border-radius: 12px;
+    width: 320px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+/* Title */
+#assignModal h3 {
+    text-align: center;
+    margin-bottom: 20px;
+    font-weight: 600;
+    color: #333;
+}
+
+/* Labels */
+#assignModal label {
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 5px;
+    display: block;
+}
+
+/* Select dropdown */
+#assignModal select {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    margin-bottom: 15px;
+    font-size: 14px;
+    outline: none;
+    transition: border 0.2s;
+}
+
+#assignModal select:focus {
+    border-color: #007bff;
+}
+
+/* Buttons container */
+.assign-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+/* Assign button */
+.assign-btn {
+    flex: 1;
+    background: #007bff;
+    color: #fff;
+    border: none;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.assign-btn:hover {
+    background: #0062cc;
+}
+
+/* Cancel button */
+.cancel-btn {
+    flex: 1;
+    background: #eee;
+    border: none;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.cancel-btn:hover {
+    background: #ddd;
+}
+
+/* Animation */
+@keyframes fadeIn {
+    from {
+        transform: translateY(-10px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}

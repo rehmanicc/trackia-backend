@@ -3,11 +3,12 @@ module.exports = function (requiredPermission) {
 
     const user = req.user;
 
-    if (user.role === "owner" || user.role === "admin") {
+    // ✅ OWNER → FULL ACCESS
+    if (user.role === "owner") {
       return next();
     }
 
-    // ✅ Everyone else must have permission
+    // ❌ ADMIN + USER must follow permissions
     if (!user.permissions || !user.permissions.includes(requiredPermission)) {
       return res.status(403).json({
         error: "Permission denied"
