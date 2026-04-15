@@ -530,6 +530,7 @@ async function initApp() {
     await loadGeofences();
     await loadInitialPositions();
     await loadUsersCache();
+    await loadCurrentUserPermissions();
     // POSITIONS
     let positionBuffer = [];
     let processing = false;
@@ -1227,5 +1228,13 @@ async function loadAdminsForDevice() {
 
     } catch (err) {
         console.error("Failed to load admins", err);
+    }
+}
+async function loadCurrentUserPermissions() {
+    try {
+        const user = await apiRequest("/api/users/me"); // create this route if not exists
+        appState.userPermissions = user.permissions || [];
+    } catch (err) {
+        console.error("Failed to load permissions", err);
     }
 }
