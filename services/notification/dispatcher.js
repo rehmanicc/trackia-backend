@@ -1,5 +1,4 @@
 const { sendPush } = require("./pushService");
-const { sendSMS } = require("./smsService");
 const { triggerCall } = require("../callService");
 const Device = require("../../models/Device");
 const { sendPushFCM } = require("./pushFCMService");
