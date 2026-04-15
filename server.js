@@ -2,7 +2,6 @@ require("dotenv").config();
 const Position = require("./models/Position");
 const PositionArchive = require("./models/PositionsArchive");
 const Trip = require("./models/Trip");
-console.log("MONGO_URI:", process.env.MONGO_URI);
 const deviceRoutes = require("./routes/device");
 const { getPendingCalls, clearCalls } = require("./services/callService");
 const Geofence = require("./models/Geofence");
@@ -18,6 +17,7 @@ const server = http.createServer(app);
 const jwt = require("jsonwebtoken");
 const Device = require("./models/Device");
 
+require("./services/notification/firebase");
 // ✅ SOCKET INIT
 const socket = require("./socket");
 const io = socket.init(server);
@@ -175,7 +175,7 @@ app.delete("/api/reset", async (req, res) => {
     await Alert.deleteMany({});
     await Geofence.deleteMany({});
     await GeofenceEvent.deleteMany({});
-    
+
 
     return res.json({ message: "Database reset successful" });
 
@@ -201,12 +201,12 @@ setInterval(() => {
 
 
 app.get("/test-alert", async (req, res) => {
-
+  const { dispatch } = require("./services/notification/dispatcher");
   const alert = await Alert.create({
     deviceId: "123",
     type: "ENGINE_ON",
     message: "Test alert working"
   });
-
+  await dispatch(alert, io);
   res.json(alert);
 });

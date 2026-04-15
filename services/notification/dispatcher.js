@@ -2,7 +2,7 @@ const { sendPush } = require("./pushService");
 const { sendSMS } = require("./smsService");
 const { triggerCall } = require("../callService");
 const Device = require("../../models/Device");
-
+const { sendPushFCM } = require("./pushFCMService");
 async function dispatch(alert, io) {
 
     sendPush(io, alert);
@@ -23,5 +23,6 @@ async function dispatch(alert, io) {
     ) {
         return triggerCall(alert);
     }
+    await sendPushFCM(alert);
 }
 module.exports = { dispatch };

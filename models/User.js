@@ -54,6 +54,10 @@ const userSchema = new mongoose.Schema({
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User"
+  },
+  fcmTokens: {
+    type: [String],
+    default: []
   }
 
 });
