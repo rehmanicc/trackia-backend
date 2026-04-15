@@ -4,7 +4,11 @@ const Device = require("../../models/Device");
 const { sendPushFCM } = require("./pushFCMService");
 async function dispatch(alert, io) {
 
+    // ✅ Web push
     sendPush(io, alert);
+
+    // ✅ ALWAYS send mobile push (independent)
+    await sendPushFCM(alert);
 
     const device = await Device.findOne({
         traccarId: alert.deviceId
@@ -12,16 +16,17 @@ async function dispatch(alert, io) {
 
     if (!device || !device.callEnabled) return;
 
+    // 📞 Battery → always call
     if (alert.type === "BATTERY_DISCONNECTED") {
         return triggerCall(alert);
     }
 
+    // 📞 Geofence → only selected
     if (
         alert.type === "GEOFENCE_EXIT" &&
         alert.metadata?.geofenceId === device.callGeofenceId
     ) {
         return triggerCall(alert);
     }
-    await sendPushFCM(alert);
 }
 module.exports = { dispatch };
