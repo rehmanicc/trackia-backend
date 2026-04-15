@@ -5,8 +5,7 @@ const checkPermission = require("../middleware/checkPermission");
 const PERMISSIONS = require("../config/permissions");
 const Device = require("../models/Device");
 const User = require("../models/User");
-const { logAudit } = require("../services/audit/auditService");
-
+const { logAudit } = require("../services/auditService");
 router.get("/",
   auth,
   ctrl.getDevices

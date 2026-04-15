@@ -13,16 +13,14 @@ exports.createDevice = async (req, res, next) => {
 
   try {
 
-    const { logAudit } = require("../services/audit/auditService"); // 🔥 add
+    const { logAudit } = require("../services/auditService");
 
-    // 🔥 FIX 1
-    if (user.role === "owner" && !req.body.adminId) {
+        if (user.role === "owner" && !req.body.adminId) {
       return res.status(400).json({
         error: "adminId is required when owner creates device"
       });
     }
-
-    // 🔥 FIX 2
+   
     if (user.role === "owner") {
       const adminExists = await User.findOne({
         _id: req.body.adminId,
@@ -147,7 +145,7 @@ exports.getDevices = async (req, res) => {
 // DELETE DEVICE
 exports.deleteDevice = async (req, res) => {
   try {
-    const { logAudit } = require("../services/audit/auditService"); // 🔥 add
+    const { logAudit } = require("../services/auditService");
 
     const device = await Device.findById(req.params.id);
 
@@ -193,7 +191,7 @@ exports.deleteDevice = async (req, res) => {
 exports.assignDevice = async (req, res) => {
   try {
     const mongoose = require("mongoose");
-    const { logAudit } = require("../services/audit/auditService"); // 🔥 add
+    const { logAudit } = require("../services/auditService");
 
     const { userId } = req.body;
     const deviceId = req.params.id;
@@ -267,7 +265,7 @@ exports.assignDevice = async (req, res) => {
 // UNASSIGN DEVICE
 exports.unassignDevice = async (req, res) => {
   try {
-    const { logAudit } = require("../services/audit/auditService"); // 🔥 add
+    const { logAudit } = require("../services/auditService"); // 🔥 add
 
     const device = await Device.findById(req.params.id);
 
