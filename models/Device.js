@@ -78,9 +78,7 @@ const deviceSchema = new mongoose.Schema({
     }
 
 }, { timestamps: true });
-deviceSchema.index({ adminId: 1 });
-deviceSchema.index({ assignedTo: 1 });
-deviceSchema.index({ traccarId: 1 });
+
 deviceSchema.pre("save", async function () {
 
     // ✅ Only validate when assignment changes
