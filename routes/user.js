@@ -198,7 +198,7 @@ router.delete("/:id", authMiddleware, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-router.post("/fcm-token", auth, async (req, res) => {
+router.post("/fcm-token", authMiddleware, async (req, res) => {
   try {
     const { token } = req.body;
 
