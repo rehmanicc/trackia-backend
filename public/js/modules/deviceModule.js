@@ -183,6 +183,13 @@ export async function openAssign(deviceId) {
     selectedDeviceForAssign = deviceId;
 
     const adminSelect = document.getElementById("assignAdminSelect");
+    const adminBlock = document.getElementById("adminAssignBlock");
+
+    if (appState.userRole === "admin") {
+        adminBlock.style.display = "none";
+    } else {
+        adminBlock.style.display = "block";
+    }
     const userSelect = document.getElementById("assignUserSelect");
 
     // Reset dropdowns
@@ -198,13 +205,7 @@ export async function openAssign(deviceId) {
     }
 
     // Ensure users are loaded
-    if (!appState.cachedUsers || appState.cachedUsers.length === 0) {
-        console.log("⚡ Loading users inside assign...");
-        appState.cachedUsers = await apiRequest("/api/users") || [];
-    }
-
-    const users = appState.cachedUsers;
-
+    const users = appState.cachedUsers || [];
     console.log("Assign users:", users);
 
     // Populate dropdowns
@@ -235,8 +236,7 @@ export async function openAssign(deviceId) {
     if (device.adminId) {
         adminSelect.value = device.adminId;
     }
-
-    // Open modal (ONLY ONCE, at end)
+       // Open modal (ONLY ONCE, at end)
     document.getElementById("assignModal").style.display = "flex";
 }
 

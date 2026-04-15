@@ -1,3 +1,4 @@
+import { computeStatus } from "../state/statusEngine.js";
 let map;
 const markers = {};
 let markerCluster;

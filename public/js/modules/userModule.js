@@ -55,7 +55,12 @@ let permissionChanges = {};
 let originalPhone = "";
 export async function loadUserPermissions() {
 
-    const users = await apiRequest("/api/users");
+    let users = appState.cachedUsers;
+
+    if (!users || users.length === 0) {
+        users = await apiRequest("/api/users");
+        appState.cachedUsers = users;
+    }
     const list = document.getElementById("userList");
 
     list.innerHTML = "";
@@ -236,10 +241,10 @@ export async function showUserPermissions(userId) {
 }
 export async function showEditUser(userId) {
 
-        const right = document.getElementById("userContent");
+    const right = document.getElementById("userContent");
 
-        // 🔥 FIRST render HTML
-        right.innerHTML = `
+    // 🔥 FIRST render HTML
+    right.innerHTML = `
         <div class="user-form-card">
             <h3>Edit User</h3>
 
@@ -259,132 +264,132 @@ export async function showEditUser(userId) {
         </div>
     `;
 
-        // 🔥 THEN fetch user
-        const user = await apiRequest(`/api/users/${userId}`);
+    // 🔥 THEN fetch user
+    const user = await apiRequest(`/api/users/${userId}`);
 
-        // 🔥 NOW elements exist
-        document.getElementById("editUserName").value = user.name || "";
-        document.getElementById("editUserPhone").value = user.phoneNumber || "";
-        originalPhone = user.phoneNumber;
+    // 🔥 NOW elements exist
+    document.getElementById("editUserName").value = user.name || "";
+    document.getElementById("editUserPhone").value = user.phoneNumber || "";
+    originalPhone = user.phoneNumber;
+}
+export async function updateUser(userId) {
+
+    const name = document.getElementById("editUserName").value.trim();
+    const phone = document.getElementById("editUserPhone").value
+        .trim()
+        .replace(/\s+/g, "");
+    console.log("Phone raw:", document.getElementById("editUserPhone").value);
+    console.log("Phone trimmed:", phone);
+    console.log("Length:", phone.length);
+    if (!name || !phone) {
+        alert("Fill all fields");
+        return;
     }
-    export async function updateUser(userId) {
-
-        const name = document.getElementById("editUserName").value.trim();
-        const phone = document.getElementById("editUserPhone").value
-            .trim()
-            .replace(/\s+/g, "");
-        console.log("Phone raw:", document.getElementById("editUserPhone").value);
-        console.log("Phone trimmed:", phone);
-        console.log("Length:", phone.length);
-        if (!name || !phone) {
-            alert("Fill all fields");
+    if (phone !== originalPhone) {
+        if (!phone.match(/^03\\d{9}$/)) {
+            alert("Enter valid mobile number");
             return;
         }
-        if (phone !== originalPhone) {
-            if (!phone.match(/^03\\d{9}$/)) {
-                alert("Enter valid mobile number");
-                return;
-            }
-        }
-        await apiRequest(`/api/users/${userId}`, {
-            method: "PUT",
-            body: JSON.stringify({
-                name,
-                phoneNumber: phone
-            })
-        });
-
-        alert("User updated");
-        loadUserPermissions();
     }
-    export function toggleGroup(userId, groupKey, isChecked) {
+    await apiRequest(`/api/users/${userId}`, {
+        method: "PUT",
+        body: JSON.stringify({
+            name,
+            phoneNumber: phone
+        })
+    });
 
-        const group = PERMISSION_GROUPS[groupKey];
+    alert("User updated");
+    loadUserPermissions();
+}
+export function toggleGroup(userId, groupKey, isChecked) {
 
-        // 🔥 Update permissionChanges
-        if (!permissionChanges[userId]) {
-            permissionChanges[userId] = new Set();
-        }
+    const group = PERMISSION_GROUPS[groupKey];
 
-        group.permissions.forEach(p => {
-            if (isChecked) {
-                permissionChanges[userId].add(p);
-            } else {
-                permissionChanges[userId].delete(p);
-            }
-        });
+    // 🔥 Update permissionChanges
+    if (!permissionChanges[userId]) {
+        permissionChanges[userId] = new Set();
+    }
 
-        // 🔥 ALSO update UI instantly
-        group.permissions.forEach(p => {
-            const inputs = document.querySelectorAll(`input[data-permission="${p}"]`);
-            inputs.forEach(input => input.checked = isChecked);
-        });
-    };
-    export function togglePermission(userId, permission, isChecked) {
-
-        if (!permissionChanges[userId]) {
-            permissionChanges[userId] = new Set();
-        }
-
+    group.permissions.forEach(p => {
         if (isChecked) {
-            permissionChanges[userId].add(permission);
+            permissionChanges[userId].add(p);
         } else {
-            permissionChanges[userId].delete(permission);
+            permissionChanges[userId].delete(p);
         }
+    });
+
+    // 🔥 ALSO update UI instantly
+    group.permissions.forEach(p => {
+        const inputs = document.querySelectorAll(`input[data-permission="${p}"]`);
+        inputs.forEach(input => input.checked = isChecked);
+    });
+};
+export function togglePermission(userId, permission, isChecked) {
+
+    if (!permissionChanges[userId]) {
+        permissionChanges[userId] = new Set();
     }
-    export async function savePermissions(userId) {
 
-        const container = document.getElementById("userContent");
-        const inputs = container.querySelectorAll(".permission-item input");
-
-        const perms = [];
-
-        inputs.forEach(input => {
-            if (input.checked) {
-                const perm = input.dataset.permission;
-                if (perm) perms.push(perm);
-            }
-        });
-
-        await apiRequest(`/api/auth/permissions/${userId}`, {
-            method: "PUT",
-            body: JSON.stringify({ permissions: perms })
-        });
-
-        const alertUI = window.alertUI;
-        alertUI?.showToast("Permissions updated", "success");
-
-        loadUserPermissions(); // ✅ correct call
-    };
-
-    export function populateRoleDropdown() {
-
-        const roleSelect = document.getElementById("newUserRole");
-        if (!roleSelect) return;
-
-        roleSelect.innerHTML = "";
-
-        const currentRole = appState.userRole;
-        // 👑 OWNER → Admin + User
-        if (currentRole === "owner") {
-
-            const adminOption = document.createElement("option");
-            adminOption.value = "admin";
-            adminOption.textContent = "Admin";
-            roleSelect.appendChild(adminOption);
-
-            const userOption = document.createElement("option");
-            userOption.value = "user";
-            userOption.textContent = "User";
-            roleSelect.appendChild(userOption);
-        }
-
-        // 🏢 ADMIN → Only User
-        else if (currentRole === "admin") {
-
-            const userOption = document.createElement("option");
-            userOption.value = "user";
-            userOption.textContent = "User";
-            roleSelect.appendChild(userOption);
-        }
+    if (isChecked) {
+        permissionChanges[userId].add(permission);
+    } else {
+        permissionChanges[userId].delete(permission);
     }
+}
+export async function savePermissions(userId) {
+
+    const container = document.getElementById("userContent");
+    const inputs = container.querySelectorAll(".permission-item input");
+
+    const perms = [];
+
+    inputs.forEach(input => {
+        if (input.checked) {
+            const perm = input.dataset.permission;
+            if (perm) perms.push(perm);
+        }
+    });
+
+    await apiRequest(`/api/auth/permissions/${userId}`, {
+        method: "PUT",
+        body: JSON.stringify({ permissions: perms })
+    });
+
+    const alertUI = window.alertUI;
+    alertUI?.showToast("Permissions updated", "success");
+
+    loadUserPermissions(); // ✅ correct call
+};
+
+export function populateRoleDropdown() {
+
+    const roleSelect = document.getElementById("newUserRole");
+    if (!roleSelect) return;
+
+    roleSelect.innerHTML = "";
+
+    const currentRole = appState.userRole;
+    // 👑 OWNER → Admin + User
+    if (currentRole === "owner") {
+
+        const adminOption = document.createElement("option");
+        adminOption.value = "admin";
+        adminOption.textContent = "Admin";
+        roleSelect.appendChild(adminOption);
+
+        const userOption = document.createElement("option");
+        userOption.value = "user";
+        userOption.textContent = "User";
+        roleSelect.appendChild(userOption);
+    }
+
+    // 🏢 ADMIN → Only User
+    else if (currentRole === "admin") {
+
+        const userOption = document.createElement("option");
+        userOption.value = "user";
+        userOption.textContent = "User";
+        roleSelect.appendChild(userOption);
+    }
+}

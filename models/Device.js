@@ -66,6 +66,15 @@ const deviceSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
         default: null
+    },
+    callEnabled: {
+        type: Boolean,
+        default: true
+    },
+
+    callGeofenceId: {
+        type: String, // store geofenceId from Traccar
+        default: null
     }
 
 }, { timestamps: true });

@@ -40,7 +40,8 @@
                     <li onclick="setActiveMenu(this); switchPanel('geofence')">📍 Geofencing</li>
                     <li onclick="setActiveMenu(this); switchPanel('alerts')"> 🚨 Alerts</li>
                     <li id="usersMenuBtn" onclick="setActiveMenu(this); switchPanel('users')">
-                        👤 User Management
+                    <li onclick="setActiveMenu(this); switchPanel('audit')">📜 Audit Logs</li>
+                    👤 User Management
                     </li>
                 </ul>
             </nav>
@@ -324,6 +325,13 @@
                     </div>
 
                     <div id="alertList"></div>
+
+                </div>
+                <div id="auditPanel" class="vehicle-panel">
+
+                    <h3>📜 Audit Logs</h3>
+
+                    <div id="auditList"></div>
 
                 </div>
                 <!-- MAP -->

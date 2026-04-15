@@ -128,7 +128,29 @@ export function createVehicleCardElement({ pos, device, isAnalytics, statusClass
 
     body.appendChild(left);
 
-    // ACTION
+    // 🔔 CALL SETTINGS UI
+    const callContainer = document.createElement("div");
+    callContainer.style.marginTop = "6px";
+
+    const toggleLabel = document.createElement("label");
+    toggleLabel.innerHTML = `<input type="checkbox"> 📞 Calls`;
+
+    const callToggle = toggleLabel.querySelector("input");
+    callToggle.checked = device.callEnabled ?? true;
+
+    const select = document.createElement("select");
+    select.style.width = "100%";
+    select.innerHTML = `<option value="">-- Select Geofence --</option>`;
+
+    const saveBtn = document.createElement("button");
+    saveBtn.innerText = "💾 Save";
+    saveBtn.className = "btn-action";
+
+    callContainer.appendChild(toggleLabel);
+    callContainer.appendChild(select);
+    callContainer.appendChild(saveBtn);
+
+    body.appendChild(callContainer);
     const actionContainer = document.createElement("div");
     actionContainer.style.display = "flex";
     actionContainer.style.gap = "6px";

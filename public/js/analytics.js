@@ -1,13 +1,9 @@
-let deviceMap = {};
-let geofenceMap = {};
 let dailyChart, geoChart, deviceChart;
 
-
-import { getMap, drawTrip } from "./modules/mapModule.js";
+import { drawTrip } from "./modules/mapModule.js";
 import { apiRequest } from "./services/apiService.js";
 import { getState } from "./state/uiState.js";
 import { toKmh } from "./modules/mapModule.js";
-const map = getMap();
 async function loadAnalytics(query = "") {
 
     let data;
@@ -49,21 +45,6 @@ async function loadAnalytics(query = "") {
     });
 
     tbody.appendChild(fragment);
-}
-function openAnalytics() {
-
-    activePanel = "analytics";
-    localStorage.setItem("activePanel", activePanel);
-
-    // Hide all panels
-    document.querySelectorAll(".vehicle-panel")
-        .forEach(p => p.style.display = "none");
-
-    // Show device panel
-    document.getElementById("devicePanel").style.display = "block";
-
-    // Hide analytics panel initially
-    document.getElementById("analyticsPanel").style.display = "none";
 }
 async function loadDailyChart(query = "") {
 
@@ -173,9 +154,6 @@ async function applyFilters() {
     }
     document.body.style.opacity = 1;
 }
-async function init() {
-    console.log("✅ Analytics module ready");
-}
 async function fetchTrip() {
 
 
@@ -240,4 +218,3 @@ function showAnalytics(stats) {
     }
 }
 window.fetchTrip = fetchTrip;
-init();

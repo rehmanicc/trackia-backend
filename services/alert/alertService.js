@@ -1,9 +1,8 @@
 const Alert = require("../../models/Alert");
 // 🔥 Prevent duplicate spam
-
+const { dispatch } = require("../notification/dispatcher");
 const COOLDOWN = 15000; // 15 seconds
 const recent = null;
-const { triggerCall } = require("../callService");
 async function createAlert(alertData, io) {
     try {
         console.log("📥 createAlert called:", alertData);
@@ -24,19 +23,11 @@ async function createAlert(alertData, io) {
 
         // ✅ SINGLE EMIT
         if (io) {
-            io.emit("alert", alertDoc);
+            await dispatch(alertDoc, io);
         }
 
         console.log("🚨 ALERT:", alertData.type, alertData.deviceId);
-
-        if (alertDoc.priority === "high") {
-            try {
-                await triggerCall(alertDoc);
-            } catch (err) {
-                console.error("Call trigger failed:", err);
-            }
-        }
-
+        
         return alertDoc;
 
     } catch (error) {

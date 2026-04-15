@@ -8,10 +8,6 @@ async function triggerCall(alert) {
 
     try {
 
-        // ✅ Only HIGH priority
-        if (alert.priority !== "high") return;
-
-        // ✅ Get device
         const device = await Device.findOne({
             traccarId: alert.deviceId
         }).populate("assignedTo");

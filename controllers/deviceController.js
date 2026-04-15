@@ -13,14 +13,16 @@ exports.createDevice = async (req, res, next) => {
 
   try {
 
-    // 🔥 FIX 1: Owner must provide adminId
+    const { logAudit } = require("../services/audit/auditService"); // 🔥 add
+
+    // 🔥 FIX 1
     if (user.role === "owner" && !req.body.adminId) {
       return res.status(400).json({
         error: "adminId is required when owner creates device"
       });
     }
 
-    // 🔥 FIX 2: Verify admin exists
+    // 🔥 FIX 2
     if (user.role === "owner") {
       const adminExists = await User.findOne({
         _id: req.body.adminId,
@@ -34,7 +36,6 @@ exports.createDevice = async (req, res, next) => {
       }
     }
 
-    // ⬇️ YOUR EXISTING CODE CONTINUES
     const existingMongo = await Device.findOne({ uniqueId });
 
     if (existingMongo) {
@@ -43,7 +44,6 @@ exports.createDevice = async (req, res, next) => {
       });
     }
 
-    // ✅ CONTINUE createDevice (YOU LOST THIS PART)
     const traccarRes = await traccarAPI.get("/api/devices");
     const traccarDevices = traccarRes.data;
 
@@ -73,6 +73,23 @@ exports.createDevice = async (req, res, next) => {
       isActive: true
     });
 
+    // 🔥 AUDIT LOG (ADD HERE)
+    try {
+      await logAudit({
+        userId: user._id,
+        action: "CREATE_DEVICE",
+        entity: "Device",
+        entityId: device._id,
+        metadata: {
+          name,
+          uniqueId,
+          adminId: device.adminId
+        }
+      });
+    } catch (e) {
+      console.error("Audit failed:", e);
+    }
+
     res.json(device);
 
   } catch (err) {
@@ -82,7 +99,7 @@ exports.createDevice = async (req, res, next) => {
       error: err.response?.data?.message || err.message
     });
   }
-}; // ✅ THIS LINE FIXES YOUR ERROR
+};
 exports.getDevices = async (req, res) => {
   try {
     const user = req.user;
@@ -130,17 +147,42 @@ exports.getDevices = async (req, res) => {
 // DELETE DEVICE
 exports.deleteDevice = async (req, res) => {
   try {
+    const { logAudit } = require("../services/audit/auditService"); // 🔥 add
+
     const device = await Device.findById(req.params.id);
 
     if (!device) return res.status(404).json({ error: "Not found" });
+
+    // 🔥 Capture data BEFORE delete (important)
+    const deviceData = {
+      name: device.name,
+      uniqueId: device.uniqueId,
+      traccarId: device.traccarId,
+      adminId: device.adminId
+    };
+
     await traccarAPI.delete(`/api/devices/${device.traccarId}`);
 
     await Geofence.deleteMany({
       deviceId: device.traccarId
     });
 
-    // 🔥 2. Delete device from Mongo
+    // 🔥 Delete device
     await device.deleteOne();
+
+    // 🔥 AUDIT LOG (ADD HERE)
+    try {
+      await logAudit({
+        userId: req.user.id,
+        action: "DELETE_DEVICE",
+        entity: "Device",
+        entityId: device._id,
+        metadata: deviceData
+      });
+    } catch (e) {
+      console.error("Audit failed:", e);
+    }
+
     res.json({ message: "Device deleted" });
 
   } catch (err) {
@@ -151,6 +193,7 @@ exports.deleteDevice = async (req, res) => {
 exports.assignDevice = async (req, res) => {
   try {
     const mongoose = require("mongoose");
+    const { logAudit } = require("../services/audit/auditService"); // 🔥 add
 
     const { userId } = req.body;
     const deviceId = req.params.id;
@@ -173,14 +216,17 @@ exports.assignDevice = async (req, res) => {
     if (!device || !user) {
       return res.status(404).json({ error: "Not found" });
     }
+
     if (device.assignedTo) {
       console.log("♻️ Overwriting assignment for device:", device._id);
     }
+
     if (String(device.adminId) !== String(user.adminId)) {
       return res.status(400).json({
         error: "User and device belong to different admins"
       });
     }
+
     if (
       req.user.role === "admin" &&
       String(device.adminId) !== String(req.user.id)
@@ -192,6 +238,22 @@ exports.assignDevice = async (req, res) => {
 
     device.assignedTo = userId;
     await device.save();
+
+    // 🔥 AUDIT LOG (ADD HERE)
+    try {
+      await logAudit({
+        userId: req.user.id,
+        action: "ASSIGN_DEVICE",
+        entity: "Device",
+        entityId: device._id,
+        metadata: {
+          assignedTo: userId
+        }
+      });
+    } catch (e) {
+      console.error("Audit failed:", e);
+    }
+
     res.json({
       message: "Device assigned successfully",
       assignedTo: device.assignedTo
@@ -205,6 +267,8 @@ exports.assignDevice = async (req, res) => {
 // UNASSIGN DEVICE
 exports.unassignDevice = async (req, res) => {
   try {
+    const { logAudit } = require("../services/audit/auditService"); // 🔥 add
+
     const device = await Device.findById(req.params.id);
 
     if (!device) {
@@ -217,12 +281,26 @@ exports.unassignDevice = async (req, res) => {
 
     console.log("🔄 Unassigning device:", device._id);
 
+    const previousUser = device.assignedTo; // 🔥 capture before removing
+
     device.assignedTo = null;
 
-    // 🔥 OPTIONAL (recommended)
-    // device.adminId = null;
-
     await device.save();
+
+    // 🔥 AUDIT LOG
+    try {
+      await logAudit({
+        userId: req.user.id,
+        action: "UNASSIGN_DEVICE",
+        entity: "Device",
+        entityId: device._id,
+        metadata: {
+          previousAssignedTo: previousUser
+        }
+      });
+    } catch (e) {
+      console.error("Audit failed:", e);
+    }
 
     res.json({ message: "Device unassigned successfully" });
 

@@ -28,10 +28,7 @@ async function handleLogin() {
                 const payload = JSON.parse(atob(data.token.split(".")[1]));
 
                 appState.userRole = payload.role;
-                appState.userPermissions = payload.permissions || [];
                 localStorage.setItem("userRole", payload.role);
-
-                console.log("User role:", window.userRole);
 
             } catch (e) {
                 console.error("Token parse error");

@@ -1,5 +1,6 @@
 const GeofenceEvent = require("../models/GeofenceEvent");
 const { createAlert } = require("./alert/alertService");
+const Geofence = require("../models/Geofence");
 async function saveGeofenceEvent(event, io) {
     try {
 
@@ -26,17 +27,21 @@ async function saveGeofenceEvent(event, io) {
             position: event.position
         });
 
-        console.log("🚨 EVENT REACHED:", event);
+        const geo = await Geofence.findById(event.geofenceId);
+        const geoName = geo?.name || "geofence";
 
         const result = await createAlert({
             deviceId: String(event.deviceId),
             type: event.type === "ENTER" ? "GEOFENCE_ENTER" : "GEOFENCE_EXIT",
             message:
                 event.type === "ENTER"
-                    ? `Vehicle ${event.deviceId} entered geofence`
-                    : `Vehicle ${event.deviceId} exited geofence`,
-            metadata: { geofenceId: event.geofenceId },
-            priority: event.type === "EXIT" ? "high" : "medium"
+                    ? `Vehicle ${event.deviceId} entered ${geoName}`
+                    : `Vehicle ${event.deviceId} exited ${geoName}`,
+            metadata: {
+                geofenceId: event.geofenceId,
+                geofenceName: geoName // 🔥 ADD THIS
+            },
+            priority: "medium"
         }, io);
 
         console.log("🚨 ALERT RESULT:", result);

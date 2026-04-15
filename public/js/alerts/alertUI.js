@@ -38,10 +38,18 @@ function renderAlerts(alerts = []) {
         else {
             div.classList.add("alert-low");
         }
-        div.innerHTML = `
-            ${a.message}<br>
-            <small>${new Date(a.timestamp).toLocaleTimeString()}</small>
-        `;
+        const icon =
+    a.type.includes("EXIT") ? "🚧" :
+    a.type.includes("ENTER") ? "📍" :
+    a.type.includes("OVERSPEED") ? "⚡" :
+    a.type.includes("ENGINE_ON") ? "🟢" :
+    a.type.includes("ENGINE_OFF") ? "🔴" :
+    "🔔";
+
+div.innerHTML = `
+    ${icon} ${a.message}<br>
+    <small>${new Date(a.timestamp).toLocaleTimeString()}</small>
+`;
         div.onclick = () => markAlertRead(a.timestamp);
 
         container.appendChild(div);

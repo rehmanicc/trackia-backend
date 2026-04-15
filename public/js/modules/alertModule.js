@@ -24,9 +24,22 @@ export function initAlertModule() {
         if (window.alertUI?.renderAlerts) {
             window.alertUI.renderAlerts(alertList);
         }
-        const type = alert.priority === "high" ? "error" : "success";
+        const type =
+            alert.type === "BATTERY_DISCONNECTED" ? "error" :
+                alert.type === "GEOFENCE_EXIT" ? "warning" :
+                    "success";
         if (window.alertUI?.showToast) {
             window.alertUI.showToast(alert.message, type);
+        }
+
+        // 🔊 SOUND FOR CRITICAL ALERTS
+        if (alert.type === "BATTERY_DISCONNECTED") {
+            const audio = new Audio("/sounds/alert.mp3");
+            audio.play().catch(() => { });
+        }
+        if (alert.type === "GEOFENCE_EXIT") {
+            const audio = new Audio("/sounds/soft-alert.mp3");
+            audio.play().catch(() => { });
         }
     });
 }
@@ -42,8 +55,8 @@ window.markAlertRead = function (timestamp) {
     saveAlertsToStorage();
 
     if (window.alertUI?.renderAlerts) {
-    window.alertUI.renderAlerts(alertList);
-}
+        window.alertUI.renderAlerts(alertList);
+    }
 };
 window.clearReadAlerts = function () {
 
@@ -56,8 +69,8 @@ window.clearReadAlerts = function () {
     saveAlertsToStorage();
     saveCleared();
     if (window.alertUI?.renderAlerts) {
-    window.alertUI.renderAlerts(alertList);
-}
+        window.alertUI.renderAlerts(alertList);
+    }
 };
 function saveCleared() {
     localStorage.setItem("clearedAlerts", JSON.stringify([...clearedTimestamps]));
@@ -97,8 +110,8 @@ window.filterAlerts = function (type) {
     }
 
     if (window.alertUI?.renderAlerts) {
-    window.alertUI.renderAlerts(filtered);
-}
+        window.alertUI.renderAlerts(filtered);
+    }
 };
 window.clearAllAlerts = function () {
     if (!confirm("Clear all alerts?")) return;
@@ -110,8 +123,8 @@ window.clearAllAlerts = function () {
     localStorage.removeItem("clearedAlerts");
 
     if (window.alertUI?.renderAlerts) {
-    window.alertUI.renderAlerts([]);
-}
+        window.alertUI.renderAlerts([]);
+    }
 };
 export async function loadInitialAlerts() {
 
@@ -135,8 +148,8 @@ export async function loadInitialAlerts() {
             });
 
         if (window.alertUI?.renderAlerts) {
-    window.alertUI.renderAlerts(alertList);
-}
+            window.alertUI.renderAlerts(alertList);
+        }
 
     } catch (err) {
         console.error("❌ Failed to load alerts", err);

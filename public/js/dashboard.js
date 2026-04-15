@@ -11,7 +11,7 @@ let geofenceLayers = {};
 let geofences = [];
 let drawnItems;
 let map;
-let routeLine = null;
+
 let drawControl;
 let collapsedDevices = Object.create(null);
 let selectedGeofenceId = null;
@@ -22,53 +22,6 @@ const vehicleRefsMap = new Map();
 // PERMISSION GROUPS (v2.4)
 // ===============================
 
-const PERMISSION_GROUPS = {
-    DEVICES: {
-        label: "🚗 Devices",
-        permissions: [
-            "VIEW_DEVICE",
-            "EDIT_DEVICE",
-            "SEND_COMMAND",
-            "ENGINE_CONTROL"
-        ]
-    },
-    GEOFENCE: {
-        label: "📍 Geofencing",
-        permissions: [
-            "GEOFENCE_VIEW",
-            "GEOFENCE_CREATE",
-            "GEOFENCE_EDIT",
-            "GEOFENCE_DELETE"
-        ]
-    },
-    SYSTEM: {
-        label: "⚙️ System",
-        permissions: [
-            "EDIT_SPEED",
-            "EDIT_FUEL",
-            "RENEW_DEVICE"
-        ]
-    }
-};
-
-// ===============================
-// HUMAN READABLE LABELS
-// ===============================
-const PERMISSION_LABELS = {
-    VIEW_DEVICE: "View Devices",
-    EDIT_DEVICE: "Edit Devices",
-    SEND_COMMAND: "Send Commands",
-    RENEW_DEVICE: "Renew Devices",
-    ENGINE_CONTROL: "Engine Control (ON/OFF)",
-
-    EDIT_SPEED: "Edit Speed Limit",
-    EDIT_FUEL: "Edit Fuel Settings",
-
-    GEOFENCE_VIEW: "View Geofences",
-    GEOFENCE_CREATE: "Create Geofence",
-    GEOFENCE_EDIT: "Edit Geofence",
-    GEOFENCE_DELETE: "Delete Geofence"
-};
 const DOM = {
     vehicleList: document.getElementById("vehicleList"),
     countMoving: document.getElementById("countMoving"),
@@ -77,6 +30,7 @@ const DOM = {
     countOffline: document.getElementById("countOffline")
 };
 import { appState } from "./state/appState.js";
+import { computeStatus, computeAllStatuses } from "./state/statusEngine.js";
 
 import {
     initSocket,
@@ -88,6 +42,7 @@ import { createVehicleCardElement } from "./components/vehicleCard.js";
 import { apiRequest } from "./services/apiService.js";
 import { hasPermission } from "./components/permissions.js";
 import { subscribe } from "./state/uiState.js";
+import { loadAuditLogs } from "./modules/auditModule.js";
 import {
     parseLatLng,
     toKmh,
@@ -187,15 +142,6 @@ function createButton({ text, className = "", onClick = "", title = "" }) {
             ${text}
         </button>
     `;
-}
-async function safeApi(call, fallback = null) {
-    try {
-        return await call();
-    } catch (err) {
-        console.error("API Error:", err);
-        alert("Something went wrong. Please try again.");
-        return fallback;
-    }
 }
 
 window.createUser = async function () {
@@ -330,8 +276,13 @@ window.confirmPlayback = function () {
 }
 async function fetchAllowedDevices() {
     try {
-        const devices = await safeApi(() => apiRequest("/api/devices"), []);
-        allowedDevices = {};
+        let devices = [];
+
+        try {
+            devices = await apiRequest("/api/devices") || [];
+        } catch (err) {
+            console.error("❌ Error fetching devices:", err);
+        } allowedDevices = {};
         devices.forEach(device => {
             allowedDevices[String(device.traccarId)] = device;
         });
@@ -525,11 +476,11 @@ async function initApp() {
     const token = localStorage.getItem("token");
     initSocket(token);
     initAlertModule();
+    await loadUsersCache();
     await loadInitialAlerts();
     await fetchAllowedDevices();
     await loadGeofences();
     await loadInitialPositions();
-    await loadUsersCache();
     await loadCurrentUserPermissions();
     // POSITIONS
     let positionBuffer = [];
@@ -720,27 +671,12 @@ function updateVehicleList(positions) {
 
     const visibleIds = new Set();
 
-    let counts = {
-        moving: 0,
-        idle: 0,
-        stopped: 0,
-        offline: 0
-    };
-
     Object.values(allowedDevices).forEach(device => {
 
         const id = String(device.traccarId);
+        const pos = lastPositions[id];
+        const status = computeStatus(pos);
 
-        // ✅ Use position if exists
-        const pos = lastPositions[id] || {
-            deviceId: id,
-            speedKmh: 0,
-            deviceTime: new Date().toISOString()
-        };
-
-        const status = device.status || "offline";
-
-        counts[status]++;
 
         // 🔍 FILTERS
         if (statusFilter !== "all" && status !== statusFilter) return;
@@ -766,9 +702,10 @@ function updateVehicleList(positions) {
         }
 
         const statusClass = {
-            online: "status-online",
-            offline: "status-offline",
-            unknown: "status-unknown"
+            moving: "status-online",
+            idle: "status-idle",
+            stopped: "status-stopped",
+            offline: "status-offline"
         }[status] || "status-unknown";
 
         if (!card) {
@@ -799,10 +736,9 @@ function updateVehicleList(positions) {
         const prev = lastRenderedData.get(id);
 
         const newData =
-            pos.speedKmh + "|" +
+            (pos?.speedKmh || 0) + "|" +
             status + "|" +
-            pos.deviceTime + "|" +
-            (device.name || "");
+            (pos?.deviceTime || "");
 
         if (prev !== newData) {
             const refs = vehicleRefsMap.get(id);
@@ -831,7 +767,8 @@ function updateVehicleList(positions) {
         }
     });
 
-    // ✅ UPDATE STATS
+    const { counts } = computeAllStatuses(lastPositions);
+
     DOM.countMoving.innerText = counts.moving;
     DOM.countIdle.innerText = counts.idle;
     DOM.countStopped.innerText = counts.stopped;
@@ -972,6 +909,11 @@ window.switchPanel = function (panel) {
             if (headerTitle) headerTitle.innerText = "Create Device";
             loadAdminsForDevice();
             break;
+        case "audit":
+            document.getElementById("auditPanel").classList.add("active");
+            headerTitle.innerText = "Audit Logs";
+            loadAuditLogs();
+            break;
     }
     setState({ activePanel: panel });
 
@@ -1085,10 +1027,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         userDisplay.innerText = `👤 ${payload.name || "User"} (${roleLabel})`;
     }
-    const adminPanel = document.getElementById("adminPanel");
-    const userPanel = document.getElementById("userPanel");
-    const roleSelect = document.getElementById("newUserRole");
-
     const startIcon = L.icon({
         iconUrl: "https://maps.google.com/mapfiles/ms/icons/green-dot.png",
         iconSize: [32, 32],

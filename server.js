@@ -38,6 +38,7 @@ app.post("/api/call/clear", (req, res) => {
   clearCalls();
   res.json({ success: true });
 });
+
 // ======================
 // MONGODB CONNECTION
 // ======================
@@ -83,6 +84,7 @@ app.use("/api/analytics", analyticsRoutes);
 app.use("/api/devices", deviceRoutes);
 app.use("/api/alerts", alertRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/audit", require("./routes/auditRoutes"));
 // ======================
 // DB CHECK ROUTE
 // ======================
