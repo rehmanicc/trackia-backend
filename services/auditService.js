@@ -1,5 +1,4 @@
-const AuditLog = require("../../models/AuditLog");
-
+const AuditLog = require("../models/AuditLog");
 async function logAudit({ userId, action, entity, entityId, metadata }) {
   try {
     await AuditLog.create({

@@ -182,6 +182,10 @@ window.createUser = async function () {
 //command function
 
 window.sendCommand = async function (deviceId, type) {
+    if (!hasPermission("SEND_COMMAND")) {
+        alert("No permission to send command");
+        return;
+    }
     if (!deviceId || !type) {
         alert("Invalid command");
         return;

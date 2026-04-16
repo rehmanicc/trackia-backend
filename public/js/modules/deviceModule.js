@@ -86,14 +86,26 @@ function createDeviceControlCard(device) {
     }
 
     engineBtn.onclick = async () => {
+
+        // ✅ STEP 1 — Permission check
         if (!hasPermission("ENGINE_CONTROL")) {
             alert("No permission for engine control");
             return;
         }
+
+        // ✅ STEP 2 — Engine ON restriction (Owner/Admin control)
         if (!device.engineAllowed && !engineState) {
             alert("Engine ON is restricted by Admin/Owner");
             return;
         }
+
+        // ✅ STEP 3 — HARD LOCK (NEW — REQUIRED)
+        if (device.engineLockedBy && !engineState) {
+            alert(`Engine locked by ${device.engineLockedBy}`);
+            return;
+        }
+
+        // ✅ STEP 4 — Tracker check
         if (!device.traccarId) {
             alert("Device not linked to tracker");
             return;
