@@ -2,9 +2,27 @@ import { appState } from "../state/appState.js";
 
 export function hasPermission(permission) {
 
-    // ✅ Owner bypass
-    if (appState.userRole === "owner") return true;
+    const role = appState.userRole;
+    const perms = appState.userPermissions || [];
 
-    // ✅ Use centralized permissions
-    return appState.userPermissions.includes(permission);
+    // ✅ OWNER → full access
+    if (role === "owner") return true;
+
+    // ✅ ADMIN → restricted
+    if (role === "admin") {
+
+        // ❌ Admin cannot renew unless explicitly allowed
+        if (permission === "RENEW_DEVICE" && !perms.includes("RENEW_DEVICE")) {
+            return false;
+        }
+
+        return perms.includes(permission);
+    }
+
+    // ✅ USER → only assigned permissions
+    if (role === "user") {
+        return perms.includes(permission);
+    }
+
+    return false;
 }

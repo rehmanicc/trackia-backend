@@ -41,7 +41,7 @@ function createDeviceControlCard(device) {
     // ===============================
     const select = document.createElement("select");
     select.className = "";
-    select.innerHTML = `<option value="">-- Select Geofence --</option>`;
+    select.innerHTML = `<option value="">-Select Geofence for Call-</option>`;
 
     const deviceGeofences = window.geofences?.filter(
         g => String(g.deviceId) === String(device._id)
@@ -86,7 +86,14 @@ function createDeviceControlCard(device) {
     }
 
     engineBtn.onclick = async () => {
-
+        if (!hasPermission("ENGINE_CONTROL")) {
+            alert("No permission for engine control");
+            return;
+        }
+        if (!device.engineAllowed && !engineState) {
+            alert("Engine ON is restricted by Admin/Owner");
+            return;
+        }
         if (!device.traccarId) {
             alert("Device not linked to tracker");
             return;
@@ -138,16 +145,24 @@ function createDeviceControlCard(device) {
     const speedWrap = document.createElement("div");
     speedWrap.className = "inline-group";
     speedWrap.innerHTML = `<label>Speed Limit</label>`;
+    if (!hasPermission("EDIT_SPEED")) {
+        speedInput.disabled = true;
+    }
     speedWrap.appendChild(speedInput);
 
     const fuelWrap = document.createElement("div");
     fuelWrap.className = "inline-group";
     fuelWrap.innerHTML = `<label>Fuel Efficiency</label>`;
+    if (!hasPermission("EDIT_FUEL")) {
+        fuelInput.disabled = true;
+    }
     fuelWrap.appendChild(fuelInput);
 
     inputRow.appendChild(speedWrap);
     inputRow.appendChild(fuelWrap);
-
+    const saveBtn = document.createElement("button");
+    saveBtn.innerText = "💾 Save";
+    saveBtn.className = "btn-save";
     // ===============================
     // 🔥 CALL + ENGINE ROW
     // ===============================
@@ -160,22 +175,25 @@ function createDeviceControlCard(device) {
 
     const engineWrap = document.createElement("div");
     engineWrap.className = "inline-group";
-    engineWrap.innerHTML = `<label>Engine</label>`;
     engineWrap.appendChild(engineBtn);
     engineWrap.style.display = "flex";
-    engineWrap.style.flexDirection = "column";
+    engineWrap.style.alignItems = "center";
+    engineWrap.style.justifyContent = "space-between";
 
     controlRow.appendChild(callWrap);
     controlRow.appendChild(engineWrap);
+    controlRow.appendChild(saveBtn);
     // 🔥 ACTION BUTTONS
     const actionLeft = document.createElement("div");
     actionLeft.className = "action-left";
 
     // Assign
     const assignBtn = document.createElement("button");
-    assignBtn.innerText = "Assign";
+    assignBtn.innerText = "👤Assign";
     assignBtn.className = "btn btn-primary";
-
+    if (!hasPermission("ASSIGN_DEVICE")) {
+        assignBtn.style.display = "none";
+    }
     assignBtn.onclick = () => {
         openAssign(device._id);
     };
@@ -184,7 +202,9 @@ function createDeviceControlCard(device) {
     const unassignBtn = document.createElement("button");
     unassignBtn.innerText = "Unassign";
     unassignBtn.className = "btn btn-warning";
-
+    if (!hasPermission("EDIT_DEVICE")) {
+        unassignBtn.style.display = "none";
+    }
     unassignBtn.onclick = () => {
         unassignDevice(device._id);
     };
@@ -193,7 +213,9 @@ function createDeviceControlCard(device) {
     const deleteBtn = document.createElement("button");
     deleteBtn.innerText = "Delete";
     deleteBtn.className = "btn btn-danger";
-
+    if (!hasPermission("DELETE_DEVICE")) {
+        deleteBtn.style.display = "none";
+    }
     deleteBtn.onclick = () => {
         deleteDevice(device._id);
     };
@@ -204,9 +226,6 @@ function createDeviceControlCard(device) {
     // ===============================
     // 🔥 SAVE BUTTON (BOTTOM)
     // ===============================
-    const saveBtn = document.createElement("button");
-    saveBtn.innerText = "💾 Save";
-    saveBtn.className = "btn-save";
 
     // ===============================
     // 🔥 ROW 4 — ACTION BUTTONS
@@ -218,13 +237,7 @@ function createDeviceControlCard(device) {
     actionRow.appendChild(unassignBtn);
     actionRow.appendChild(deleteBtn);
 
-    // ===============================
-    // 🔥 ROW 5 — SAVE BUTTON
-    // ===============================
-    const saveRow = document.createElement("div");
-    saveRow.className = "save-row";
 
-    saveRow.appendChild(saveBtn);
     // ===============================
     // 🔥 SAVE ALL SETTINGS
     // ===============================
@@ -275,7 +288,6 @@ function createDeviceControlCard(device) {
     body.appendChild(inputRow);
     body.appendChild(controlRow);
     body.appendChild(actionRow);
-    body.appendChild(saveRow);
 
     root.appendChild(header);
     root.appendChild(body);

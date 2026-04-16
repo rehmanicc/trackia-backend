@@ -154,6 +154,19 @@ body {
 }
 
 /* SIDEBAR */
+
+.logo {
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 30px;
+}
+
+.vehicle-actions {
+    display: flex;
+    gap: 6px;
+}
+
+
 .sidebar {
     width: 240px;
     background: #111827;
@@ -163,12 +176,6 @@ body {
     padding: 20px;
 }
 
-.logo {
-    font-size: 20px;
-    font-weight: bold;
-    margin-bottom: 30px;
-}
-
 .sidebar ul {
     list-style: none;
 }
@@ -176,14 +183,23 @@ body {
 .sidebar li {
     padding: 12px;
     margin-bottom: 8px;
-    cursor: pointer;
-    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    line-height: 1;
+
+}
+
+.sidebar ul {
+    margin: 0;
+    padding: 0;
 }
 
 .sidebar li:hover,
 .sidebar .active {
     background: #1f2937;
 }
+
+
 
 .user {
     margin-top: auto;
@@ -295,6 +311,14 @@ body {
 .vehicle-card {
     cursor: pointer;
     transition: 0.2s;
+
+    /* 🔥 ADD THESE */
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 10px;
+
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 .vehicle-card:hover {
@@ -2093,6 +2117,7 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     background: var(--primary);
     color: white;
 }
+
 .vehicle-header {
     display: flex;
     justify-content: space-between;
@@ -2100,6 +2125,7 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     font-weight: 600;
     gap: 6px;
 }
+
 .vehicle-header div:first-child {
     flex: 1;
 }
@@ -2144,6 +2170,7 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     background: #4caf50;
     color: white;
 }
+
 /* 🔥 INPUT STYLE */
 .input {
     width: 100%;
@@ -2157,4 +2184,118 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     display: flex;
     gap: var(--gap);
     margin-bottom: 10px;
+}
+
+/* 🔥 CONTROL ROW FIX */
+.control-row {
+    display: flex;
+    gap: var(--gap);
+    align-items: center;
+}
+
+.control-row .inline-group {
+    flex: 1;
+}
+
+/* 🔥 ENGINE INLINE FIX */
+
+
+.control-row .inline-group:last-child label {
+    margin: 0;
+}
+
+.control-row .inline-group:last-child .btn {
+    width: auto;
+    padding: 6px 10px;
+}
+
+.control-row .inline-group {
+    flex: 1;
+}
+
+.btn-engine {
+    background: #10b981;
+    color: white;
+}
+
+.btn-save {
+    width: 60%;
+    padding: 10px;
+    background: var(--primary);
+    color: white;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.action-row .btn {
+    height: 36px;
+}
+
+/* 🔥 CALL TOGGLE FIX */
+.inline-group label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.input {
+    font-size: 13px;
+}
+
+.vehicle-body {
+    margin-top: 6px;
+    font-size: 12px;
+    padding: 10px;
+    /* 🔥 ADD THIS */
+}
+
+/* 🔥 ENGINE INLINE FIX */
+.control-row .inline-group:last-child {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* 🔥 CONTROL ROW BALANCE */
+.control-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Call takes space */
+.control-row .inline-group:first-child {
+    flex: 1;
+}
+
+/* Engine stays compact */
+.control-row .inline-group:last-child {
+    flex: 1;
+}
+
+/* Save button inline */
+.control-row .btn-save {
+    width: auto;
+    padding: 6px 12px;
+    height: 32px;
+    white-space: nowrap;
+}
+
+/* 🔥 ENGINE BUTTON ALIGN */
+.control-row .inline-group:last-child {
+    display: flex;
+    justify-content: flex-start;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+}
+
+.inline-group input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: var(--primary);
+    /* 🔥 matches your theme */
 }
