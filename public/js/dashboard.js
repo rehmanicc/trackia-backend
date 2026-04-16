@@ -31,7 +31,8 @@ const DOM = {
 };
 import { appState } from "./state/appState.js";
 import { computeStatus, computeAllStatuses } from "./state/statusEngine.js";
-
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+import { getMessaging, getToken } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging.js";
 import {
     initSocket,
     onPositions,
@@ -485,6 +486,7 @@ async function initApp() {
     const token = localStorage.getItem("token");
     initSocket(token);
     initAlertModule();
+
     await loadUsersCache();
     await loadInitialAlerts();
     await fetchAllowedDevices();
@@ -1151,6 +1153,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     initApp();
+    getFCMToken();
 });
 async function loadAdminsForDevice() {
     try {
@@ -1187,4 +1190,47 @@ async function loadCurrentUserPermissions() {
     } catch (err) {
         console.error("Failed to load permissions", err);
     }
+}
+
+const firebaseConfig = {
+  apiKey: "AIzaSyARTNHa7_oa28ZM5qfOuxa55bvwzEWZpNc",
+  authDomain: "trackiatech.firebaseapp.com",
+  projectId: "trackiatech",
+  messagingSenderId: "592029796394",
+  appId: "1:592029796394:web:81218f9d0fba816f66db53"
+};
+
+const app = initializeApp(firebaseConfig);
+const messaging = getMessaging(app);
+
+async function getFCMToken() {
+  try {
+    console.log("🚀 Requesting permission...");
+
+    const permission = await Notification.requestPermission();
+    console.log("🔐 Permission:", permission);
+
+    const token = await getToken(messaging, {
+      vapidKey: "BPNeA64Sqaemp9nqRqosx7JP4UN7YVIfBqjIzuS0I_yTwwyJ6am7lcZa1Hnd7exLNk3syDaNlqKr74CsFjkV11Y"
+    });
+
+    console.log("🔥 FCM TOKEN:", token);
+
+    // ✅ ADD THIS PART (IMPORTANT)
+    if (token) {
+      await fetch("https://trackia-backend.onrender.com/api/users/save-fcm-token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + localStorage.getItem("token")
+        },
+        body: JSON.stringify({ token })
+      });
+
+      console.log("✅ Token saved to backend");
+    }
+
+  } catch (err) {
+    console.error("❌ Token error:", err);
+  }
 }

@@ -219,5 +219,29 @@ router.post("/fcm-token", authMiddleware, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+router.post("/save-fcm-token", authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { token } = req.body;
+
+    const user = await User.findById(userId);
+
+    if (!user.fcmTokens) user.fcmTokens = [];
+
+    if (!user.fcmTokens.includes(token)) {
+      user.fcmTokens.push(token);
+    }
+
+    await user.save();
+
+    console.log("✅ FCM token saved:", token);
+
+    res.json({ message: "Token saved" });
+
+  } catch (err) {
+    console.error("❌ Save token error:", err);
+    res.status(500).json({ error: "Failed to save token" });
+  }
+});
 
 module.exports = router;
