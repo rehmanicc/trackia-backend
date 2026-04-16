@@ -203,7 +203,7 @@ setInterval(() => {
 app.get("/test-alert", async (req, res) => {
   const { dispatch } = require("./services/notification/dispatcher");
   const alert = await Alert.create({
-    deviceId: "123",
+    deviceId: "155",
     type: "ENGINE_ON",
     message: "Test alert working"
   });
