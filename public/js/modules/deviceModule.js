@@ -5,6 +5,283 @@ import { hasPermission } from "../components/permissions.js";
 const getUsers = () => window.cachedUsers || [];
 const switchPanel = window.switchPanel;
 const alertUI = window.alertUI;
+function createDeviceControlCard(device) {
+
+    const root = document.createElement("div");
+    root.className = "vehicle-card";
+
+    let expanded = false;
+
+    // 🔹 HEADER
+    const header = document.createElement("div");
+    header.className = "vehicle-header";
+
+    const name = document.createElement("div");
+    name.innerText = "📦 " + device.name;
+
+    const expandIcon = document.createElement("span");
+    expandIcon.innerText = "▼";
+
+    header.appendChild(name);
+    header.appendChild(expandIcon);
+
+    // 🔹 BODY
+    const body = document.createElement("div");
+    body.className = "vehicle-body";
+    body.style.display = "none";
+
+    header.onclick = () => {
+        expanded = !expanded;
+        body.style.display = expanded ? "block" : "none";
+        expandIcon.innerText = expanded ? "▲" : "▼";
+    };
+
+    // ===============================
+    // 🔥 GEOFENCE DROPDOWN
+    // ===============================
+    const select = document.createElement("select");
+    select.className = "";
+    select.innerHTML = `<option value="">-- Select Geofence --</option>`;
+
+    const deviceGeofences = window.geofences?.filter(
+        g => String(g.deviceId) === String(device._id)
+    ) || [];
+
+    deviceGeofences.forEach(g => {
+        const option = document.createElement("option");
+        option.value = g._id;
+        option.textContent = g.name;
+        select.appendChild(option);
+    });
+
+    if (device.callGeofenceId) {
+        select.value = device.callGeofenceId;
+    }
+
+    const geoRow = document.createElement("div");
+    geoRow.className = "geo-row";
+    geoRow.appendChild(select);
+
+    // ===============================
+    // 🔥 CALL TOGGLE
+    // ===============================
+    const toggleLabel = document.createElement("label");
+    toggleLabel.innerHTML = `<input type="checkbox"> Enable Call`;
+
+    const callToggle = toggleLabel.querySelector("input");
+    callToggle.checked = device.callEnabled ?? true;
+
+    // ===============================
+    // 🔥 ENGINE BUTTON
+    // ===============================
+    const engineBtn = document.createElement("button");
+    engineBtn.className = "btn btn-success";
+
+    let engineState = device.engineOn ?? false;
+    engineBtn.innerText = engineState ? "🟢 ON" : "🔴 OFF";
+
+    if (!device.traccarId) {
+        engineBtn.disabled = true;
+        engineBtn.innerText = "⚠️ No Tracker";
+    }
+
+    engineBtn.onclick = async () => {
+
+        if (!device.traccarId) {
+            alert("Device not linked to tracker");
+            return;
+        }
+
+        engineBtn.disabled = true;
+
+        const command = engineState ? "engineStop" : "engineResume";
+
+        try {
+            await apiRequest(`/api/commands/send`, {
+                method: "POST",
+                body: JSON.stringify({
+                    deviceId: device.traccarId,
+                    command
+                })
+            });
+
+            engineState = !engineState;
+            engineBtn.innerText = engineState ? "🟢 ON" : "🔴 OFF";
+
+        } catch (err) {
+            console.error(err);
+            alert("Engine command failed");
+        }
+
+        engineBtn.disabled = false;
+    };
+
+    // ===============================
+    // 🔥 SPEED + FUEL INPUTS
+    // ===============================
+    const speedInput = document.createElement("input");
+    speedInput.className = "input";
+    speedInput.value = device.speedLimit ?? "";
+
+    speedInput.placeholder = "Default from backend";
+
+    const fuelInput = document.createElement("input");
+    fuelInput.className = "input";
+    fuelInput.value = device.fuelEfficiency ?? "";
+
+    fuelInput.placeholder = "Default from backend";
+
+    // Row: Speed + Fuel
+    const inputRow = document.createElement("div");
+    inputRow.className = "input-row";
+
+    const speedWrap = document.createElement("div");
+    speedWrap.className = "inline-group";
+    speedWrap.innerHTML = `<label>Speed Limit</label>`;
+    speedWrap.appendChild(speedInput);
+
+    const fuelWrap = document.createElement("div");
+    fuelWrap.className = "inline-group";
+    fuelWrap.innerHTML = `<label>Fuel Efficiency</label>`;
+    fuelWrap.appendChild(fuelInput);
+
+    inputRow.appendChild(speedWrap);
+    inputRow.appendChild(fuelWrap);
+
+    // ===============================
+    // 🔥 CALL + ENGINE ROW
+    // ===============================
+    const controlRow = document.createElement("div");
+    controlRow.className = "control-row";
+
+    const callWrap = document.createElement("div");
+    callWrap.className = "inline-group";
+    callWrap.appendChild(toggleLabel);
+
+    const engineWrap = document.createElement("div");
+    engineWrap.className = "inline-group";
+    engineWrap.innerHTML = `<label>Engine</label>`;
+    engineWrap.appendChild(engineBtn);
+    engineWrap.style.display = "flex";
+    engineWrap.style.flexDirection = "column";
+
+    controlRow.appendChild(callWrap);
+    controlRow.appendChild(engineWrap);
+    // 🔥 ACTION BUTTONS
+    const actionLeft = document.createElement("div");
+    actionLeft.className = "action-left";
+
+    // Assign
+    const assignBtn = document.createElement("button");
+    assignBtn.innerText = "Assign";
+    assignBtn.className = "btn btn-primary";
+
+    assignBtn.onclick = () => {
+        openAssign(device._id);
+    };
+
+    // Unassign
+    const unassignBtn = document.createElement("button");
+    unassignBtn.innerText = "Unassign";
+    unassignBtn.className = "btn btn-warning";
+
+    unassignBtn.onclick = () => {
+        unassignDevice(device._id);
+    };
+
+    // Delete
+    const deleteBtn = document.createElement("button");
+    deleteBtn.innerText = "Delete";
+    deleteBtn.className = "btn btn-danger";
+
+    deleteBtn.onclick = () => {
+        deleteDevice(device._id);
+    };
+
+    actionLeft.appendChild(assignBtn);
+    actionLeft.appendChild(unassignBtn);
+    actionLeft.appendChild(deleteBtn);
+    // ===============================
+    // 🔥 SAVE BUTTON (BOTTOM)
+    // ===============================
+    const saveBtn = document.createElement("button");
+    saveBtn.innerText = "💾 Save";
+    saveBtn.className = "btn-save";
+
+    // ===============================
+    // 🔥 ROW 4 — ACTION BUTTONS
+    // ===============================
+    const actionRow = document.createElement("div");
+    actionRow.className = "action-row";
+
+    actionRow.appendChild(assignBtn);
+    actionRow.appendChild(unassignBtn);
+    actionRow.appendChild(deleteBtn);
+
+    // ===============================
+    // 🔥 ROW 5 — SAVE BUTTON
+    // ===============================
+    const saveRow = document.createElement("div");
+    saveRow.className = "save-row";
+
+    saveRow.appendChild(saveBtn);
+    // ===============================
+    // 🔥 SAVE ALL SETTINGS
+    // ===============================
+    saveBtn.onclick = async () => {
+        try {
+
+            await Promise.all([
+
+                // Call + Geofence
+                apiRequest(`/api/devices/${device._id}/call-settings`, {
+                    method: "POST",
+                    body: JSON.stringify({
+                        callEnabled: callToggle.checked,
+                        geofenceId: select.value
+                    })
+                }),
+
+                // Speed
+                apiRequest(`/api/devices/${device._id}/speed`, {
+                    method: "PUT",
+                    body: JSON.stringify({
+                        speedLimit: Number(speedInput.value)
+                    })
+                }),
+
+                // Fuel
+                apiRequest(`/api/devices/${device._id}/fuel`, {
+                    method: "PUT",
+                    body: JSON.stringify({
+                        fuelEfficiency: Number(fuelInput.value)
+                    })
+                })
+
+            ]);
+
+            alertUI?.showToast("All settings saved", "success");
+
+        } catch (err) {
+            console.error(err);
+            alert("Failed to save");
+        }
+    };
+
+    // ===============================
+    // 🔥 FINAL APPEND ORDER
+    // ===============================
+    body.appendChild(geoRow);
+    body.appendChild(inputRow);
+    body.appendChild(controlRow);
+    body.appendChild(actionRow);
+    body.appendChild(saveRow);
+
+    root.appendChild(header);
+    root.appendChild(body);
+
+    return root;
+}
 export async function loadDevices() {
 
     const container = document.getElementById("deviceList");
@@ -14,80 +291,16 @@ export async function loadDevices() {
         window.allDevices = devices;
         appState.allDevices = devices;
         container.innerHTML = `
-            <div class="device-header">
-                <input type="text" id="deviceSearch" placeholder="Search devices..." oninput="filterDevices()">
-            </div>
+    <div class="device-header">
+        <input type="text" id="deviceSearch" placeholder="Search devices..." oninput="filterDevices()">
+    </div>
+    <div id="deviceCardList"></div>
+`;
 
-            <table class="device-table">
-                <thead>
-                    <th>Name</th>
-                    <th>Tra ID</th>
-                    <th>Speed</th>
-                    <th>Assigned Users</th>
-                    <th>Actions</th>                   
-                </thead>
-                <tbody id="deviceTableBody"></tbody>
-            </table>
-        `;
-
-        const tbody = document.getElementById("deviceTableBody");
-
-        devices.forEach(d => {
-
-            const canManageDevices =
-                appState.userRole === "owner" ||
-                hasPermission?.("EDIT_DEVICE");
-            const canEditSpeed =
-                appState.userRole === "owner" ||
-                hasPermission?.("EDIT_SPEED");
-
-            let users = "-";
-
-            if (Array.isArray(d.assignedTo)) {
-                users = d.assignedTo.map(u => u.name || "User").join(", ");
-            }
-            else if (d.assignedTo && typeof d.assignedTo === "object") {
-                users = d.assignedTo.name || "User";
-            }
-
-            const row = document.createElement("tr");
-
-            row.innerHTML = `
-                <td>${d.name}</td>
-                <td>${d.traccarId}</td>
-
-                <td>
-                    <input 
-                        type="number" 
-                        value="${d.speedLimit ?? 70}" 
-                        onchange="updateSpeed('${d._id}', this.value)"
-                        style="width:70px;"
-                        ${canEditSpeed ? "" : "disabled"}
-                    >
-                </td>
-
-                <td>${users}</td>
-
-                <td>
-                    <div class="action-buttons">
-
-                        ${canManageDevices ? `
-                            <button onclick="openAssign('${d._id}')">👤</button>
-                        ` : ""}
-
-                        ${canManageDevices && d.assignedTo ? `
-                            <button onclick="unassignDevice('${d._id}')">❌</button>
-                        ` : ""}
-
-                        ${canManageDevices ? `
-                            <button onclick="deleteDevice('${d._id}')">🗑</button>
-                        ` : ""}
-
-                    </div>
-                </td>
-            `;
-
-            tbody.appendChild(row);
+        const list = document.getElementById("deviceCardList");
+        devices.forEach(device => {
+            const card = createDeviceControlCard(device);
+            list.appendChild(card);
         });
 
     } catch (err) {
@@ -117,11 +330,11 @@ export async function deleteDevice(id) {
 export function filterDevices() {
 
     const search = document.getElementById("deviceSearch").value.toLowerCase();
-    const rows = document.querySelectorAll("#deviceTableBody tr");
+    const cards = document.querySelectorAll("#deviceCardList .vehicle-card");
 
-    rows.forEach(row => {
-        const text = row.innerText.toLowerCase();
-        row.style.display = text.includes(search) ? "" : "none";
+    cards.forEach(card => {
+        const text = card.innerText.toLowerCase();
+        card.style.display = text.includes(search) ? "" : "none";
     });
 }
 
@@ -236,7 +449,7 @@ export async function openAssign(deviceId) {
     if (device.adminId) {
         adminSelect.value = device.adminId;
     }
-       // Open modal (ONLY ONCE, at end)
+    // Open modal (ONLY ONCE, at end)
     document.getElementById("assignModal").style.display = "flex";
 }
 

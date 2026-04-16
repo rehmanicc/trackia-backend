@@ -1,3 +1,141 @@
+:root {
+    --primary: #2563eb;
+    --danger: #ef4444;
+    --success: #10b981;
+    --warning: #f59e0b;
+
+    --bg: #f4f6f9;
+    --card: #ffffff;
+    --border: #e5e7eb;
+    --text: #111827;
+
+    --radius: 8px;
+    --gap: 10px;
+}
+
+.card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 12px;
+    margin-bottom: 10px;
+    border: 1px solid var(--border);
+}
+
+/* 🔥 UNIVERSAL LAYOUT SYSTEM */
+
+.row {
+    display: flex;
+    gap: var(--gap);
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.row-between {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--gap);
+}
+
+.col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 🔥 INLINE GROUP (label + input/button) */
+.inline-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* 🔥 DEVICE CONTROL LAYOUT FIX */
+
+.geo-row {
+    margin-bottom: 10px;
+}
+
+.geo-row select {
+    width: 100%;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+}
+
+/* Speed + Fuel row */
+
+
+/* Call + Engine row */
+.control-row {
+    display: flex;
+    gap: var(--gap);
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+/* 🔥 BUTTON SYSTEM */
+
+.btn {
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+
+.btn-danger {
+    background: var(--danger);
+    color: white;
+}
+
+.btn-success {
+    background: var(--success);
+    color: white;
+}
+
+.btn-warning {
+    background: var(--warning);
+    color: white;
+}
+
+/* Full / centered button */
+.btn-block {
+    width: 50%;
+    margin: auto;
+    display: block;
+}
+
+/* 🔥 ACTION ROW (Assign / Unassign / Delete) */
+
+.action-row {
+    display: flex;
+    gap: var(--gap);
+    margin-bottom: 10px;
+}
+
+.action-row .btn {
+    flex: 1;
+}
+
+/* 🔥 SAVE BUTTON ROW */
+
+.save-row {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+}
+
+.btn-save {
+    width: 50%;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -99,18 +237,6 @@ body {
     border-bottom: 1px solid #eee;
 }
 
-.action-buttons {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-    flex-wrap: nowrap;
-    overflow: hidden;
-}
-
-.action-buttons button {
-    flex-shrink: 0;
-    /* prevents wrapping */
-}
 
 .search-box input {
     width: 100%;
@@ -167,8 +293,6 @@ body {
 }
 
 .vehicle-card {
-    padding: 12px;
-    border-bottom: 1px solid #eee;
     cursor: pointer;
     transition: 0.2s;
 }
@@ -183,11 +307,7 @@ body {
 }
 
 /* HEADER */
-.vehicle-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
+
 
 .vehicle-name {
     font-weight: 600;
@@ -203,12 +323,6 @@ body {
     text-transform: capitalize;
 }
 
-/* BODY */
-.vehicle-body {
-    font-size: 12px;
-    color: #555;
-    margin-top: 6px;
-}
 
 /* STATS BAR */
 .stats-bar {
@@ -328,42 +442,14 @@ body {
     margin-left: 5px;
 }
 
-/* 🔥 ALERT PANEL UPGRADE */
-.alert-item {
-    padding: 10px;
-    border-bottom: 1px solid #eee;
-    cursor: pointer;
-    transition: 0.2s;
-}
-
-.alert-item:hover {
-    background: #f9fafb;
-}
-
-.alert-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.alert-title {
-    font-size: 13px;
-    font-weight: 600;
-}
-
 .alert-time {
     font-size: 11px;
     color: gray;
 }
 
-.alert-message {
-    font-size: 12px;
-    margin-top: 4px;
-}
-
 /* COLORS */
 .alert-engine {
-    border-left: 4px solid #10b981;
+    border-left: 4px solid #030505;
 }
 
 .alert-geofence {
@@ -405,38 +491,6 @@ body {
     background: #1e40af;
 }
 
-/* ICON BUTTON BASE */
-.icon-btn {
-    border: none;
-    padding: 6px 8px;
-    border-radius: 5px;
-    cursor: pointer;
-    margin-right: 5px;
-    transition: 0.2s;
-    font-size: 13px;
-}
-
-/* ASSIGN BUTTON */
-.icon-btn.assign {
-    background: #e0f2fe;
-    color: #0369a1;
-}
-
-/* DELETE BUTTON */
-.icon-btn.delete {
-    background: #fee2e2;
-    color: #b91c1c;
-}
-
-/* UNASSIGN BUTTON */
-.icon-btn.unassign {
-    background: #fef3c7;
-    color: #92400e;
-}
-
-.icon-btn:hover {
-    opacity: 0.8;
-}
 
 .error-box {
     color: #b91c1c;
@@ -512,15 +566,6 @@ body {
     z-index: 1000;
 }
 
-.modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 2000;
-}
 
 /* 🔥 Trip Stats Bar */
 .trip-card {
@@ -581,13 +626,7 @@ body {
     border-left: 4px solid #8b5cf6;
 }
 
-.modal-content {
-    background: white;
-    padding: 20px;
-    margin: 10% auto;
-    width: 300px;
-    border-radius: 10px;
-}
+
 
 .modal-overlay {
     position: fixed;
@@ -627,13 +666,7 @@ body {
     display: none !important;
 }
 
-/* 🔥 ACTION BUTTONS (Step 2) */
-.btn-action {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-weight: bold;
-}
+
 
 /* variants */
 .btn-analytics {
@@ -642,13 +675,6 @@ body {
 
 .btn-playback {
     color: #16a34a;
-}
-
-/* layout fix */
-.vehicle-body {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
 }
 
 /* 🔥 STATUS COLORS (Step 3) */
@@ -722,14 +748,7 @@ body {
     gap: 5px;
 }
 
-/* 🔘 BUTTON BASE */
-.btn {
-    padding: 6px 12px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 13px;
-}
+
 
 /*LOGOUT BUTTON section */
 .btn-logout {
@@ -739,26 +758,6 @@ body {
 
 .btn-logout:hover {
     background: #e60000;
-}
-
-.btn-primary {
-    background: #2563eb;
-    /* 🔥 consistent theme */
-    color: white;
-    padding: 8px 14px;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-}
-
-.btn-primary:hover {
-    background: #1e40af;
-}
-
-
-.btn-success {
-    background: #28a745;
-    color: white;
 }
 
 .btn-success:hover {
@@ -1238,18 +1237,7 @@ body {
     z-index: 999;
 }
 
-/* 🔥 MODAL BOX */
-#assignModal .modal-content {
-    background: #fff;
-    padding: 25px 30px;
-    width: 320px;
-    /* ✅ increased size */
-    border-radius: 12px;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
-    text-align: center;
 
-    animation: fadeIn 0.2s ease;
-}
 
 /* 🔥 TITLE */
 #assignModal h3 {
@@ -1344,27 +1332,6 @@ body {
     overflow-y: auto;
 }
 
-/* ALERT CARD */
-.alert-item {
-    background: #fff;
-    padding: 10px;
-    margin-bottom: 8px;
-    border-radius: 8px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-}
-
-/* PRIORITY COLORS */
-.alert-high {
-    border-left: 4px solid red;
-}
-
-.alert-medium {
-    border-left: 4px solid orange;
-}
-
-.alert-low {
-    border-left: 4px solid green;
-}
 
 input:disabled {
     background: #eee;
@@ -1481,24 +1448,6 @@ input:disabled {
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
-}
-
-/* ========================
-   ACTION BUTTONS
-======================== */
-.action-buttons {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 6px;
-}
-
-/* BUTTON STYLE */
-.icon-btn {
-    padding: 4px 6px;
-    font-size: 12px;
-    border-radius: 6px;
-    cursor: pointer;
 }
 
 /* ========================
@@ -1646,46 +1595,12 @@ input:disabled {
     background: #fecaca;
 }
 
-/* DELETE BUTTON */
-.btn-danger {
-    background: #ef4444;
-    color: white;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-}
 
 .btn-danger:hover {
     background: #dc2626;
 }
 
-/* ===== MODAL OVERLAY ===== */
-.modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(15, 23, 42, 0.65);
-    /* dark blur feel */
-    backdrop-filter: blur(4px);
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-}
 
-/* ===== MODAL BOX ===== */
-.modal-content {
-    background: #1e293b;
-    color: #e2e8f0;
-    padding: 20px 24px;
-    border-radius: 10px;
-    width: 320px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-    animation: fadeIn 0.2s ease;
-}
 
 /* ===== TITLE ===== */
 .modal-content h3 {
@@ -1762,34 +1677,10 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
     cursor: pointer;
 }
 
-/* 🔲 Modal background */
-.modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-}
 
 /* ❌ Hidden state */
 .hidden {
     display: none;
-}
-
-/* 📦 Modal box */
-.modal-content {
-    background: #fff;
-    width: 500px;
-    max-height: 70vh;
-    overflow-y: auto;
-    border-radius: 8px;
-    padding: 15px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
 /* 🔝 Header */
@@ -2176,4 +2067,94 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 .alert-low {
     border-left: 4px solid #999;
     background: #f5f5f5;
+}
+
+.playback-badge,
+.trip-badge {
+    display: inline-flex;
+    align-items: center;
+    height: 26px;
+    /* 🔥 SAME HEIGHT */
+    line-height: 1;
+}
+
+.status-badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+}
+.vehicle-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    gap: 6px;
+}
+.vehicle-header div:first-child {
+    flex: 1;
+}
+
+.status-pill {
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+    border: none;
+}
+
+/* Playback (blue) */
+.playback-pill {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+/* Trip (green) */
+.trip-pill {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+/* Optional hover */
+.status-pill:hover {
+    opacity: 0.85;
+}
+
+/* Playback (Blue) */
+.playback-badge {
+    background: #2196f3;
+    color: white;
+}
+
+/* Trip (Green) */
+.trip-badge {
+    background: #4caf50;
+    color: white;
+}
+/* 🔥 INPUT STYLE */
+.input {
+    width: 100%;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+}
+
+/* 🔥 FIX INPUT ROW */
+.input-row {
+    display: flex;
+    gap: var(--gap);
+    margin-bottom: 10px;
 }

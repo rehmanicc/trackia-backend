@@ -466,6 +466,11 @@ async function loadInitialPositions() {
 async function loadUsersCache() {
     try {
         console.log("⚡ Loading users cache...");
+        if (appState.userRole !== "admin" && appState.userRole !== "owner") {
+            console.warn("⛔ Skipping users cache (no permission)");
+            appState.cachedUsers = [];
+            return;
+        }
         appState.cachedUsers = await apiRequest("/api/users") || [];
     } catch (err) {
         console.error("❌ Failed to load users", err);
@@ -605,6 +610,8 @@ async function loadGeofences() {
         if (!fences) return;
 
         geofences = fences;
+        window.geofences = fences;
+        window.geofences = geofences;
         drawnItems.clearLayers();
 
         fences.forEach(f => {
@@ -937,6 +944,7 @@ async function selectVehicle(deviceId) {
 
     await loadGeofences();
     renderGeofenceList();
+    scheduleVehicleListRender();
 }
 window.logout = function () {
     localStorage.removeItem("token");
