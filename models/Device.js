@@ -131,20 +131,5 @@ deviceSchema.pre("save", async function () {
         throw new Error("User and Device admin mismatch");
     }
 });
-router.put("/:id/call-permission",
-  auth,
-  async (req, res) => {
-    if (!["admin", "owner"].includes(req.user.role)) {
-      return res.status(403).json({ error: "Not allowed" });
-    }
 
-    const device = await Device.findByIdAndUpdate(
-      req.params.id,
-      { allowUserToChangeCallReceiver: req.body.allow },
-      { new: true }
-    );
-
-    res.json(device);
-  }
-);
 module.exports = mongoose.model("Device", deviceSchema);
