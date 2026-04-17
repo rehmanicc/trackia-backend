@@ -14,19 +14,25 @@ async function dispatch(alert, io) {
         traccarId: alert.deviceId
     });
 
-    if (!device || !device.callEnabled) return;
+    if (!device || !device.callEnabled || !device.callReceiverNumber) return;
 
-    // 📞 Battery → always call
+    // 📞 Battery alert → always call
     if (alert.type === "BATTERY_DISCONNECTED") {
-        return triggerCall(alert);
+        return triggerCall({
+            ...alert,
+            phoneNumber: device.callReceiverNumber
+        });
     }
 
-    // 📞 Geofence → only selected
+    // 📞 Geofence alert → conditional
     if (
         alert.type === "GEOFENCE_EXIT" &&
         alert.metadata?.geofenceId === device.callGeofenceId
     ) {
-        return triggerCall(alert);
+        return triggerCall({
+            ...alert,
+            phoneNumber: device.callReceiverNumber
+        });
     }
 }
 module.exports = { dispatch };

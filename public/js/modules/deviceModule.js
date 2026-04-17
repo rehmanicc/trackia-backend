@@ -62,6 +62,52 @@ function createDeviceControlCard(device) {
     geoRow.className = "geo-row";
     geoRow.appendChild(select);
 
+    const callInput = document.createElement("input");
+    callInput.className = "input";
+    callInput.value = device.callReceiverNumber || "";
+    const role = appState.userRole;
+
+    const isOwner = role === "owner";
+    const isAdmin = role === "admin";
+    const isUser = role === "user";
+
+    // 🔒 Lock logic
+    if (isUser && !device.allowUserToChangeCallReceiver) {
+        callInput.disabled = true;
+        callInput.title = "Permission denied by admin";
+    }
+    if (callInput.disabled) {
+        callInput.style.background = "#eee";
+        callInput.style.cursor = "not-allowed";
+        callInput.style.opacity = "0.7";
+    }
+    callInput.placeholder = "Call Receiver Number";
+
+    const callWrapInput = document.createElement("div");
+    callWrapInput.className = "inline-group";
+    callWrapInput.innerHTML = `<label>
+        Call Number ${callInput.disabled ? "🔒" : ""}
+    </label>`;
+    callWrapInput.appendChild(callInput);
+    const callPermRow = document.createElement("div");
+    callPermRow.className = "control-row";
+    callPermRow.style.display = "flex";
+    callPermRow.style.justifyContent = "space-between";
+    callPermRow.style.alignItems = "center";
+    const callPermLabel = document.createElement("div");
+    callPermLabel.innerText = "Allow Call Receiver Change";
+
+    const callPermToggle = document.createElement("label");
+    callPermToggle.className = "switch";
+
+    callPermToggle.innerHTML = `
+    <input type="checkbox">
+    <span class="slider"></span>
+`;
+
+    const callPermCheckbox = callPermToggle.querySelector("input");
+    callPermCheckbox.checked = device.allowUserToChangeCallReceiver || false;
+
     // ===============================
     // 🔥 CALL TOGGLE
     // ===============================
@@ -157,7 +203,7 @@ function createDeviceControlCard(device) {
     const speedWrap = document.createElement("div");
     speedWrap.className = "inline-group";
     speedWrap.innerHTML = `<label>Speed Limit</label>`;
-    if (!hasPermission("EDIT_SPEED")) {
+    if (!device.allowSpeedEdit) {
         speedInput.disabled = true;
     }
     speedWrap.appendChild(speedInput);
@@ -165,7 +211,7 @@ function createDeviceControlCard(device) {
     const fuelWrap = document.createElement("div");
     fuelWrap.className = "inline-group";
     fuelWrap.innerHTML = `<label>Fuel Efficiency</label>`;
-    if (!hasPermission("EDIT_FUEL")) {
+    if (!device.allowFuelEdit) {
         fuelInput.disabled = true;
     }
     fuelWrap.appendChild(fuelInput);
@@ -254,6 +300,17 @@ function createDeviceControlCard(device) {
     // 🔥 SAVE ALL SETTINGS
     // ===============================
     saveBtn.onclick = async () => {
+        if (
+            appState.userRole === "user" &&
+            !device.allowUserToChangeCallReceiver
+        ) {
+            alert("You are not allowed to change call receiver");
+            return;
+        }
+        if (callInput.value && !callInput.value.match(/^03\d{9}$/)) {
+            alert("Invalid call number");
+            return;
+        }
         try {
 
             await Promise.all([
@@ -263,10 +320,17 @@ function createDeviceControlCard(device) {
                     method: "POST",
                     body: JSON.stringify({
                         callEnabled: callToggle.checked,
-                        geofenceId: select.value
+                        callGeofenceId: select.value
                     })
                 }),
+                //call number
 
+                apiRequest(`/api/devices/${device._id}/call-receiver`, {
+                    method: "PUT",
+                    body: JSON.stringify({
+                        callReceiverNumber: callInput.value
+                    })
+                }),
                 // Speed
                 apiRequest(`/api/devices/${device._id}/speed`, {
                     method: "PUT",
@@ -274,7 +338,14 @@ function createDeviceControlCard(device) {
                         speedLimit: Number(speedInput.value)
                     })
                 }),
-
+                ...(appState.userRole !== "user" ? [
+                    apiRequest(`/api/devices/${device._id}/call-permission`, {
+                        method: "PUT",
+                        body: JSON.stringify({
+                            allow: callPermCheckbox.checked
+                        })
+                    })
+                ] : []),
                 // Fuel
                 apiRequest(`/api/devices/${device._id}/fuel`, {
                     method: "PUT",
@@ -297,6 +368,21 @@ function createDeviceControlCard(device) {
     // 🔥 FINAL APPEND ORDER
     // ===============================
     body.appendChild(geoRow);
+    body.appendChild(callWrapInput);
+    // ===============================
+    // 🔥 CALL RECEIVER PERMISSION
+    // ===============================
+
+
+    // Hide for user
+    if (appState.userRole === "user") {
+        callPermRow.style.display = "none";
+    }
+
+    callPermRow.appendChild(callPermLabel);
+    callPermRow.appendChild(callPermToggle);
+
+    body.appendChild(callPermRow);
     body.appendChild(inputRow);
     body.appendChild(controlRow);
     body.appendChild(actionRow);
@@ -379,7 +465,29 @@ export async function submitNewDevice() {
         return;
     }
 
-    const payload = { name, uniqueId, adminId };
+    const deviceSimNumber = document.getElementById("deviceSimInput").value.trim();
+    const callReceiverNumber = document.getElementById("deviceCallReceiverInput").value.trim();
+
+    if (!deviceSimNumber) {
+        alert("Device SIM number is required");
+        return;
+    }
+
+    if (callReceiverNumber && !callReceiverNumber.match(/^03\d{9}$/)) {
+        alert("Invalid call receiver number");
+        return;
+    }
+
+    const payload = {
+        name,
+        uniqueId,
+        adminId,
+        deviceSimNumber
+    };
+
+    if (callReceiverNumber) {
+        payload.callReceiverNumber = callReceiverNumber;
+    }
 
     if (speedInput) payload.speedLimit = Number(speedInput);
     if (mileageInput) payload.fuelEfficiency = Number(mileageInput);
@@ -493,7 +601,9 @@ export async function submitAssign() {
     });
 
     alert("Assigned successfully");
-
+    if (userId) {
+        payload.userId = userId;
+    }
     document.getElementById("assignModal").style.display = "none";
     loadDevices();
 }

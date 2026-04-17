@@ -236,4 +236,73 @@ router.put("/:id/call-settings",
     }
   }
 );
+// ✅ UPDATE CALL RECEIVER NUMBER
+router.put("/:id/call-receiver",
+  auth,
+  async (req, res) => {
+    try {
+      const device = await Device.findById(req.params.id);
+
+      if (!device) {
+        return res.status(404).json({ error: "Device not found" });
+      }
+
+      const isOwner = req.user.role === "owner";
+      const isAdmin = req.user.role === "admin";
+      const isUser = req.user.role === "user";
+
+      // ✅ OWNER / ADMIN → always allowed
+      if (isOwner || isAdmin) {
+        device.callReceiverNumber = req.body.callReceiverNumber;
+      }
+
+      // ✅ USER → conditional
+      else if (isUser) {
+
+        // must own device
+        if (String(device.assignedTo) !== String(req.user.id)) {
+          return res.status(403).json({ error: "Not your device" });
+        }
+
+        // must have permission
+        if (!device.allowUserToChangeCallReceiver) {
+          return res.status(403).json({ error: "Permission denied" });
+        }
+
+        device.callReceiverNumber = req.body.callReceiverNumber;
+      }
+
+      else {
+        return res.status(403).json({ error: "Unauthorized role" });
+      }
+
+      await device.save();
+
+      res.json({
+        message: "Call receiver updated",
+        callReceiverNumber: device.callReceiverNumber
+      });
+
+    } catch (err) {
+      console.error("❌ Update call receiver error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  }
+);
+router.put("/:id/call-permission",
+  auth,
+  async (req, res) => {
+    if (!["admin", "owner"].includes(req.user.role)) {
+      return res.status(403).json({ error: "Not allowed" });
+    }
+
+    const device = await Device.findByIdAndUpdate(
+      req.params.id,
+      { allowUserToChangeCallReceiver: req.body.allow },
+      { new: true }
+    );
+
+    res.json(device);
+  }
+);
 module.exports = router;

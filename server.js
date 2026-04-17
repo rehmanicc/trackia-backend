@@ -85,7 +85,6 @@ app.use("/api/devices", deviceRoutes);
 app.use("/api/alerts", alertRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/audit", require("./routes/auditRoutes"));
-app.use("/api/users", userRoutes);
 // ======================
 // DB CHECK ROUTE
 // ======================

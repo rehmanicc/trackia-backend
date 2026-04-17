@@ -15,12 +15,12 @@ exports.createDevice = async (req, res, next) => {
 
     const { logAudit } = require("../services/auditService");
 
-        if (user.role === "owner" && !req.body.adminId) {
+    if (user.role === "owner" && !req.body.adminId) {
       return res.status(400).json({
         error: "adminId is required when owner creates device"
       });
     }
-   
+
     if (user.role === "owner") {
       const adminExists = await User.findOne({
         _id: req.body.adminId,
@@ -68,6 +68,9 @@ exports.createDevice = async (req, res, next) => {
       speedLimit: speedLimit || 70,
       fuelEfficiency: fuelEfficiency || 12,
       expiryDate: oneYearLater,
+      deviceSimNumber: req.body.deviceSimNumber,
+      callReceiverNumber: req.body.callReceiverNumber || null,
+
       isActive: true
     });
 
@@ -193,7 +196,7 @@ exports.assignDevice = async (req, res) => {
     const mongoose = require("mongoose");
     const { logAudit } = require("../services/auditService");
 
-    const { userId } = req.body;
+    const { userId, callUserId } = req.body;
     const deviceId = req.params.id;
 
     console.log("📥 Device ID:", deviceId);
@@ -235,6 +238,13 @@ exports.assignDevice = async (req, res) => {
     }
 
     device.assignedTo = userId;
+    // ✅ Sync new system
+    device.assignedUsers = [userId];
+
+    // ✅ Set default call receiver if not already set
+    if (!device.callReceiverNumber) {
+      device.callReceiverNumber = user.phoneNumber;
+    }
     await device.save();
 
     // 🔥 AUDIT LOG (ADD HERE)

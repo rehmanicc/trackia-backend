@@ -1,50 +1,28 @@
-const Device = require("../models/Device");
-const User = require("../models/User");
 const MAX_ATTEMPTS = 3;
 const BASE_DELAY = 2000;
 let isProcessing = false;
 // 🔥 MAIN FUNCTION
 async function triggerCall(alert) {
-
     try {
 
-        const device = await Device.findOne({
-            traccarId: alert.deviceId
-        }).populate("assignedTo");
-
-        if (!device) return;
-
-        let users = [];
-
-        if (Array.isArray(device.assignedTo)) {
-            users = device.assignedTo;
-        } else if (device.assignedTo) {
-            users = [device.assignedTo];
+        if (!alert.phoneNumber) {
+            console.log("❌ No call receiver number");
+            return;
         }
 
-        for (const user of users) {
+        console.log("📞 CALL TO:", alert.phoneNumber);
 
-            if (!user.callEnabled) continue;
-            if (!user.phoneNumber) continue;
+        await CallQueue.create({
+            number: alert.phoneNumber,
+            alertType: alert.type,
+            deviceId: alert.deviceId
+        });
 
-            console.log("📞 CALL TRIGGERED:", {
-                user: user.name,
-                number: user.phoneNumber,
-                alert: alert.type
-            });
-
-            await CallQueue.create({
-                number: user.phoneNumber,
-                alertType: alert.type,
-                deviceId: alert.deviceId
-            });
-            processQueue();
-        }
+        processQueue();
 
     } catch (err) {
         console.error("❌ Call trigger failed:", err.message);
     }
-
 }
 const CallQueue = require("../models/CallQueue");
 
@@ -110,7 +88,7 @@ const axios = require("axios");
 async function makeCall(call) {
 
     const AUTOMATE_URL = "https://howard-unsymbolized-grant.ngrok-free.dev/call"; // 🔥 CHANGE THIS
-    console.log("🚨 CALL TRIGGERED:", phoneNumber);
+    console.log("🚨 CALL TRIGGERED:", call.number);
     await axios.post(AUTOMATE_URL, {
         number: call.number
     });

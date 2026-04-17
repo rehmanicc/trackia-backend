@@ -23,22 +23,30 @@ async function sendPushFCM(alert) {
       return;
     }
 
-    // 🔍 Find user
-    const user = await User.findById(device.assignedTo);
+    // 🔥 GET USERS (assigned user + admin)
+    const users = await User.find({
+      _id: {
+        $in: [device.assignedTo, device.adminId]
+      }
+    });
 
-    if (!user) {
-      console.log("❌ User not found");
-      return;
-    }
+    let tokens = [];
 
-    console.log("👤 User found:", user._id);
+    users.forEach(u => {
+      if (u.fcmTokens && u.fcmTokens.length > 0) {
+        tokens.push(...u.fcmTokens);
+      }
+    });
 
-    if (!user.fcmTokens || user.fcmTokens.length === 0) {
+    // 🔥 REMOVE DUPLICATES
+    tokens = [...new Set(tokens)];
+
+    if (tokens.length === 0) {
       console.log("❌ No FCM tokens");
       return;
     }
 
-    console.log("📲 Tokens:", user.fcmTokens);
+    console.log("📲 Tokens:", tokens);
 
     const message = {
       notification: {
@@ -49,7 +57,7 @@ async function sendPushFCM(alert) {
         type: alert.type,
         deviceId: String(alert.deviceId)
       },
-      tokens: user.fcmTokens
+      tokens
     };
 
     const response = await messaging.sendEachForMulticast(message);

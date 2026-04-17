@@ -42,8 +42,7 @@ const deviceSchema = new mongoose.Schema({
     assignedTo: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
-        default: null,
-        index: true
+        default: null
     },
     expiryDate: {
         type: Date,
@@ -75,7 +74,37 @@ const deviceSchema = new mongoose.Schema({
     callGeofenceId: {
         type: String, // store geofenceId from Traccar
         default: null
+    },
+    assignedUsers: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User"
+        }
+    ],
+    deviceSimNumber: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    callReceiverNumber: {
+        type: String,
+        required: true
+    },
+
+    allowUserToChangeCallReceiver: {
+        type: Boolean,
+        default: false
+    },
+    callReceiverNumber: {
+        type: String,
+        required: true
+    },
+
+    allowUserToChangeCallReceiver: {
+        type: Boolean,
+        default: false
     }
+
 
 }, { timestamps: true });
 
@@ -102,4 +131,20 @@ deviceSchema.pre("save", async function () {
         throw new Error("User and Device admin mismatch");
     }
 });
+router.put("/:id/call-permission",
+  auth,
+  async (req, res) => {
+    if (!["admin", "owner"].includes(req.user.role)) {
+      return res.status(403).json({ error: "Not allowed" });
+    }
+
+    const device = await Device.findByIdAndUpdate(
+      req.params.id,
+      { allowUserToChangeCallReceiver: req.body.allow },
+      { new: true }
+    );
+
+    res.json(device);
+  }
+);
 module.exports = mongoose.model("Device", deviceSchema);

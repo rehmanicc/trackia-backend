@@ -23,8 +23,6 @@ const PERMISSION_GROUPS = {
     SYSTEM: {
         label: "⚙️ System",
         permissions: [
-            "EDIT_SPEED",
-            "EDIT_FUEL",
             "RENEW_DEVICE"
         ]
     }
@@ -40,9 +38,6 @@ const PERMISSION_LABELS = {
     SEND_COMMAND: "Send Commands",
     RENEW_DEVICE: "Renew Devices",
     ENGINE_CONTROL: "Engine Control (ON/OFF)",
-
-    EDIT_SPEED: "Edit Speed Limit",
-    EDIT_FUEL: "Edit Fuel Settings",
 
     GEOFENCE_VIEW: "View Geofences",
     GEOFENCE_CREATE: "Create Geofence",
