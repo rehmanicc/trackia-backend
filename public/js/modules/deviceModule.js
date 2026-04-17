@@ -203,7 +203,10 @@ function createDeviceControlCard(device) {
     const speedWrap = document.createElement("div");
     speedWrap.className = "inline-group";
     speedWrap.innerHTML = `<label>Speed Limit</label>`;
-    if (!device.allowSpeedEdit) {
+    if (
+        appState.userRole === "user" &&
+        !device.allowSpeedEdit
+    ) {
         speedInput.disabled = true;
     }
     speedWrap.appendChild(speedInput);
@@ -211,7 +214,10 @@ function createDeviceControlCard(device) {
     const fuelWrap = document.createElement("div");
     fuelWrap.className = "inline-group";
     fuelWrap.innerHTML = `<label>Fuel Efficiency</label>`;
-    if (!device.allowFuelEdit) {
+    if (
+        appState.userRole === "user" &&
+        !device.allowFuelEdit
+    ) {
         fuelInput.disabled = true;
     }
     fuelWrap.appendChild(fuelInput);
@@ -323,36 +329,50 @@ function createDeviceControlCard(device) {
                         callGeofenceId: select.value
                     })
                 }),
-                //call number
 
+                // Call number
                 apiRequest(`/api/devices/${device._id}/call-receiver`, {
                     method: "PUT",
                     body: JSON.stringify({
                         callReceiverNumber: callInput.value
                     })
                 }),
-                // Speed
+
+                // Speed value
                 apiRequest(`/api/devices/${device._id}/speed`, {
                     method: "PUT",
                     body: JSON.stringify({
                         speedLimit: Number(speedInput.value)
                     })
                 }),
+
+                // Fuel value
+                apiRequest(`/api/devices/${device._id}/fuel`, {
+                    method: "PUT",
+                    body: JSON.stringify({
+                        fuelEfficiency: Number(fuelInput.value)
+                    })
+                }),
+
+                // 🔥 CALL PERMISSION (admin/owner only)
                 ...(appState.userRole !== "user" ? [
                     apiRequest(`/api/devices/${device._id}/call-permission`, {
                         method: "PUT",
                         body: JSON.stringify({
                             allow: callPermCheckbox.checked
                         })
+                    }),
+
+                    // 🔥 NEW: SPEED + FUEL PERMISSION
+                    apiRequest(`/api/devices/${device._id}/device-permissions`, {
+                        method: "PUT",
+                        body: JSON.stringify({
+                            allowSpeedEdit: speedCheckbox.checked,
+                            allowFuelEdit: fuelCheckbox.checked
+                        })
                     })
-                ] : []),
-                // Fuel
-                apiRequest(`/api/devices/${device._id}/fuel`, {
-                    method: "PUT",
-                    body: JSON.stringify({
-                        fuelEfficiency: Number(fuelInput.value)
-                    })
-                })
+
+                ] : [])
 
             ]);
 
@@ -364,9 +384,6 @@ function createDeviceControlCard(device) {
         }
     };
 
-    // ===============================
-    // 🔥 FINAL APPEND ORDER
-    // ===============================
     body.appendChild(geoRow);
     body.appendChild(callWrapInput);
     // ===============================
@@ -383,6 +400,76 @@ function createDeviceControlCard(device) {
     callPermRow.appendChild(callPermToggle);
 
     body.appendChild(callPermRow);
+ 
+
+// ===============================
+// 🔥 SPEED TOGGLE (REQUIRED)
+// ===============================
+const speedLabel = document.createElement("div");
+speedLabel.innerText = "Allow Speed Edit";
+
+const speedToggle = document.createElement("label");
+speedToggle.className = "switch";
+
+speedToggle.innerHTML = `
+    <input type="checkbox">
+    <span class="slider"></span>
+`;
+
+const speedCheckbox = speedToggle.querySelector("input");
+speedCheckbox.checked = device.allowSpeedEdit ?? true;
+
+
+// ===============================
+// 🔥 FUEL TOGGLE (REQUIRED)
+// ===============================
+const fuelLabel = document.createElement("div");
+fuelLabel.innerText = "Allow Fuel Edit";
+
+const fuelToggle = document.createElement("label");
+fuelToggle.className = "switch";
+
+fuelToggle.innerHTML = `
+    <input type="checkbox">
+    <span class="slider"></span>
+`;
+
+const fuelCheckbox = fuelToggle.querySelector("input");
+fuelCheckbox.checked = device.allowFuelEdit ?? true;
+const permRow = document.createElement("div");
+permRow.className = "control-row";
+permRow.style.display = "flex";
+permRow.style.alignItems = "center";
+permRow.style.justifyContent = "flex-start";
+permRow.style.gap = "40px";
+
+// Speed group
+const speedWrapPerm = document.createElement("div");
+speedWrapPerm.style.display = "flex";
+speedWrapPerm.style.alignItems = "center";
+speedWrapPerm.style.gap = "8px";
+
+speedWrapPerm.appendChild(speedLabel);
+speedWrapPerm.appendChild(speedToggle);
+
+// Fuel group
+const fuelWrapPerm = document.createElement("div");
+fuelWrapPerm.style.display = "flex";
+fuelWrapPerm.style.alignItems = "center";
+fuelWrapPerm.style.gap = "8px";
+
+fuelWrapPerm.appendChild(fuelLabel);
+fuelWrapPerm.appendChild(fuelToggle);
+
+// Hide for user
+if (appState.userRole === "user") {
+    permRow.style.display = "none";
+}
+
+permRow.appendChild(speedWrapPerm);
+permRow.appendChild(fuelWrapPerm);
+
+body.appendChild(permRow);
     body.appendChild(inputRow);
     body.appendChild(controlRow);
     body.appendChild(actionRow);
