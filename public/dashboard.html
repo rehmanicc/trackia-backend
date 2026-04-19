@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+    <title>Trackia Live Tracking</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+
+    <script src="/js/login.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <script src="https://rawcdn.githack.com/bbecquet/Leaflet.RotatedMarker/master/leaflet.rotatedMarker.js"></script>
+    <script src="/js/alerts/alertUI.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-rotatedmarker@0.2.0/leaflet.rotatedMarker.js"></script>
+    <script type="module" src="js/analytics.js"></script>
+    <script type="module" src="/js/dashboard.js"></script>
+</head>
+
+<body>
+
+    <div class="app">
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="logo">🚀 Trackia</div>
+
+            <nav>
+                <ul>
+                    <li onclick="setActiveMenu(this); switchPanel('live')">📡 Live Tracking</li>
+                    <li onclick="setActiveMenu(this); switchPanel('devices')">📦 Device Management</li>
+                    <li onclick="setActiveMenu(this); switchPanel('geofence')">📍 Geofencing</li>
+                    <li onclick="setActiveMenu(this); switchPanel('alerts')"> 🚨 Alerts</li>
+                    <li id="usersMenuBtn" onclick="setActiveMenu(this); switchPanel('users')">👤 User Management</li>
+                    <li onclick="setActiveMenu(this); switchPanel('audit')">📜 Audit Logs</li>
+                </ul>
+            </nav>
+
+        </aside>
+
+
+        <!-- MAIN AREA -->
+        <div class="main">
+
+            <!-- HEADER -->
+            <header class="header">
+                <div>
+                    <h2>Live Tracking</h2>
+                    <p>Real-time fleet monitoring</p>
+                </div>
+
+                <div id="authSection" class="auth-section">
+                    <!-- LOGIN FORM -->
+                    <!-- LOGIN FORM -->
+                    <div id="loginSection">
+                        <input id="loginPhone" placeholder="03XXXXXXXXX" style="width:200px;">
+                        <input id="loginPassword" type="password" placeholder="Password" style="width:120px;">
+                        <button onclick="handleLogin()" class="btn btn-primary">
+                            Login
+                        </button>
+                    </div>
+
+                    <!-- LOGGED IN -->
+                    <div id="loggedInSection" style="display:none; align-items:center; gap:10px;">
+                        <span id="loggedInUser"></span>
+                        <button onclick="logout()" class="btn btn-logout">
+                            Logout
+                        </button>
+                    </div>
+
+                </div>
+            </header>
+
+            <!-- ✅ MOVE STATS BAR HERE -->
+            <div class="stats-bar">
+
+                <div class="stat-card moving">
+                    <span id="countMoving">0</span>
+                    <p>Moving</p>
+                </div>
+
+                <div class="stat-card idle">
+                    <span id="countIdle">0</span>
+                    <p>Idle</p>
+                </div>
+
+                <div class="stat-card stopped">
+                    <span id="countStopped">0</span>
+                    <p>Stopped</p>
+                </div>
+
+                <div class="stat-card offline">
+                    <span id="countOffline">0</span>
+                    <p>Offline</p>
+                </div>
+
+            </div>
+            <div id="tripStatsPanel" class="trip-stats-bar" style="display:none;">
+
+                <div class="trip-card distance">
+                    <span id="tripDistance">0</span>
+                    <p>Distance (km)</p>
+                </div>
+
+                <div class="trip-card avg-speed">
+                    <span id="tripAvgSpeed">0</span>
+                    <p>Avg Speed</p>
+                </div>
+
+                <div class="trip-card max-speed">
+                    <span id="tripMaxSpeed">0</span>
+                    <p>Max Speed</p>
+                </div>
+
+                <div class="trip-card stops">
+                    <span id="tripStops">0</span>
+                    <p>Stops</p>
+                </div>
+
+                <div class="trip-card fuel">
+                    <span id="tripFuel">0</span>
+                    <p>Fuel (L)</p>
+                </div>
+
+            </div>
+
+            <!-- CONTENT -->
+            <div class="content">
+
+                <!-- VEHICLE PANEL -->
+                <div class="vehicle-panel">
+
+                    <div class="filters">
+
+                        <input type="text" id="searchInput" placeholder="Search vehicles..." />
+
+                        <select id="statusFilter">
+                            <option value="all">All</option>
+                            <option value="moving">Moving</option>
+                            <option value="idle">Idle</option>
+                            <option value="stopped">Stopped</option>
+                            <option value="offline">Offline</option>
+                        </select>
+
+                    </div>
+
+                    <div id="vehicleList" class="vehicle-list"></div>
+
+                </div>
+                <div id="geofencePanel" class="vehicle-panel">
+
+                    <div style="padding:10px;">
+                        Manage Geofences
+                    </div>
+
+                    <div id="geofenceList"></div>
+
+                </div>
+                <div id="userPanel" class="vehicle-panel">
+
+                    <div class="user-layout">
+
+                        <!-- LEFT PANEL -->
+                        <div class="user-left">
+
+                            <button class="btn-primary" onclick="showCreateUserForm()">
+                                ➕ Create User
+                            </button>
+
+                            <div id="userList">
+                                <!-- Users will come here -->
+                            </div>
+
+                        </div>
+
+                        <!-- RIGHT PANEL -->
+                        <div class="user-right" id="userContent">
+                            <h3>Right Panel</h3>
+                            <p>This will show forms and permissions</p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+                <div id="modalOverlay"></div>
+
+                <div id="createDevicePanel" class="vehicle-panel">
+
+                    <div class="user-layout">
+
+                        <div class="user-right">
+
+                            <div class="user-form-card">
+
+                                <div class="flex-between">
+                                    <h3>Create Device</h3>
+                                    <button class="btn" onclick="switchPanel('devices')">✖</button>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Device Name</label>
+                                    <input id="deviceNameInput" type="text">
+                                </div>
+
+                                <div class="form-group">
+                                    <label>IMEI / Unique ID</label>
+                                    <input id="deviceUniqueInput" type="text">
+                                </div>
+                                <div class="form-group">
+                                    <label>Select Admin</label>
+                                    <select id="deviceAdminSelect">
+                                        <option value="">-- Select Admin --</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Device SIM Number</label>
+                                    <input id="deviceSimInput" type="text" placeholder="03XXXXXXXXX">
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Call Receiver Number (Optional)</label>
+                                    <input id="deviceCallReceiverInput" type="text" placeholder="Default = User Phone">
+                                </div>
+                                <div class="form-group">
+                                    <label>Speed Limit (km/h)</label>
+                                    <input id="deviceSpeedInput" type="number">
+                                </div>
+
+                                <div class="form-group">
+                                    <label> Mileage (km)</label>
+                                    <input id="deviceMileageInput" type="number">
+                                </div>
+
+                                <button class="btn-create-user" onclick="submitNewDevice()">
+                                    Create Device
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+                <div id="devicePanel" class="vehicle-panel">
+
+                    <div style="padding:10px;">
+                        <button class="primary-btn" onclick="switchPanel('createDevice')">➕ Add Device</button>
+                        <div id="expiredBtnContainer"></div>
+                    </div>
+
+                    <div id="deviceList"></div>
+
+                </div>
+                <div id="expiredModal" class="modal hidden">
+
+                    <div class="modal-content">
+
+                        <div class="modal-header">
+                            <h3>Expired Devices</h3>
+                            <button class="close-btn" onclick="closeExpiredDevices()">✖</button>
+                        </div>
+
+                        <div id="expiredList" class="modal-body"></div>
+
+                    </div>
+
+                </div>
+                <div id="assignModal">
+                    <div class="modal-content">
+
+                        <h3>Assign Device</h3>
+
+                        <div id="adminAssignBlock">
+                            <label>Assign Admin</label>
+                            <select id="assignAdminSelect">
+                                <option value="">-- Select Admin --</option>
+                            </select>
+                        </div>
+
+                        <div id="userAssignBlock">
+                            <label>Assign User</label>
+                            <select id="assignUserSelect">
+                                <option value="">-- Select User --</option>
+                            </select>
+                        </div>
+
+                        <div class="assign-actions">
+                            <button class="assign-btn" onclick="submitAssign()">Assign</button>
+                            <button class="cancel-btn" onclick="closeAssign()">Cancel</button>
+                        </div>
+
+                    </div>
+                </div>
+                <div id="alertPanel" class="vehicle-panel">
+
+                    <h3>🚨 Alerts</h3>
+                    <div> <button onclick="clearReadAlerts()" class="btn-clear">
+                            🧹 Clear Read
+                        </button>
+                        <button onclick="clearAllAlerts()" class="alert-btn">
+                            ❌ Clear All
+                        </button>
+                    </div><br>
+                    <div style="margin-bottom:10px;">
+                        <button onclick="filterAlerts('all')">All</button>
+                        <button onclick="filterAlerts('high')">Critical</button>
+                        <button onclick="filterAlerts('unread')">Unread</button>
+                        <button onclick="clearReadAlerts()">Clear Read</button>
+                    </div>
+
+                    <div style="margin-bottom:10px;">
+                        <select id="alertTypeFilter">
+                            <option value="all">All</option>
+                            <option value="engine_on">Engine ON</option>
+                            <option value="engine_off">Engine OFF</option>
+                            <option value="geofence_enter">Geofence Enter</option>
+                            <option value="geofence_exit">Geofence Exit</option>
+                            <option value="geofence_exit">Over Speed</option>
+                        </select>
+
+                        <input type="text" id="vehicleSearch" placeholder="Search vehicle">
+                    </div>
+
+                    <div id="alertList"></div>
+
+                </div>
+                <div id="auditPanel" class="vehicle-panel">
+
+                    <h3>📜 Audit Logs</h3>
+
+                    <div id="auditList"></div>
+
+                </div>
+                <!-- MAP -->
+                <div id="map" class="map-container">
+
+                    <!-- KEEP PLAYBACK -->
+                    <div id="playbackControl" style="display:none;">
+                        <div id="playbackRow">
+                            <div id="playToggleBtn" onclick="togglePlayback()">▶</div>
+
+                            <input type="range" id="timeSlider">
+
+                            <div id="speedContainer">
+                                <input type="range" id="speedSlider" min="0.5" max="16" step="0.2" value="1">
+                                <span id="speedLabel">1x</span>
+                            </div>
+                        </div>
+
+                        <div id="timeLabel">00:00:00</div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+        <div id="playbackModal" class="modal-overlay" style="display:none;">
+            <div class="modal-box">
+                <h3>Playback</h3>
+
+                <label>Select Date:</label>
+                <input type="date" id="playbackDatePicker">
+
+                <div style="margin-top:10px;">
+                    <button onclick="confirmPlayback()">Start</button>
+                    <button onclick="closePlaybackModal()">Cancel</button>
+                </div>
+            </div>
+        </div>
+        <div id="analyticsModal" class="modal" style="display:none;">
+            <div class="modal-content">
+
+                <h3>📊 Select Time Range</h3>
+
+                <label>Start Time</label>
+                <input type="datetime-local" id="startTime">
+
+                <label>End Time</label>
+                <input type="datetime-local" id="endTime">
+
+                <div class="modal-actions">
+                    <button class="btn-generate" onclick="fetchTrip()">Generate</button>
+                    <button class="btn-cancel" onclick="closeAnalyticsModal()">Cancel</button>
+                </div>
+
+            </div>
+        </div>
+</body>
+
+</html>

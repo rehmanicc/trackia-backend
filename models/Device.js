@@ -1,0 +1,135 @@
+const mongoose = require("mongoose");
+
+const deviceSchema = new mongoose.Schema({
+
+    name: {
+        type: String,
+        required: true
+    },
+    uniqueId: {
+        type: String,
+        unique: true,
+        required: true,
+        index: true
+    },
+
+    traccarId: {
+        type: Number,
+        required: true,
+        unique: true,
+        index: true
+    },
+
+    adminId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true,
+        index: true
+    },
+
+    createdBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User"
+    },
+    speedLimit: {
+        type: Number,
+        default: 70
+    },
+    fuelEfficiency: {
+        type: Number,
+        default: 12
+    },
+    assignedTo: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null
+    },
+    expiryDate: {
+        type: Date,
+        required: true
+    },
+    isActive: {
+        type: Boolean,
+        default: true
+    },
+    engineControlEnabled: {
+        type: Boolean,
+        default: false
+    },
+    engineLockedByAdmin: {
+        type: Boolean,
+        default: false,
+        index: true
+    },
+    engineLockedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null
+    },
+    callEnabled: {
+        type: Boolean,
+        default: true
+    },
+
+    callGeofenceId: {
+        type: String, // store geofenceId from Traccar
+        default: null
+    },
+    assignedUsers: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User"
+        }
+    ],
+    deviceSimNumber: {
+        type: String,
+        required: true,
+        unique: true
+    },
+    callReceiverNumber: {
+        type: String,
+        required: true
+    },
+
+    allowUserToChangeCallReceiver: {
+        type: Boolean,
+        default: false
+    },
+    callReceiverNumber: {
+        type: String,
+        required: true
+    },
+
+    allowUserToChangeCallReceiver: {
+        type: Boolean,
+        default: false
+    }
+
+
+}, { timestamps: true });
+
+deviceSchema.pre("save", async function () {
+
+    // ✅ Only validate when assignment changes
+    if (!this.isModified("assignedTo")) return;
+
+    if (!this.assignedTo) return;
+
+    const user = await mongoose.model("User").findById(this.assignedTo);
+
+    if (!user) {
+        throw new Error("Assigned user not found");
+    }
+
+    // ✅ Role restriction
+    if (user.role !== "user") {
+        throw new Error("Device can only be assigned to a user");
+    }
+
+    // ✅ Admin match check
+    if (String(user.adminId) !== String(this.adminId)) {
+        throw new Error("User and Device admin mismatch");
+    }
+});
+
+module.exports = mongoose.model("Device", deviceSchema);

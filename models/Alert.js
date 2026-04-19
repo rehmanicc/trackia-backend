@@ -1,0 +1,59 @@
+const mongoose = require("mongoose");
+
+const alertSchema = new mongoose.Schema({
+
+    deviceId: {
+        type: String,
+        required: true,
+        index: true
+    },
+
+    type: {
+        type: String,
+        enum: [
+            "ENGINE_ON",
+            "ENGINE_OFF",
+            "BATTERY_DISCONNECTED",
+            "GEOFENCE_ENTER",
+            "GEOFENCE_EXIT",
+            "OVERSPEED"
+        ],
+        required: true,
+        index: true
+    },
+
+    message: {
+        type: String
+    },
+
+    metadata: {
+        geofenceId: String,
+        batteryLevel: Number
+    },
+
+    timestamp: {
+        type: Date,
+        default: Date.now,
+        index: true
+    },
+    ruleId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "AlertRule"
+    },
+
+    priority: {
+        type: String,
+        enum: ["low", "medium", "high"],
+        default: "medium"
+    }
+
+}, { timestamps: true });
+
+
+alertSchema.index({
+    deviceId: 1,
+    type: 1,
+    timestamp: 1
+});
+
+module.exports = mongoose.model("Alert", alertSchema);
