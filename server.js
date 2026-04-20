@@ -203,15 +203,3 @@ setInterval(() => {
   console.log("🔥 Server alive");
 }, 1000 * 60 * 5);
 
-
-
-app.get("/test-alert", async (req, res) => {
-  const { dispatch } = require("./services/notification/dispatcher");
-  const alert = await Alert.create({
-    deviceId: "155",
-    type: "ENGINE_ON",
-    message: "Test alert working"
-  });
-  await dispatch(alert, io);
-  res.json(alert);
-});

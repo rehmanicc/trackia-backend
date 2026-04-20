@@ -3,7 +3,7 @@ const { wrapper } = require("axios-cookiejar-support");
 const { CookieJar } = require("tough-cookie");
 
 const jar = new CookieJar();
-
+let loginPromise = null;
 const client = wrapper(axios.create({
   baseURL: "http://localhost:8082",
   jar,
@@ -12,36 +12,47 @@ const client = wrapper(axios.create({
 let isLoggedIn = false;
 const qs = require("qs");
 const loginTraccar = async () => {
-  try {
-    const email = process.env.TRACCAR_EMAIL;
-    const password = process.env.TRACCAR_PASSWORD;
+  if (loginPromise) return loginPromise;
 
-    const formData = new URLSearchParams();
-    formData.append("email", email);
-    formData.append("password", password);
+  loginPromise = (async () => {
+    try {
+      const email = process.env.TRACCAR_EMAIL;
+      const password = process.env.TRACCAR_PASSWORD;
 
-    const res = await client.post("/api/session", formData.toString(), {
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
+      const formData = new URLSearchParams();
+      formData.append("email", email);
+      formData.append("password", password);
+
+      const res = await client.post("/api/session", formData.toString(), {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded"
+        }
+      });
+
+      const cookies = await jar.getCookies("http://localhost:8082");
+
+      if (res.status === 200 && cookies.length > 0) {
+        isLoggedIn = true;
+        console.log("✅ Traccar login success");
+      } else {
+        isLoggedIn = false;
+        console.log("❌ Login failed (no cookies)");
       }
-    });
 
-    // ✅ ONLY mark success if 200
-    if (res.status === 200) {
-      isLoggedIn = true;
-      console.log("✅ Traccar login success");
-    } else {
+    } catch (err) {
+      console.error("❌ Login failed:", err.response?.data || err.message);
       isLoggedIn = false;
-      console.log("❌ Login failed with status:", res.status);
+    } finally {
+      loginPromise = null;
     }
+  })();
 
-  } catch (err) {
-    console.error("❌ Login failed:", err.response?.data || err.message);
-    isLoggedIn = false;
-  }
+  return loginPromise;
 };
 const getPositions = async () => {
   try {
+
+    // Ensure login
     if (!isLoggedIn) {
       await loginTraccar();
     }
@@ -51,6 +62,7 @@ const getPositions = async () => {
 
   } catch (err) {
 
+    // Retry on session expiry
     if (err.response?.status === 401) {
       console.log("⚠️ Session expired. Re-logging...");
 
