@@ -113,10 +113,28 @@ const apiPost = async (url, data) => {
     throw err;
   }
 };
+const apiDelete = async (url) => {
+  try {
+    if (!isLoggedIn) await loginTraccar();
+
+    const res = await client.delete(url);
+    return res.data;
+
+  } catch (err) {
+    if (err.response?.status === 401) {
+      isLoggedIn = false;
+      await loginTraccar();
+      const retry = await client.delete(url);
+      return retry.data;
+    }
+    throw err;
+  }
+};
 
 module.exports = {
   loginTraccar,
   getPositions,
   apiGet,
-  apiPost
+  apiPost,
+  apiDelete
 };

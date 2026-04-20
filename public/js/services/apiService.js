@@ -16,13 +16,19 @@ export async function apiRequest(path, options = {}) {
 
         // 🔴 HANDLE AUTH ERROR FIRST (IMPORTANT)
         if (res.status === 401) {
-            console.warn("⚠️ Session expired. Redirecting to login...");
+            console.warn("⚠️ Session expired");
 
             localStorage.removeItem("token");
 
-            // redirect to login page
-            window.location.href = "/login.html";
-            return;
+            // 🔥 Safe UI switch
+            const login = document.getElementById("loginSection");
+            const dashboard = document.getElementById("loggedInSection");
+
+            if (login) login.style.display = "block";
+            if (dashboard) dashboard.style.display = "none";
+
+            // 🔥 STOP further processing
+            return null;
         }
 
         const text = await res.text();

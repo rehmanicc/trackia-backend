@@ -42,17 +42,15 @@ exports.createDevice = async (req, res, next) => {
       });
     }
 
-    const traccarRes = await traccarAPI.get("/api/devices");
-    const traccarDevices = traccarRes.data;
+    const traccarDevices = await traccarAPI.apiGet("/api/devices");
 
     let traccarDevice = traccarDevices.find(d => d.uniqueId === uniqueId);
 
     if (!traccarDevice) {
-      const response = await traccarAPI.post("/api/devices", {
+      traccarDevice = await traccarAPI.apiPost("/api/devices", {
         name,
         uniqueId
       });
-      traccarDevice = response.data;
     }
 
     const oneYearLater = new Date();
@@ -124,8 +122,7 @@ exports.getDevices = async (req, res) => {
     }
 
     // 🔥 GET LIVE DEVICES FROM TRACCAR
-    const traccarRes = await traccarAPI.get("/api/devices");
-    const traccarDevices = traccarRes.data;
+    const traccarDevices = await traccarAPI.apiGet("/api/devices");
 
     // 🔥 MERGE STATUS
     const merged = devices.map(d => {
@@ -162,7 +159,7 @@ exports.deleteDevice = async (req, res) => {
       adminId: device.adminId
     };
 
-    await traccarAPI.delete(`/api/devices/${device.traccarId}`);
+    await traccarAPI.apiDelete(`/api/devices/${device.traccarId}`);
 
     await Geofence.deleteMany({
       deviceId: device.traccarId

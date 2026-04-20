@@ -85,62 +85,44 @@ router.post("/command",
 // ======================
 router.post("/webhook", async (req, res) => {
   try {
-    console.log("📥 WEBHOOK HIT");
-    console.log("📦 DATA:", req.body);
+    const socket = require("../socket");
+    const io = socket.getIO();
 
-    const Position = require("../models/Position");
+    const data = req.body;
 
     let positions = [];
 
-    // ✅ HANDLE ALL FORMATS FROM TRACCAR
-    if (Array.isArray(req.body)) {
-      positions = req.body;
-    } else if (req.body.positions) {
-      positions = req.body.positions;
+    if (Array.isArray(data)) {
+      positions = data;
+    } else if (data.positions) {
+      positions = data.positions;
     } else {
-      positions = [req.body];
+      positions = [data];
     }
 
+    const livePositions = [];
+
     for (const pos of positions) {
-
-  // ✅ Handle normal position
-  if (pos.deviceId && pos.deviceTime) {
-
-    await Position.updateOne(
-      {
-        deviceId: pos.deviceId,
-        deviceTime: pos.deviceTime
-      },
-      {
-        $setOnInsert: {
+      if (pos.deviceId && pos.deviceTime) {
+        livePositions.push({
           deviceId: pos.deviceId,
           latitude: pos.latitude,
           longitude: pos.longitude,
           speed: pos.speed,
           deviceTime: pos.deviceTime
-        }
-      },
-      { upsert: true }
-    );
+        });
+      }
+    }
 
-    console.log("💾 Saved position:", pos.deviceId);
-
-  }
-
-  // 🔥 Handle event (optional)
-  else if (pos.event) {
-    console.log("⚡ Event received:", pos.event.type);
-  }
-
-  else {
-    console.log("❌ Unknown data format");
-  }
-}
+    if (io && livePositions.length > 0) {
+      io.emit("positions", livePositions);
+      console.log("⚡ LIVE PUSH:", livePositions.length);
+    }
 
     res.sendStatus(200);
 
   } catch (err) {
-    console.error("❌ Webhook error:", err.message);
+    console.error("Webhook error:", err.message);
     res.sendStatus(500);
   }
 });

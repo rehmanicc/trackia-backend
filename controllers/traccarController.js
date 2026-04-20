@@ -13,7 +13,8 @@ exports.getPositions = async (req, res) => {
   try {
     const positions = await getPositions();
 
-    const io = require("../socket").getIO();
+    const socket = require("../socket");
+    const io = socket.getIO();
 
     // 🔥 PRELOAD DEVICES (OPTIMIZED)
     const deviceIds = positions.map(p => p.deviceId);
@@ -58,16 +59,18 @@ exports.getPositions = async (req, res) => {
         { upsert: true }
       );
 
-      // ✅ PROCESS ENGINE
-      await processPosition({
-        deviceId: p.deviceId,
-        latitude: p.latitude,
-        longitude: p.longitude,
-        speed: p.speed,
-        attributes: p.attributes || {},
-        deviceTime: p.deviceTime
-      }, io);
-      await handleAlerts(p, io);
+      if (io) {
+        await processPosition({
+          deviceId: p.deviceId,
+          latitude: p.latitude,
+          longitude: p.longitude,
+          speed: p.speed,
+          attributes: p.attributes || {},
+          deviceTime: p.deviceTime
+        }, io);
+
+        await handleAlerts(p, io);
+      }
 
       activePositions.push({
         ...p,
@@ -75,8 +78,9 @@ exports.getPositions = async (req, res) => {
       });
     }
 
-    // 🔥 EMIT ONLY ACTIVE DEVICES
-    io.emit("positions", activePositions);
+    if (io) {
+      io.emit("positions", activePositions);
+    }
 
     console.log("📡 ACTIVE POSITIONS:", activePositions.length);
 
@@ -124,10 +128,10 @@ exports.getTrips = async (req, res) => {
     const { deviceId, from, to } = req.query;
 
     const data = await apiGet("/api/reports/trips", {
-  params: { deviceId, from, to }
-});
+      params: { deviceId, from, to }
+    });
 
-res.json(data);
+    res.json(data);
 
   } catch (error) {
 
@@ -225,11 +229,11 @@ exports.sendCommand = async (req, res) => {
     }
 
     const data = await apiPost("/api/commands/send", {
-  deviceId,
-  type
-});
+      deviceId,
+      type
+    });
 
-res.json(data);
+    res.json(data);
 
   } catch (error) {
     res.status(500).json({

@@ -39,7 +39,14 @@ async function handleLogin() {
             document.getElementById("loginSection").style.display = "none";
             document.getElementById("loggedInSection").style.display = "flex";
 
-            window.location.reload();
+            // ✅ switch UI
+            document.getElementById("loginSection").style.display = "none";
+            document.getElementById("loggedInSection").style.display = "flex";
+
+            // 🔥 initialize app manually instead of reload
+            if (window.initApp) {
+                window.initApp();
+            }
 
         }
         // ❌ FAILURE

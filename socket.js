@@ -13,12 +13,14 @@ module.exports = {
       },
       transports: ["websocket"]
     });
+
     return io;
   },
 
   getIO: () => {
     if (!io) {
-      throw new Error("Socket.io not initialized!");
+      console.log("⚠️ Socket not ready yet");
+      return null;   // 🔥 IMPORTANT: no crash
     }
     return io;
   }

@@ -76,14 +76,24 @@ const alertRoutes = require("./routes/alertRoutes");
 const userRoutes = require("./routes/user");
 const alertRuleRoutes = require("./routes/alertRuleRoutes");
 
+console.log("alertRuleRoutes:", typeof alertRuleRoutes);
 app.use("/api/alert-rules", alertRuleRoutes);
+console.log("authRoutes:", typeof authRoutes);
 app.use("/api/auth", authRoutes);
+console.log("geofenceRoutes:", typeof geofenceRoutes);
 app.use("/api/geofence", geofenceRoutes);
+console.log("tripRoutes:", typeof tripRoutes);
 app.use("/api/trips", tripRoutes);
+console.log("traccarRoutes:", typeof traccarRoutes);
 app.use("/api/traccar", traccarRoutes);
+console.log("analyticsRoutes:", typeof analyticsRoutes);
 app.use("/api/analytics", analyticsRoutes);
+console.log("deviceRoutes type:", typeof deviceRoutes);
+console.log("deviceRoutes value:", deviceRoutes);
 app.use("/api/devices", deviceRoutes);
+console.log("alertRoutes:", typeof alertRoutes);
 app.use("/api/alerts", alertRoutes);
+console.log("userRoutes:", typeof userRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/audit", require("./routes/auditRoutes"));
 // ======================
@@ -113,7 +123,7 @@ app.get("/check-db", async (req, res) => {
 // ======================
 // SOCKET CONNECTION
 // ======================
-io.on("connection", async (socket) => {
+ io.on("connection", async (socket) => {
 
   try {
     const token = socket.handshake.auth?.token;
@@ -151,7 +161,7 @@ io.on("connection", async (socket) => {
     console.log("Client disconnected:", socket.id);
   });
 
-});
+}); 
 // ======================
 // SERVER START
 // ======================
