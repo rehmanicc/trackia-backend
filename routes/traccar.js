@@ -117,7 +117,7 @@ router.all("/webhook", async (req, res) => {
     }
 
     const activePositions = [];
-
+    const bulkOps = [];
     // 🔥 preload devices
     const deviceIds = positions.map(p => p.deviceId);
     const devices = await Device.find({ traccarId: { $in: deviceIds } });
@@ -142,34 +142,40 @@ router.all("/webhook", async (req, res) => {
 
       const last = lastPositionCache.get(cacheKey);
 
-      if (
-        last &&
-        last.latitude === p.latitude &&
-        last.longitude === p.longitude
-      ) {
-        // ⛔ same position → skip DB write
-        continue;
+      if (last) {
+        const moved =
+          Math.abs(last.latitude - p.latitude) > 0.00001 ||
+          Math.abs(last.longitude - p.longitude) > 0.00001;
+
+        if (!moved) {
+          continue; // ⛔ ignore jitter
+        }
       }
       lastPositionCache.set(cacheKey, {
         latitude: p.latitude,
         longitude: p.longitude
       });
-      await Position.updateOne(
-        {
-          deviceId: p.deviceId,
-          deviceTime: p.deviceTime
-        },
-        {
-          $setOnInsert: {
+      if (lastPositionCache.size > 10000) {
+        lastPositionCache.clear();
+      }
+      bulkOps.push({
+        updateOne: {
+          filter: {
             deviceId: p.deviceId,
-            latitude: p.latitude,
-            longitude: p.longitude,
-            speed: p.speed,
             deviceTime: p.deviceTime
-          }
-        },
-        { upsert: true }
-      );
+          },
+          update: {
+            $setOnInsert: {
+              deviceId: p.deviceId,
+              latitude: p.latitude,
+              longitude: p.longitude,
+              speed: p.speed,
+              deviceTime: p.deviceTime
+            }
+          },
+          upsert: true
+        }
+      });
 
       // ✅ GEOFENCE + ALERTS
       if (io) {
@@ -190,7 +196,9 @@ router.all("/webhook", async (req, res) => {
         engineOn: p.attributes?.ignition === true
       });
     }
-
+    if (bulkOps.length > 0) {
+      await Position.bulkWrite(bulkOps);
+    }
     // ======================
     // 🔥 EMIT PER USER / COMPANY
     // ======================
@@ -214,9 +222,12 @@ router.all("/webhook", async (req, res) => {
       for (const adminId in companyGroups) {
         const items = companyGroups[adminId];
 
+        // 🔹 group per user
+        const userGroups = {};
+        const companyPositions = [];
+
         for (const { pos, device } of items) {
 
-          // 🔒 collect users
           const users = new Set(
             [
               ...(device.assignedUsers || []),
@@ -228,14 +239,22 @@ router.all("/webhook", async (req, res) => {
 
           if (users.size > 0) {
             users.forEach(userId => {
-              io.to(`user_${userId}`).emit("positions", [pos]);
-              console.log("📡 Emit → user:", userId.toString());
+              if (!userGroups[userId]) userGroups[userId] = [];
+              userGroups[userId].push(pos);
             });
           } else {
-            // fallback → company
-            io.to(`company_${adminId}`).emit("positions", [pos]);
-            console.log("📡 Emit → company:", adminId);
+            companyPositions.push(pos);
           }
+        }
+
+        // 🔹 emit to users
+        for (const userId in userGroups) {
+          io.to(`user_${userId}`).emit("positions", userGroups[userId]);
+        }
+
+        // 🔹 fallback emit to company
+        if (companyPositions.length > 0) {
+          io.to(`company_${adminId}`).emit("positions", companyPositions);
         }
       }
     }
