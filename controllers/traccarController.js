@@ -4,15 +4,14 @@ const TRACCAR_URL = process.env.TRACCAR_URL;
 const EMAIL = process.env.TRACCAR_EMAIL;
 const PASSWORD = process.env.TRACCAR_PASSWORD;
 const Device = require("../models/Device");
-const traccarAPI = require("../services/traccarAPI");
+const { getPositions, apiGet, apiPost } = require("../services/traccarAPI");
 const { processPosition } = require("../services/geofenceEngine");
 const { handleAlerts } = require("../services/alert/alertProcessor");
 
 //Get positions API
 exports.getPositions = async (req, res) => {
   try {
-    const response = await traccarAPI.get("/api/positions");
-    const positions = response.data;
+    const positions = await getPositions();
 
     const io = require("../socket").getIO();
 
@@ -69,7 +68,7 @@ exports.getPositions = async (req, res) => {
         deviceTime: p.deviceTime
       }, io);
       await handleAlerts(p, io);
-      
+
       activePositions.push({
         ...p,
         engineOn: p.attributes?.ignition === true
@@ -98,11 +97,11 @@ exports.getRoute = async (req, res) => {
     const bufferMs = 10 * 60 * 1000;
     to = new Date(new Date(to).getTime() + bufferMs).toISOString();
 
-    const response = await traccarAPI.get("/api/reports/route", {
+    const data = await apiGet("/api/reports/route", {
       params: { deviceId, from, to }
     });
 
-    res.json(response.data);
+    res.json(data);
 
   } catch (error) {
 
@@ -124,11 +123,11 @@ exports.getTrips = async (req, res) => {
 
     const { deviceId, from, to } = req.query;
 
-    const response = await traccarAPI.get("/api/reports/trips", {
-      params: { deviceId, from, to }
-    });
+    const data = await apiGet("/api/reports/trips", {
+  params: { deviceId, from, to }
+});
 
-    res.json(response.data);
+res.json(data);
 
   } catch (error) {
 
@@ -225,12 +224,12 @@ exports.sendCommand = async (req, res) => {
       }
     }
 
-    const response = await traccarAPI.post("/api/commands/send", {
-      deviceId,
-      type
-    });
+    const data = await apiPost("/api/commands/send", {
+  deviceId,
+  type
+});
 
-    res.json(response.data);
+res.json(data);
 
   } catch (error) {
     res.status(500).json({

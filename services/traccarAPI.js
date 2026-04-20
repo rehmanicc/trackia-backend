@@ -1,40 +1,110 @@
 const axios = require("axios");
+const { wrapper } = require("axios-cookiejar-support");
+const { CookieJar } = require("tough-cookie");
 
-const traccarAPI = axios.create({
-  baseURL: process.env.TRACCAR_URL,
-  timeout: 10000, // 🔥 prevents hanging requests
-  auth: {
-    username: process.env.TRACCAR_EMAIL,
-    password: process.env.TRACCAR_PASSWORD
-  }
-});
+const jar = new CookieJar();
 
-// ✅ RESPONSE INTERCEPTOR (VERY IMPORTANT)
-traccarAPI.interceptors.response.use(
-  (response) => {
-    // 🔥 Detect wrong response (HTML instead of JSON)
-    if (typeof response.data === "string" && response.data.includes("<!DOCTYPE")) {
-      console.error("❌ Traccar returned HTML → wrong URL or auth");
-      return Promise.reject({
-        message: "Invalid Traccar response (HTML)"
-      });
-    }
+const client = wrapper(axios.create({
+  baseURL: "http://localhost:8082",
+  jar,
+  withCredentials: true,
+}));
+let isLoggedIn = false;
+const qs = require("qs");
+const loginTraccar = async () => {
+  try {
+    const email = process.env.TRACCAR_EMAIL;
+    const password = process.env.TRACCAR_PASSWORD;
 
-    return response;
-  },
-  (error) => {
-    console.error("❌ Traccar Error:", error.message);
+    const formData = new URLSearchParams();
+    formData.append("email", email);
+    formData.append("password", password);
 
-    if (error.response) {
-      return Promise.reject({
-        message: error.response.data || "Traccar API error"
-      });
-    }
-
-    return Promise.reject({
-      message: error.message || "Unknown error"
+    const res = await client.post("/api/session", formData.toString(), {
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      }
     });
-  }
-);
 
-module.exports = traccarAPI;
+    // ✅ ONLY mark success if 200
+    if (res.status === 200) {
+      isLoggedIn = true;
+      console.log("✅ Traccar login success");
+    } else {
+      isLoggedIn = false;
+      console.log("❌ Login failed with status:", res.status);
+    }
+
+  } catch (err) {
+    console.error("❌ Login failed:", err.response?.data || err.message);
+    isLoggedIn = false;
+  }
+};
+const getPositions = async () => {
+  try {
+    if (!isLoggedIn) {
+      await loginTraccar();
+    }
+
+    const res = await client.get("/api/positions");
+    return res.data;
+
+  } catch (err) {
+
+    if (err.response?.status === 401) {
+      console.log("⚠️ Session expired. Re-logging...");
+
+      isLoggedIn = false;
+      await loginTraccar();
+
+      const retry = await client.get("/api/positions");
+      return retry.data;
+    }
+
+    console.error("❌ Positions error:", err.response?.data || err.message);
+    throw err;
+  }
+};
+
+const apiGet = async (url, config = {}) => {
+  try {
+    if (!isLoggedIn) await loginTraccar();
+
+    const res = await client.get(url, config);
+    return res.data;
+
+  } catch (err) {
+    if (err.response?.status === 401) {
+      isLoggedIn = false;
+      await loginTraccar();
+      const retry = await client.get(url, config);
+      return retry.data;
+    }
+    throw err;
+  }
+};
+
+const apiPost = async (url, data) => {
+  try {
+    if (!isLoggedIn) await loginTraccar();
+
+    const res = await client.post(url, data);
+    return res.data;
+
+  } catch (err) {
+    if (err.response?.status === 401) {
+      isLoggedIn = false;
+      await loginTraccar();
+      const retry = await client.post(url, data);
+      return retry.data;
+    }
+    throw err;
+  }
+};
+
+module.exports = {
+  loginTraccar,
+  getPositions,
+  apiGet,
+  apiPost
+};

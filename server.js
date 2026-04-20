@@ -16,6 +16,7 @@ const app = express();
 const server = http.createServer(app);
 const jwt = require("jsonwebtoken");
 const Device = require("./models/Device");
+const { startPolling } = require("./services/traccarPolling");
 
 require("./services/notification/firebase");
 // ✅ SOCKET INIT
@@ -191,8 +192,12 @@ app.use((err, req, res, next) => {
     error: err.message || "Internal Server Error"
   });
 });
+
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+
+  // 🚀 START AUTO POLLING
+  startPolling();
 });
 setInterval(() => {
   console.log("🔥 Server alive");

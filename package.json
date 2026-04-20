@@ -12,7 +12,8 @@
   "type": "commonjs",
   "dependencies": {
     "@turf/turf": "^7.3.4",
-    "axios": "^1.13.6",
+    "axios": "^1.15.0",
+    "axios-cookiejar-support": "^6.0.5",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
@@ -23,6 +24,8 @@
     "mongodb": "^7.1.0",
     "mongoose": "^9.3.0",
     "node-cron": "^4.2.1",
-    "socket.io": "^4.8.3"
+    "qs": "^6.15.1",
+    "socket.io": "^4.8.3",
+    "tough-cookie": "^6.0.1"
   }
 }
