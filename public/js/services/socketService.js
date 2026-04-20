@@ -12,7 +12,7 @@ export function initSocket(token) {
         return socket;
     }
 
-    socket = io("https://trackia-backend.onrender.com", {
+    socket = io("http://195.35.7.110:5000", {
         transports: ["websocket"], // 🔥 optimized (no polling)
         reconnection: true,
         reconnectionAttempts: Infinity,
@@ -52,7 +52,7 @@ export function initSocket(token) {
             try {
                 const token = localStorage.getItem("token");
 
-                const res = await fetch("https://trackia-backend.onrender.com/api/traccar/positions", {
+                const res = await fetch("http://195.35.7.110:5000/api/traccar/positions", {
                     headers: {
                         "Authorization": "Bearer " + token
                     }

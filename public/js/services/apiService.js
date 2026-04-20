@@ -1,4 +1,4 @@
-const BASE_URL = "https://trackia-backend.onrender.com";
+const BASE_URL = "http://195.35.7.110:5000";
 
 export async function apiRequest(path, options = {}) {
 

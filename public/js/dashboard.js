@@ -1218,7 +1218,7 @@ async function getFCMToken() {
 
     // ✅ ADD THIS PART (IMPORTANT)
     if (token) {
-      await fetch("https://trackia-backend.onrender.com/api/users/save-fcm-token", {
+      await fetch("http://195.35.7.110:5000/api/users/save-fcm-token", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
