@@ -1,4 +1,9 @@
 require("dotenv").config();
+const express = require("express");
+const app = express();
+const path = require("path");
+app.use(express.json());
+app.use(express.static(path.join(__dirname, "public")));
 const Position = require("./models/Position");
 const PositionArchive = require("./models/PositionsArchive");
 const Trip = require("./models/Trip");
@@ -6,20 +11,18 @@ const deviceRoutes = require("./routes/device");
 const { getPendingCalls, clearCalls } = require("./services/callService");
 const Geofence = require("./models/Geofence");
 const GeofenceEvent = require("./models/GeofenceEvent");
-const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const http = require("http");
-const path = require("path");
+
 const Alert = require("./models/Alert");
-const app = express();
 const server = http.createServer(app);
 const jwt = require("jsonwebtoken");
 const Device = require("./models/Device");
 const { startPolling } = require("./services/traccarPolling");
 
 require("./services/notification/firebase");
-// ✅ SOCKET INIT
+
 const socket = require("./socket");
 const io = socket.init(server);
 
@@ -53,8 +56,10 @@ mongoose.connect(process.env.MONGO_URI)
 // ======================
 // MIDDLEWARE
 // ======================
-app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
+app.use((req, res, next) => {
+  console.log("🌐 Incoming:", req.method, req.url);
+  next();
+});
 // ======================
 // TEST ROUTE
 // ======================
@@ -76,6 +81,8 @@ const alertRoutes = require("./routes/alertRoutes");
 const userRoutes = require("./routes/user");
 const alertRuleRoutes = require("./routes/alertRuleRoutes");
 
+
+app.use(express.urlencoded({ extended: true }));
 console.log("alertRuleRoutes:", typeof alertRuleRoutes);
 app.use("/api/alert-rules", alertRuleRoutes);
 console.log("authRoutes:", typeof authRoutes);
@@ -123,7 +130,7 @@ app.get("/check-db", async (req, res) => {
 // ======================
 // SOCKET CONNECTION
 // ======================
- io.on("connection", async (socket) => {
+io.on("connection", async (socket) => {
 
   try {
     const token = socket.handshake.auth?.token;
@@ -161,7 +168,7 @@ app.get("/check-db", async (req, res) => {
     console.log("Client disconnected:", socket.id);
   });
 
-}); 
+});
 // ======================
 // SERVER START
 // ======================

@@ -85,19 +85,20 @@ router.post("/command",
 // ======================
 router.post("/webhook", async (req, res) => {
   try {
+    console.log("🔥 WEBHOOK HIT");
+    console.log("📦 BODY:", req.body);
+
     const socket = require("../socket");
     const io = socket.getIO();
 
-    const data = req.body;
-
     let positions = [];
 
-    if (Array.isArray(data)) {
-      positions = data;
-    } else if (data.positions) {
-      positions = data.positions;
+    if (Array.isArray(req.body)) {
+      positions = req.body;
+    } else if (req.body.positions) {
+      positions = req.body.positions;
     } else {
-      positions = [data];
+      positions = [req.body];
     }
 
     const livePositions = [];
@@ -114,6 +115,8 @@ router.post("/webhook", async (req, res) => {
       }
     }
 
+    console.log("📊 Parsed positions:", livePositions.length);
+
     if (io && livePositions.length > 0) {
       io.emit("positions", livePositions);
       console.log("⚡ LIVE PUSH:", livePositions.length);
@@ -122,7 +125,7 @@ router.post("/webhook", async (req, res) => {
     res.sendStatus(200);
 
   } catch (err) {
-    console.error("Webhook error:", err.message);
+    console.error("❌ Webhook error:", err.message);
     res.sendStatus(500);
   }
 });
