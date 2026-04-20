@@ -214,9 +214,8 @@ server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 
   // 🚀 START AUTO POLLING
-  startPolling();
+  //startPolling();
 });
 setInterval(() => {
   console.log("🔥 Server alive");
 }, 1000 * 60 * 5);
-

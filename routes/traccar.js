@@ -86,10 +86,15 @@ router.post("/command",
 router.post("/webhook", async (req, res) => {
   try {
     console.log("🔥 WEBHOOK HIT");
-    console.log("📦 BODY:", req.body);
 
     const socket = require("../socket");
     const io = socket.getIO();
+
+    const Position = require("../models/Position");
+    const Device = require("../models/Device");
+
+    const { processPosition } = require("../services/geofenceEngine");
+    const { handleAlerts } = require("../services/alert/alertProcessor");
 
     let positions = [];
 
@@ -101,26 +106,74 @@ router.post("/webhook", async (req, res) => {
       positions = [req.body];
     }
 
-    const livePositions = [];
+    const activePositions = [];
 
-    for (const pos of positions) {
-      if (pos.deviceId && pos.deviceTime) {
-        livePositions.push({
-          deviceId: pos.deviceId,
-          latitude: pos.latitude,
-          longitude: pos.longitude,
-          speed: pos.speed,
-          deviceTime: pos.deviceTime
-        });
+    // 🔥 PRELOAD DEVICES (same as polling)
+    const deviceIds = positions.map(p => p.deviceId);
+    const devices = await Device.find({ traccarId: { $in: deviceIds } });
+
+    const deviceMap = {};
+    devices.forEach(d => {
+      deviceMap[d.traccarId] = d;
+    });
+
+    for (const p of positions) {
+
+      const device = deviceMap[p.deviceId];
+      if (!device) continue;
+
+      // ⛔ skip inactive
+      if (!device.isActive || new Date() > new Date(device.expiryDate)) {
+        continue;
       }
+
+      console.log("💾 Saving:", p.deviceId, p.deviceTime);
+
+      // ✅ SAVE (same as polling)
+      await Position.updateOne(
+        {
+          deviceId: p.deviceId,
+          deviceTime: p.deviceTime
+        },
+        {
+          $setOnInsert: {
+            deviceId: p.deviceId,
+            latitude: p.latitude,
+            longitude: p.longitude,
+            speed: p.speed,
+            deviceTime: p.deviceTime
+          }
+        },
+        { upsert: true }
+      );
+
+      // ✅ GEOFENCE
+      if (io) {
+        await processPosition({
+          deviceId: p.deviceId,
+          latitude: p.latitude,
+          longitude: p.longitude,
+          speed: p.speed,
+          attributes: p.attributes || {},
+          deviceTime: p.deviceTime
+        }, io);
+
+        // ✅ ALERTS
+        await handleAlerts(p, io);
+      }
+
+      activePositions.push({
+        ...p,
+        engineOn: p.attributes?.ignition === true
+      });
     }
 
-    console.log("📊 Parsed positions:", livePositions.length);
-
-    if (io && livePositions.length > 0) {
-      io.emit("positions", livePositions);
-      console.log("⚡ LIVE PUSH:", livePositions.length);
+    // ✅ SOCKET EMIT
+    if (io && activePositions.length > 0) {
+      io.emit("positions", activePositions);
     }
+
+    console.log("⚡ LIVE POSITIONS:", activePositions.length);
 
     res.sendStatus(200);
 
