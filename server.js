@@ -126,49 +126,6 @@ app.get("/check-db", async (req, res) => {
     res.json({ error: err.message });
   }
 });
-
-// ======================
-// SOCKET CONNECTION
-// ======================
-io.on("connection", async (socket) => {
-
-  try {
-    const token = socket.handshake.auth?.token;
-
-    if (!token) {
-      console.log("❌ No token");
-      return socket.disconnect();
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    socket.user = decoded;
-
-    // ✅ Assign room
-    if (decoded.role === "owner") {
-      socket.join("owner");
-    }
-
-    if (decoded.role === "admin") {
-      socket.join(`company_${decoded.adminId}`);
-    }
-
-    if (decoded.role === "user") {
-      socket.join(`user_${decoded.id}`);
-    }
-    socket.join(String(decoded.id));
-    console.log("✅ User connected:", decoded.id);
-
-  } catch (err) {
-    console.log("❌ Invalid token");
-    socket.disconnect();
-  }
-
-  socket.on("disconnect", () => {
-    console.log("Client disconnected:", socket.id);
-  });
-
-});
 // ======================
 // SERVER START
 // ======================
