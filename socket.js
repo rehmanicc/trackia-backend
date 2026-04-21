@@ -5,24 +5,26 @@ module.exports = {
   init: (server) => {
     io = require("socket.io")(server, {
       cors: {
-        origin: [
-          "http://127.0.0.1:8080",
-          "http://localhost:8080"
-        ],
+        origin: "*",
         methods: ["GET", "POST"],
         credentials: true
       },
-      transports: ["websocket"]
+      transports: ["websocket"],
+      pingTimeout: 60000,
+      pingInterval: 25000
     });
 
-    // ✅ AUTH + ROOM JOIN
+    // 🔐 AUTH
     io.use((socket, next) => {
       try {
         const token =
           socket.handshake.auth?.token ||
           socket.handshake.headers?.authorization?.split(" ")[1];
 
-        if (!token) return next(new Error("No token"));
+        if (!token) {
+          console.log("❌ No token");
+          return next(new Error("No token"));
+        }
 
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         socket.user = decoded;
@@ -34,26 +36,24 @@ module.exports = {
       }
     });
 
-    // ✅ CONNECTION HANDLER
+    // 🔌 CONNECTION
     io.on("connection", (socket) => {
       const user = socket.user;
 
-      if (!user) return;
+      if (!user) {
+        console.log("❌ No user on connection");
+        return;
+      }
 
       const adminId = String(user.adminId || user.id);
 
-      // 🔥 JOIN ROOMS
       socket.join(`company_${adminId}`);
       socket.join(`user_${user.id}`);
 
-      console.log(
-        "👤 Connected:",
-        `company_${adminId}`,
-        `user_${user.id}`
-      );
+      console.log("✅ Connected:", user.id);
 
-      socket.on("disconnect", () => {
-        console.log("🔌 Disconnected:", user.id);
+      socket.on("disconnect", (reason) => {
+        console.log("🔌 Disconnected:", user.id, reason);
       });
     });
 
