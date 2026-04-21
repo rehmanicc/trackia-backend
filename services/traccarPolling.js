@@ -31,9 +31,7 @@ async function pollPositions() {
 function startPolling() {
   console.log("🚀 Polling started...");
 
-  setInterval(pollPositions, 5000);
-
-  // 🔥 run immediately (important)
+    
   pollPositions();
 }
 
