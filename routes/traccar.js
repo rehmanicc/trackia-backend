@@ -142,13 +142,15 @@ router.all("/webhook", async (req, res) => {
 
       const last = lastPositionCache.get(cacheKey);
 
+      let shouldSave = true;
+
       if (last) {
         const moved =
           Math.abs(last.latitude - p.latitude) > 0.00001 ||
           Math.abs(last.longitude - p.longitude) > 0.00001;
 
         if (!moved) {
-          continue; // ⛔ ignore jitter
+          shouldSave = false; // ❗ only skip DB
         }
       }
       lastPositionCache.set(cacheKey, {
@@ -158,24 +160,26 @@ router.all("/webhook", async (req, res) => {
       if (lastPositionCache.size > 10000) {
         lastPositionCache.clear();
       }
-      bulkOps.push({
-        updateOne: {
-          filter: {
-            deviceId: p.deviceId,
-            deviceTime: p.deviceTime
-          },
-          update: {
-            $setOnInsert: {
+      if (shouldSave) {
+        bulkOps.push({
+          updateOne: {
+            filter: {
               deviceId: p.deviceId,
-              latitude: p.latitude,
-              longitude: p.longitude,
-              speed: p.speed,
               deviceTime: p.deviceTime
-            }
-          },
-          upsert: true
-        }
-      });
+            },
+            update: {
+              $setOnInsert: {
+                deviceId: p.deviceId,
+                latitude: p.latitude,
+                longitude: p.longitude,
+                speed: p.speed,
+                deviceTime: p.deviceTime
+              }
+            },
+            upsert: true
+          }
+        });
+      }
 
       // ✅ GEOFENCE + ALERTS
       if (io) {
@@ -258,7 +262,10 @@ router.all("/webhook", async (req, res) => {
         }
       }
     }
+    console.log("📡 DEBUG EMIT (GLOBAL):", activePositions.length);
 
+    // TEMP TEST: broadcast to ALL clients
+    io.emit("positions", activePositions);
     console.log("⚡ LIVE POSITIONS:", activePositions.length);
 
     res.sendStatus(200);

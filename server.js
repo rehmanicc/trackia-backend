@@ -83,24 +83,24 @@ const alertRuleRoutes = require("./routes/alertRuleRoutes");
 
 
 app.use(express.urlencoded({ extended: true }));
-console.log("alertRuleRoutes:", typeof alertRuleRoutes);
+//console.log("alertRuleRoutes:", typeof alertRuleRoutes);
 app.use("/api/alert-rules", alertRuleRoutes);
-console.log("authRoutes:", typeof authRoutes);
+//console.log("authRoutes:", typeof authRoutes);
 app.use("/api/auth", authRoutes);
-console.log("geofenceRoutes:", typeof geofenceRoutes);
+//console.log("geofenceRoutes:", typeof geofenceRoutes);
 app.use("/api/geofence", geofenceRoutes);
-console.log("tripRoutes:", typeof tripRoutes);
+//console.log("tripRoutes:", typeof tripRoutes);
 app.use("/api/trips", tripRoutes);
-console.log("traccarRoutes:", typeof traccarRoutes);
+//console.log("traccarRoutes:", typeof traccarRoutes);
 app.use("/api/traccar", traccarRoutes);
-console.log("analyticsRoutes:", typeof analyticsRoutes);
+//console.log("analyticsRoutes:", typeof analyticsRoutes);
 app.use("/api/analytics", analyticsRoutes);
-console.log("deviceRoutes type:", typeof deviceRoutes);
-console.log("deviceRoutes value:", deviceRoutes);
+//console.log("deviceRoutes type:", typeof deviceRoutes);
+//console.log("deviceRoutes value:", deviceRoutes);
 app.use("/api/devices", deviceRoutes);
-console.log("alertRoutes:", typeof alertRoutes);
+//console.log("alertRoutes:", typeof alertRoutes);
 app.use("/api/alerts", alertRoutes);
-console.log("userRoutes:", typeof userRoutes);
+//console.log("userRoutes:", typeof userRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/audit", require("./routes/auditRoutes"));
 // ======================
