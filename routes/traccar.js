@@ -53,226 +53,222 @@ router.post("/assign-device", authMiddleware, async (req, res) => {
   }
 });
 
-// ======================
-// ADD DEVICE (ADMIN ONLY)
-// ======================
+
 
 console.log("Traccar routes loaded");
-// ======================
-// POSITIONS
-// ======================
+
 router.get("/positions", authMiddleware, getPositions);
 
-// ======================
-// ROUTE HISTORY
-// ======================
+
 router.get("/route", authMiddleware, getRoute);
 
-// ======================
-// TRIPS
-// ======================
 router.get("/trips", authMiddleware, getTrips);
 
-// ======================
-// COMMAND
-// ======================
+
 router.post("/command",
   authMiddleware,
   checkPermission(PERMISSIONS.SEND_COMMAND),
   sendCommand
 );
-// ======================
-// WEBHOOK (REAL-TIME POSITIONS)
-// ======================
-// ======================
-// WEBHOOK (REAL-TIME POSITIONS)
-// ======================
+
 router.all("/webhook", async (req, res) => {
-  try {
-    console.log("🔥 WEBHOOK HIT");
 
-    const socket = require("../socket");
-    const io = socket.getIO();
+  // ✅ 1. RESPOND IMMEDIATELY (VERY IMPORTANT)
+  res.sendStatus(200);
 
-    const Position = require("../models/Position");
-    const Device = require("../models/Device");
-
-    const { processPosition } = require("../services/geofenceEngine");
-    const { handleAlerts } = require("../services/alert/alertProcessor");
-
-    // ✅ IMPORTANT: use SERVICE (not controller)
-
-    let positions = [];
-
+  // ✅ 2. RUN HEAVY WORK IN BACKGROUND
+  setImmediate(async () => {
     try {
-      positions = await getTraccarPositions();
-    } catch (err) {
-      console.log("❌ Traccar fetch error:", err.response?.data || err.message);
-      return res.sendStatus(200); // prevent retry spam
-    }
+      console.log("🔥 WEBHOOK HIT");
 
-    if (!positions || positions.length === 0) {
-      console.log("⚠️ No positions from Traccar");
-      return res.sendStatus(200);
-    }
+      const socket = require("../socket");
+      const io = socket.getIO();
 
-    const activePositions = [];
-    const bulkOps = [];
-    // 🔥 preload devices
-    const deviceIds = positions.map(p => p.deviceId);
-    const devices = await Device.find({ traccarId: { $in: deviceIds } });
+      const Position = require("../models/Position");
+      const Device = require("../models/Device");
 
-    const deviceMap = {};
-    devices.forEach(d => {
-      deviceMap[d.traccarId] = d;
-    });
+      const { processPosition } = require("../services/geofenceEngine");
+      const { handleAlerts } = require("../services/alert/alertProcessor");
 
-    for (const p of positions) {
-      const device = deviceMap[p.deviceId];
-      if (!device) continue;
+      let positions = [];
 
-      // ⛔ skip inactive
-      if (!device.isActive || new Date() > new Date(device.expiryDate)) {
-        continue;
+      try {
+        positions = await getTraccarPositions();
+      } catch (err) {
+        console.log("❌ Traccar fetch error:", err.message);
+        return;
       }
 
-      console.log("💾 Saving:", p.deviceId, p.deviceTime);
-
-      const cacheKey = p.deviceId;
-
-      const last = lastPositionCache.get(cacheKey);
-
-      let shouldSave = true;
-
-      if (last) {
-        const moved =
-          Math.abs(last.latitude - p.latitude) > 0.00001 ||
-          Math.abs(last.longitude - p.longitude) > 0.00001;
-
-        if (!moved) {
-          shouldSave = false; // ❗ only skip DB
-        }
+      if (!positions || positions.length === 0) {
+        console.log("⚠️ No positions from Traccar");
+        return;
       }
-      lastPositionCache.set(cacheKey, {
-        latitude: p.latitude,
-        longitude: p.longitude
+
+      const activePositions = [];
+      const bulkOps = [];
+
+      // 🔥 preload devices
+      const deviceIds = positions.map(p => p.deviceId);
+      const devices = await Device.find({ traccarId: { $in: deviceIds } });
+
+      const deviceMap = {};
+      devices.forEach(d => {
+        deviceMap[d.traccarId] = d;
       });
-      if (lastPositionCache.size > 10000) {
-        lastPositionCache.clear();
-      }
-      if (shouldSave) {
-        bulkOps.push({
-          updateOne: {
-            filter: {
-              deviceId: p.deviceId,
-              deviceTime: p.deviceTime
-            },
-            update: {
-              $setOnInsert: {
-                deviceId: p.deviceId,
-                latitude: p.latitude,
-                longitude: p.longitude,
-                speed: p.speed,
-                deviceTime: p.deviceTime
-              }
-            },
-            upsert: true
-          }
-        });
-      }
 
-      // ✅ GEOFENCE + ALERTS
-      if (io) {
-        await processPosition({
+      for (const p of positions) {
+        const device = deviceMap[p.deviceId];
+        if (!device) continue;
+
+        if (!device.isActive || new Date() > new Date(device.expiryDate)) {
+          continue;
+        }
+
+        const cacheKey = p.deviceId;
+        const last = lastPositionCache.get(cacheKey);
+
+        let shouldSave = true;
+
+        if (last) {
+          const moved =
+            Math.abs(last.latitude - p.latitude) > 0.00001 ||
+            Math.abs(last.longitude - p.longitude) > 0.00001;
+
+          if (!moved) shouldSave = false;
+        }
+
+        lastPositionCache.set(cacheKey, {
+          latitude: p.latitude,
+          longitude: p.longitude
+        });
+
+        if (lastPositionCache.size > 10000) {
+          lastPositionCache.clear();
+        }
+
+        if (shouldSave) {
+          bulkOps.push({
+            updateOne: {
+              filter: {
+                deviceId: p.deviceId,
+                deviceTime: p.deviceTime
+              },
+              update: {
+                $setOnInsert: {
+                  deviceId: p.deviceId,
+                  latitude: p.latitude,
+                  longitude: p.longitude,
+                  speed: p.speed,
+                  deviceTime: p.deviceTime
+                }
+              },
+              upsert: true
+            }
+          });
+        }
+
+        // ✅ Geofence + Alerts
+        if (io) {
+          await processPosition({
+            deviceId: p.deviceId,
+            latitude: p.latitude,
+            longitude: p.longitude,
+            speed: p.speed,
+            attributes: p.attributes || {},
+            deviceTime: p.deviceTime
+          }, io);
+
+          await handleAlerts(p, io);
+        }
+
+        activePositions.push({
+          id: p.id,
           deviceId: p.deviceId,
           latitude: p.latitude,
           longitude: p.longitude,
           speed: p.speed,
-          attributes: p.attributes || {},
-          deviceTime: p.deviceTime
-        }, io);
-
-        await handleAlerts(p, io);
+          course: p.course,
+          deviceTime: p.deviceTime,
+          engineOn: p.attributes?.ignition === true
+        });
       }
 
-      activePositions.push({
-        ...p,
-        engineOn: p.attributes?.ignition === true
-      });
-    }
-    if (bulkOps.length > 0) {
-      await Position.bulkWrite(bulkOps);
-    }
-    // ======================
-    // 🔥 EMIT PER USER / COMPANY
-    // ======================
-    if (io && activePositions.length > 0) {
+      if (bulkOps.length > 0) {
+        await Position.bulkWrite(bulkOps);
+      }
 
-      const companyGroups = {};
+      // ======================
+      // 🔥 EMIT PER USER / COMPANY (CLEAN DATA)
+      // ======================
+      if (io && activePositions.length > 0) {
 
-      for (const pos of activePositions) {
-        const device = deviceMap[pos.deviceId];
-        if (!device) continue;
+        const companyGroups = {};
 
-        const adminId = String(device.adminId);
+        for (const pos of activePositions) {
+          const device = deviceMap[pos.deviceId];
+          if (!device) continue;
 
-        if (!companyGroups[adminId]) {
-          companyGroups[adminId] = [];
+          const adminId = String(device.adminId);
+
+          if (!companyGroups[adminId]) {
+            companyGroups[adminId] = [];
+          }
+
+          companyGroups[adminId].push({ pos, device });
         }
 
-        companyGroups[adminId].push({ pos, device });
-      }
+        for (const adminId in companyGroups) {
+          const items = companyGroups[adminId];
 
-      for (const adminId in companyGroups) {
-        const items = companyGroups[adminId];
+          const userGroups = {};
+          const companyPositions = [];
 
-        // 🔹 group per user
-        const userGroups = {};
-        const companyPositions = [];
+          for (const { pos, device } of items) {
 
-        for (const { pos, device } of items) {
+            const users = new Set(
+              [
+                ...(device.assignedUsers || []),
+                device.assignedTo
+              ]
+                .filter(Boolean)
+                .map(id => id.toString())
+            );
 
-          const users = new Set(
-            [
-              ...(device.assignedUsers || []),
-              device.assignedTo
-            ]
-              .filter(Boolean)
-              .map(id => id.toString())
-          );
+            if (users.size > 0) {
+              users.forEach(userId => {
+                if (!userGroups[userId]) userGroups[userId] = [];
+                userGroups[userId].push(pos);
+              });
+            } else {
+              companyPositions.push(pos);
+            }
+          }
 
-          if (users.size > 0) {
-            users.forEach(userId => {
-              if (!userGroups[userId]) userGroups[userId] = [];
-              userGroups[userId].push(pos);
-            });
-          } else {
-            companyPositions.push(pos);
+          // ✅ Emit to users
+          for (const userId in userGroups) {
+            try {
+              io.to(`user_${userId}`).emit("positions", userGroups[userId]);
+            } catch (err) {
+              console.error("❌ Emit error (user):", err);
+            }
+          }
+
+          // ✅ Emit to company
+          if (companyPositions.length > 0) {
+            try {
+              io.to(`company_${adminId}`).emit("positions", companyPositions);
+            } catch (err) {
+              console.error("❌ Emit error (company):", err);
+            }
           }
         }
-
-        // 🔹 emit to users
-        for (const userId in userGroups) {
-          io.to(`user_${userId}`).emit("positions", userGroups[userId]);
-        }
-
-        // 🔹 fallback emit to company
-        if (companyPositions.length > 0) {
-          io.to(`company_${adminId}`).emit("positions", companyPositions);
-        }
       }
+
+      console.log("⚡ LIVE POSITIONS:", activePositions.length);
+
+    } catch (err) {
+      console.error("❌ Async processing error:", err);
     }
-    console.log("📡 DEBUG EMIT (GLOBAL):", activePositions.length);
-
-    // TEMP TEST: broadcast to ALL clients
-    io.emit("positions", activePositions);
-    console.log("⚡ LIVE POSITIONS:", activePositions.length);
-
-    res.sendStatus(200);
-
-  } catch (err) {
-    console.error("❌ Webhook error:", err.message);
-    res.sendStatus(500);
-  }
+  });
 });
 module.exports = router;
