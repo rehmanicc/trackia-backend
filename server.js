@@ -17,6 +17,8 @@ const http = require("http");
 
 const Alert = require("./models/Alert");
 const server = http.createServer(app);
+server.keepAliveTimeout = 120000;
+server.headersTimeout = 120000;
 const jwt = require("jsonwebtoken");
 const Device = require("./models/Device");
 const { startPolling } = require("./services/traccarPolling");

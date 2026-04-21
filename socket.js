@@ -10,7 +10,7 @@ module.exports = {
         credentials: true
       },
       transports: ["websocket"],
-      pingTimeout: 60000,
+      pingTimeout: 120000,
       pingInterval: 25000
     });
 
