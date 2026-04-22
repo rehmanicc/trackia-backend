@@ -4,15 +4,18 @@ const jwt = require("jsonwebtoken");
 module.exports = {
   init: (server) => {
     io = require("socket.io")(server, {
-      cors: {
-        origin: "*",
-        methods: ["GET", "POST"],
-        credentials: true
-      },
-      transports: ["websocket"],
-      pingTimeout: 120000,
-      pingInterval: 25000
-    });
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+    credentials: true
+  },
+
+  transports: ["websocket"],
+  upgrade: false,              // 🔥 ADD THIS
+
+  pingTimeout: 60000,          // 🔥 REDUCE (more stable)
+  pingInterval: 25000          // keep same
+});
 
     // 🔐 AUTH
     io.use((socket, next) => {

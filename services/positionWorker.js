@@ -116,11 +116,12 @@ async function processBatch() {
                         const latDiff = Math.abs(last.latitude - pos.latitude);
                         const lngDiff = Math.abs(last.longitude - pos.longitude);
 
-                        // 🔥 threshold to ignore GPS noise
-                        const MIN_MOVEMENT = 0.00001; // ~1 meter
+                        const moved = latDiff > 0.000003 || lngDiff > 0.000003; // 🔥 smaller threshold (~30cm)
+                        const speedChanged = last.speed !== pos.speed;
+                        const engineChanged = last.engineOn !== pos.engineOn;
 
-                        if (latDiff < MIN_MOVEMENT && lngDiff < MIN_MOVEMENT) {
-                            continue; // skip if no real movement
+                        if (!moved && !speedChanged && !engineChanged) {
+                            continue;
                         }
                     }
 
@@ -130,9 +131,13 @@ async function processBatch() {
                     filteredPositions.push(pos);
                 }
 
-                // 🚀 emit ONLY if new data exists
                 if (filteredPositions.length > 0) {
-                    io.to(`user_${userId}`).emit("positions", filteredPositions);
+                    try {
+                        console.log("🚀 EMIT:", JSON.stringify(filteredPositions));
+                        io.to(`user_${userId}`).emit("positions", filteredPositions);
+                    } catch (err) {
+                        console.log("❌ Emit error:", err.message);
+                    }
                 }
             }
         }
@@ -158,6 +163,6 @@ async function loop() {
     isRunning = false;
 }
 
-setInterval(loop, 200);
+setInterval(loop, 500);
 
 module.exports = {};
