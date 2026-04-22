@@ -107,27 +107,33 @@ async function processBatch() {
 
                 const filteredPositions = [];
 
-for (const deviceId in latestPerDevice) {
-    const pos = latestPerDevice[deviceId];
+                for (const deviceId in latestPerDevice) {
+                    const pos = latestPerDevice[deviceId];
 
-    // 🔥 Skip duplicate deviceTime
-    if (
-        lastEmitted[deviceId] &&
-        lastEmitted[deviceId].deviceTime === pos.deviceTime
-    ) {
-        continue; // skip duplicate
-    }
+                    if (lastEmitted[deviceId]) {
+                        const last = lastEmitted[deviceId];
 
-    // ✅ store latest emitted
-    lastEmitted[deviceId] = pos;
+                        const latDiff = Math.abs(last.latitude - pos.latitude);
+                        const lngDiff = Math.abs(last.longitude - pos.longitude);
 
-    filteredPositions.push(pos);
-}
+                        // 🔥 threshold to ignore GPS noise
+                        const MIN_MOVEMENT = 0.00001; // ~1 meter
 
-// 🚀 emit ONLY if new data exists
-if (filteredPositions.length > 0) {
-    io.to(`user_${userId}`).emit("positions", filteredPositions);
-}
+                        if (latDiff < MIN_MOVEMENT && lngDiff < MIN_MOVEMENT) {
+                            continue; // skip if no real movement
+                        }
+                    }
+
+                    // ✅ store latest emitted
+                    lastEmitted[deviceId] = pos;
+
+                    filteredPositions.push(pos);
+                }
+
+                // 🚀 emit ONLY if new data exists
+                if (filteredPositions.length > 0) {
+                    io.to(`user_${userId}`).emit("positions", filteredPositions);
+                }
             }
         }
 
