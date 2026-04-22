@@ -106,14 +106,18 @@ async function processBatch() {
                 }
 
                 // 3. Admin (company)
+                // emit to company (admin group)
                 if (device.adminId) {
                     const adminRoom = `company_${device.adminId}`;
                     io.to(adminRoom).emit("positions", [pos]);
+
+                    // 🔥 ALSO emit to admin as user (CRITICAL FIX)
+                    io.to(`user_${device.adminId}`).emit("positions", [pos]);
                 }
             }
 
             // ✅ 🔥 FIX 1 — ADD HERE
-            console.log("👥 USER MAP:", userMap);
+            console.log("👥 USER MAP:");
 
             if (Object.keys(userMap).length === 0) {
                 console.log("⚠️ No users mapped — forcing emit");

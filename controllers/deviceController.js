@@ -8,7 +8,7 @@ const User = require("../models/User");
 
 exports.createDevice = async (req, res, next) => {
 
-  const { name, uniqueId, speedLimit, fuelEfficiency } = req.body;
+  const { name, uniqueId, speedLimit, fuelEfficiency, registrationNumber } = req.body;
   const user = req.user;
 
   try {
@@ -60,6 +60,7 @@ exports.createDevice = async (req, res, next) => {
       name,
       uniqueId,
       traccarId: traccarDevice.id,
+      registrationNumber,
       adminId: user.role === "admin" ? user._id : req.body.adminId,
       createdBy: user._id,
       assignedTo: null,

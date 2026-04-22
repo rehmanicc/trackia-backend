@@ -19,7 +19,10 @@ const deviceSchema = new mongoose.Schema({
         unique: true,
         index: true
     },
-
+    registrationNumber: {
+        type: String,
+        default: ""
+    },
     adminId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",

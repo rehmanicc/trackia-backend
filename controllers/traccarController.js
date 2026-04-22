@@ -42,6 +42,28 @@ exports.getPositions = async (req, res) => {
       }
       console.log("💾 Saving:", p.deviceId, p.deviceTime);
       // ✅ SAVE ONLY ACTIVE
+      const lat = Number(p.latitude);
+      const lng = Number(p.longitude);
+
+      // ❌ HARD FILTER BEFORE SAVE
+      const isValid =
+        Number.isFinite(lat) &&
+        Number.isFinite(lng) &&
+        lat >= -90 && lat <= 90 &&
+        lng >= -180 && lng <= 180 &&
+        !(lat === 0 && lng === 0);
+
+      if (!isValid) {
+        console.log("❌ SKIPPED INVALID (SAVE):", {
+          rawLat: p.latitude,
+          rawLng: p.longitude,
+          parsedLat: lat,
+          parsedLng: lng,
+          deviceTime: p.deviceTime
+        });
+        continue; // 🔥 DO NOT SAVE BAD DATA
+      }
+
       await Position.updateOne(
         {
           deviceId: p.deviceId,
@@ -50,9 +72,9 @@ exports.getPositions = async (req, res) => {
         {
           $setOnInsert: {
             deviceId: p.deviceId,
-            latitude: p.latitude,
-            longitude: p.longitude,
-            speed: p.speed,
+            latitude: lat,
+            longitude: lng,
+            speed: Number(p.speed) || 0,
             deviceTime: p.deviceTime
           }
         },
@@ -74,7 +96,10 @@ exports.getPositions = async (req, res) => {
 
       activePositions.push({
         ...p,
-        engineOn: p.attributes?.ignition === true
+        engineOn: p.attributes?.ignition === true,
+       
+        name: device?.name || null,
+        registrationNumber: device?.registrationNumber || null,
       });
     }
 
