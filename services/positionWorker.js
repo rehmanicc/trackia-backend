@@ -2,7 +2,6 @@ const { getBatch } = require("./positionQueue");
 const Position = require("../models/Position");
 const Device = require("../models/Device");
 const socket = require("../socket");
-const { getQueueSize } = require("./positionQueue");
 let processedCount = 0;
 
 setInterval(() => {
@@ -11,6 +10,7 @@ setInterval(() => {
         processedCount = 0;
     }
 }, 1000);
+let isRunning = false;
 async function processBatch() {
     try {
         const batch = getBatch(200);
@@ -36,7 +36,7 @@ async function processBatch() {
         const activePositions = [];
 
         for (const p of positions) {
-            if (!p || !p.deviceId || !p.latitude || !p.longitude) continue;
+            if (!p || !p.deviceId || !p.latitude || !p.longitude || !p.deviceTime) continue;
 
             const device = deviceMap[p.deviceId];
             if (!device) continue;
@@ -76,12 +76,42 @@ async function processBatch() {
         }
 
         if (bulkOps.length > 0) {
-            await Position.bulkWrite(bulkOps);
+            await Position.bulkWrite(bulkOps, { ordered: false });
         }
 
         if (io && activePositions.length > 0) {
-            io.emit("positions", activePositions.slice(-50));
+
+            const userMap = {};
+
+            for (const pos of activePositions) {
+                const device = deviceMap[pos.deviceId];
+                if (!device || !device.assignedTo) continue;
+
+                const userId = String(device.assignedTo);
+
+                if (!userMap[userId]) {
+                    userMap[userId] = [];
+                }
+
+                userMap[userId].push(pos);
+            }
+
+            // emit per user
+            for (const userId in userMap) {
+
+                const latestPerDevice = {};
+
+                for (const pos of userMap[userId]) {
+                    latestPerDevice[pos.deviceId] = pos;
+                }
+
+                io.to(`user_${userId}`).emit(
+                    "positions",
+                    Object.values(latestPerDevice)
+                );
+            }
         }
+
 
         // 🔥 reduced logging
         if (Math.random() < 0.2) {
@@ -95,7 +125,14 @@ async function processBatch() {
     }
 }
 
-// run continuously
-setInterval(processBatch, 200);
+async function loop() {
+    if (isRunning) return;
+
+    isRunning = true;
+    await processBatch();
+    isRunning = false;
+}
+
+setInterval(loop, 200);
 
 module.exports = {};
