@@ -3,21 +3,26 @@ const Position = require("../models/Position");
 const Device = require("../models/Device");
 const socket = require("../socket");
 const { getQueueSize } = require("./positionQueue");
+let processedCount = 0;
+
+setInterval(() => {
+    if (processedCount > 0) {
+        console.log("📊 Positions/sec:", processedCount);
+        processedCount = 0;
+    }
+}, 1000);
 async function processBatch() {
-    console.log("📦 Queue size:", getQueueSize());
     try {
-        const batch = getBatch(200); // process 200 at a time
+        const batch = getBatch(200);
 
         if (batch.length === 0) return;
 
         const io = socket.getIO();
 
-        // flatten (because we pushed arrays)
         const positions = batch.flat();
 
         const deviceIds = [...new Set(positions.map(p => p.deviceId))];
 
-        // preload devices
         const devices = await Device.find({
             traccarId: { $in: deviceIds }
         });
@@ -32,15 +37,14 @@ async function processBatch() {
 
         for (const p of positions) {
             if (!p || !p.deviceId || !p.latitude || !p.longitude) continue;
+
             const device = deviceMap[p.deviceId];
             if (!device) continue;
 
-            // skip inactive
             if (!device.isActive || new Date() > new Date(device.expiryDate)) {
                 continue;
             }
 
-            // DB write
             bulkOps.push({
                 updateOne: {
                     filter: {
@@ -71,17 +75,20 @@ async function processBatch() {
             });
         }
 
-        // bulk DB write
         if (bulkOps.length > 0) {
             await Position.bulkWrite(bulkOps);
         }
 
-        // emit to socket
         if (io && activePositions.length > 0) {
-            io.emit("positions", activePositions.slice(-50)); // last 50 only
+            io.emit("positions", activePositions.slice(-50));
         }
 
-        console.log("⚡ Processed batch:", activePositions.length);
+        // 🔥 reduced logging
+        if (Math.random() < 0.2) {
+            console.log("⚡ Processed:", activePositions.length);
+        }
+
+        processedCount += activePositions.length;
 
     } catch (err) {
         console.error("❌ Worker error:", err);

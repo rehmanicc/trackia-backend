@@ -1,4 +1,5 @@
-const traccarController = require("../controllers/traccarController");
+const traccarAPI = require("./traccarAPI");
+const { addToQueue } = require("./positionQueue");
 
 let isRunning = false;
 
@@ -13,13 +14,24 @@ async function pollPositions() {
   try {
     console.log("🔄 Polling positions...");
 
-    const req = {};
-    const res = {
-      json: () => {},
-      status: () => ({ json: () => {} })
-    };
+    const positions = await traccarAPI.getPositions();
 
-    await traccarController.getPositions(req, res);
+    if (!positions || positions.length === 0) {
+      return;
+    }
+
+    // normalize for worker
+    const normalized = positions.map(p => ({
+      deviceId: p.deviceId,
+      latitude: p.latitude,
+      longitude: p.longitude,
+      deviceTime: p.deviceTime,
+      speed: p.speed,
+      course: p.course,
+      attributes: p.attributes || {}
+    }));
+
+    addToQueue(normalized);
 
   } catch (err) {
     console.error("❌ Polling error:", err.message);
@@ -28,9 +40,7 @@ async function pollPositions() {
   isRunning = false;
 }
 
-function startPolling() {
-  console.log("🚀 Polling started...");
-  
-}
+// run every 2 seconds
+setInterval(pollPositions, 1000);
 
-module.exports = { startPolling };
+module.exports = {};
