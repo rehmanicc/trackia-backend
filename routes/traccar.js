@@ -80,22 +80,38 @@ router.post("/webhook", (req, res) => {
 
   // ✅ 2. Push to queue (NO processing here)
   setImmediate(() => {
-    try {
-      if (!req.body) {
-        console.log("⚠️ Empty webhook body");
-        return;
-      }
+  try {
 
-      const positions = Array.isArray(req.body)
-        ? req.body
-        : [req.body];
+    if (!req.body) return;
 
-      addToQueue(positions);
-
-    } catch (err) {
-      console.error("❌ Webhook queue error:", err);
+    if (!req.is("application/json")) {
+      console.warn("⚠️ Non-JSON webhook ignored");
+      return;
     }
-  });
+
+    const positions = (Array.isArray(req.body) ? req.body : [req.body])
+      .filter(p => p && p.deviceId && p.latitude && p.longitude && p.deviceTime);
+
+    if (positions.length === 0) {
+      return;
+    }
+
+    // 🔥 Avoid log spam
+    if (Math.random() < 0.01) {
+      console.log("📥 Webhook active");
+    }
+
+    // 🔥 Large batch warning
+    if (positions.length > 500) {
+      console.warn("⚠️ Large batch:", positions.length);
+    }
+
+    addToQueue(positions);
+
+  } catch (err) {
+    console.error("❌ Webhook queue error:", err);
+  }
+});
 
 });
 module.exports = router;
