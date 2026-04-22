@@ -73,45 +73,75 @@ router.post("/command",
 
 const { addToQueue } = require("../services/positionQueue");
 
-router.post("/webhook", (req, res) => {
+/* router.post("/webhook", (req, res) => {
 
   // ✅ 1. Respond immediately
   res.sendStatus(200);
 
   // ✅ 2. Push to queue (NO processing here)
   setImmediate(() => {
-  try {
+    try {
 
-    if (!req.body) return;
+      if (!req.body) return;
 
-    if (!req.is("application/json")) {
+
       console.warn("⚠️ Non-JSON webhook ignored");
-      return;
+
+      console.log("RAW BODY:", JSON.stringify(req.body));
+      const raw = req.body;
+
+      let positions = [];
+
+      // Case 1: array
+      if (Array.isArray(raw)) {
+        positions = raw;
+      }
+      // Case 2: wrapped object
+      else if (raw.positions) {
+        positions = raw.positions;
+      }
+      // Case 3: single object
+      else if (raw.deviceId) {
+        positions = [raw];
+      }
+
+      // 🔥 Normalize fields
+      positions = positions.map(p => ({
+        deviceId: p.deviceId,
+        latitude: p.latitude || p.lat,
+        longitude: p.longitude || p.lon,
+        deviceTime: p.deviceTime || p.fixTime,
+        speed: p.speed,
+        course: p.course,
+        attributes: p.attributes || {}
+      }));
+
+      // 🔥 Filter valid positions
+      positions = positions.filter(p =>
+        p.deviceId && p.latitude && p.longitude && p.deviceTime
+      );
+
+      if (positions.length === 0) {
+        console.log("⚠️ No valid positions after parsing");
+        return;
+      }
+
+      // 🔥 Avoid log spam
+      if (Math.random() < 0.01) {
+        console.log("📥 Webhook active");
+      }
+
+      // 🔥 Large batch warning
+      if (positions.length > 500) {
+        console.warn("⚠️ Large batch:", positions.length);
+      }
+
+      addToQueue(positions);
+
+    } catch (err) {
+      console.error("❌ Webhook queue error:", err);
     }
+  });
 
-    const positions = (Array.isArray(req.body) ? req.body : [req.body])
-      .filter(p => p && p.deviceId && p.latitude && p.longitude && p.deviceTime);
-
-    if (positions.length === 0) {
-      return;
-    }
-
-    // 🔥 Avoid log spam
-    if (Math.random() < 0.01) {
-      console.log("📥 Webhook active");
-    }
-
-    // 🔥 Large batch warning
-    if (positions.length > 500) {
-      console.warn("⚠️ Large batch:", positions.length);
-    }
-
-    addToQueue(positions);
-
-  } catch (err) {
-    console.error("❌ Webhook queue error:", err);
-  }
-});
-
-});
+}); */
 module.exports = router;

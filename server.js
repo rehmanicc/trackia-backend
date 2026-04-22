@@ -173,7 +173,7 @@ server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 
   // 🚀 START AUTO POLLING
-  //startPolling();
+  require("./services/traccarPolling");
 });
 setInterval(() => {
   console.log("🔥 Server alive");
