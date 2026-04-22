@@ -71,7 +71,9 @@ async function processBatch() {
                 speed: p.speed,
                 course: p.course,
                 deviceTime: p.deviceTime,
-                engineOn: p.attributes?.ignition === true
+                engineOn: p.attributes?.ignition === true,
+                name: device?.name || null,
+                registrationNumber: device?.registrationNumber || null,
             });
         }
 
