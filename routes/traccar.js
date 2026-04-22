@@ -92,13 +92,8 @@ router.all("/webhook", async (req, res) => {
 
       let positions = [];
 
-      try {
-        positions = await getTraccarPositions();
-      } catch (err) {
-        console.log("❌ Traccar fetch error:", err.message);
-        return;
-      }
 
+      const positions = Array.isArray(req.body) ? req.body : [req.body];
       if (!positions || positions.length === 0) {
         console.log("⚠️ No positions from Traccar");
         return;

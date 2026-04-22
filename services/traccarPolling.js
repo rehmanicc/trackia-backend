@@ -30,9 +30,7 @@ async function pollPositions() {
 
 function startPolling() {
   console.log("🚀 Polling started...");
-
-    
-  pollPositions();
+  
 }
 
 module.exports = { startPolling };
