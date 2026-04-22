@@ -3,7 +3,7 @@ const Position = require("../models/Position");
 const Device = require("../models/Device");
 const socket = require("../socket");
 let processedCount = 0;
-
+const lastEmitted = {};
 setInterval(() => {
     if (processedCount > 0) {
         console.log("📊 Positions/sec:", processedCount);
@@ -105,10 +105,29 @@ async function processBatch() {
                     latestPerDevice[pos.deviceId] = pos;
                 }
 
-                io.to(`user_${userId}`).emit(
-                    "positions",
-                    Object.values(latestPerDevice)
-                );
+                const filteredPositions = [];
+
+for (const deviceId in latestPerDevice) {
+    const pos = latestPerDevice[deviceId];
+
+    // 🔥 Skip duplicate deviceTime
+    if (
+        lastEmitted[deviceId] &&
+        lastEmitted[deviceId].deviceTime === pos.deviceTime
+    ) {
+        continue; // skip duplicate
+    }
+
+    // ✅ store latest emitted
+    lastEmitted[deviceId] = pos;
+
+    filteredPositions.push(pos);
+}
+
+// 🚀 emit ONLY if new data exists
+if (filteredPositions.length > 0) {
+    io.to(`user_${userId}`).emit("positions", filteredPositions);
+}
             }
         }
 
