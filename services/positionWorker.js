@@ -85,15 +85,40 @@ async function processBatch() {
 
             for (const pos of activePositions) {
                 const device = deviceMap[pos.deviceId];
-                if (!device || !device.assignedTo) continue;
+                if (!device) continue;
 
-                const userId = String(device.assignedTo);
+                // 1. Primary assigned user
+                if (device.assignedTo) {
+                    const userId = String(device.assignedTo);
 
-                if (!userMap[userId]) {
-                    userMap[userId] = [];
+                    if (!userMap[userId]) userMap[userId] = [];
+                    userMap[userId].push(pos);
                 }
 
-                userMap[userId].push(pos);
+                // 2. Additional assigned users
+                if (device.assignedUsers && device.assignedUsers.length > 0) {
+                    device.assignedUsers.forEach(u => {
+                        const userId = String(u);
+
+                        if (!userMap[userId]) userMap[userId] = [];
+                        userMap[userId].push(pos);
+                    });
+                }
+
+                // 3. Admin (company)
+                if (device.adminId) {
+                    const adminRoom = `company_${device.adminId}`;
+                    io.to(adminRoom).emit("positions", [pos]);
+                }
+            }
+
+            // ✅ 🔥 FIX 1 — ADD HERE
+            console.log("👥 USER MAP:", userMap);
+
+            if (Object.keys(userMap).length === 0) {
+                console.log("⚠️ No users mapped — forcing emit");
+
+                io.emit("positions", activePositions); // TEMP DEBUG
             }
 
             // emit per user
