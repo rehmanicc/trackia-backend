@@ -24,7 +24,7 @@ const Device = require("./models/Device");
 const { startPolling } = require("./services/traccarPolling");
 
 require("./services/notification/firebase");
-
+require("./services/positionWorker");
 const socket = require("./socket");
 const io = socket.init(server);
 
