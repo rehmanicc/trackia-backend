@@ -118,8 +118,8 @@ exports.getDevices = async (req, res) => {
     else {
 
       devices = await Device.find({
-        assignedTo: user.id
-      }).populate("assignedTo", "name");
+        assignedUsers: user.id
+      }).populate("assignedUsers", "name");
     }
 
     // 🔥 GET LIVE DEVICES FROM TRACCAR
@@ -161,15 +161,14 @@ exports.deleteDevice = async (req, res) => {
     };
 
     await traccarAPI.apiDelete(`/api/devices/${device.traccarId}`);
-
     await Geofence.deleteMany({
       deviceId: device.traccarId
     });
 
-    // 🔥 Delete device
+
     await device.deleteOne();
 
-    // 🔥 AUDIT LOG (ADD HERE)
+
     try {
       await logAudit({
         userId: req.user.id,
@@ -235,11 +234,11 @@ exports.assignDevice = async (req, res) => {
       });
     }
 
-    device.assignedTo = userId;
-    // ✅ Sync new system
-    device.assignedUsers = [userId];
+    if (!device.assignedUsers.includes(userId)) {
+      device.assignedUsers.push(userId);
+    }
 
-    // ✅ Set default call receiver if not already set
+
     if (!device.callReceiverNumber) {
       device.callReceiverNumber = user.phoneNumber;
     }
@@ -289,7 +288,9 @@ exports.unassignDevice = async (req, res) => {
 
     const previousUser = device.assignedTo; // 🔥 capture before removing
 
-    device.assignedTo = null;
+    device.assignedUsers = device.assignedUsers.filter(
+      id => String(id) !== String(req.body.userId)
+    );
 
     await device.save();
 
