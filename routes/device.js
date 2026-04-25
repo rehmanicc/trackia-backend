@@ -70,5 +70,10 @@ router.put("/:id/speed",
     }
   }
 );
+router.put(
+  "/:id/permissions",
+  auth,
+  ctrl.updateDevicePermissions
+);
 
 module.exports = router;

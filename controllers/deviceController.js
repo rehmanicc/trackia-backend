@@ -346,3 +346,55 @@ exports.toggleEngineAccess = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+exports.updateDevicePermissions = async (req, res) => {
+  try {
+    const device = await Device.findById(req.params.id);
+
+    if (!device) {
+      return res.status(404).json({ error: "Device not found" });
+    }
+
+    // 🔒 ONLY OWNER / ADMIN
+    if (req.user.role !== "owner" && req.user.role !== "admin") {
+      return res.status(403).json({
+        error: "Not allowed to update device permissions"
+      });
+    }
+
+    // 🔒 Admin can only update own devices
+    if (
+      req.user.role === "admin" &&
+      String(device.adminId) !== String(req.user.id)
+    ) {
+      return res.status(403).json({
+        error: "Not allowed to modify this device"
+      });
+    }
+
+    const {
+      engineControlEnabled,
+      allowUserToChangeCallReceiver
+    } = req.body;
+
+    // ✅ update only provided fields
+    if (typeof engineControlEnabled === "boolean") {
+      device.engineControlEnabled = engineControlEnabled;
+    }
+
+    if (typeof allowUserToChangeCallReceiver === "boolean") {
+      device.allowUserToChangeCallReceiver =
+        allowUserToChangeCallReceiver;
+    }
+
+    await device.save();
+
+    res.json({
+      message: "Device permissions updated",
+      device
+    });
+
+  } catch (err) {
+    console.error("❌ DEVICE PERMISSION ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+};
