@@ -88,7 +88,7 @@ async function processBatch() {
             for (const pos of activePositions) {
                 const device = deviceMap[pos.deviceId];
                 if (!device) continue;
-                               
+
                 if (device.assignedUsers && device.assignedUsers.length > 0) {
                     device.assignedUsers.forEach(u => {
                         const userId = String(u);
@@ -97,7 +97,7 @@ async function processBatch() {
                         userMap[userId].push(pos);
                     });
                 }
-           
+
                 // emit to company (admin group)
                 if (device.adminId) {
                     const adminRoom = `company_${device.adminId}`;
@@ -108,8 +108,9 @@ async function processBatch() {
                 }
             }
 
-            // ✅ 🔥 FIX 1 — ADD HERE
-            console.log("👥 USER MAP:");
+            if (Math.random() < 0.05) {
+                console.log("👥 USER MAP:", Object.keys(userMap).length);
+            }
 
             if (Object.keys(userMap).length === 0) {
                 console.log("⚠️ No users mapped — forcing emit");

@@ -97,18 +97,8 @@ const deviceSchema = new mongoose.Schema({
     allowUserToChangeCallReceiver: {
         type: Boolean,
         default: false
-    },
-    callReceiverNumber: {
-        type: String,
-        required: true
-    },
-
-    allowUserToChangeCallReceiver: {
-        type: Boolean,
-        default: false
     }
-
-
+ 
 }, { timestamps: true });
 
 deviceSchema.pre("save", async function () {

@@ -4,7 +4,8 @@ const { addToQueue } = require("./positionQueue");
 let isRunning = false;
 
 async function pollPositions() {
-  
+  if (isRunning) return; // ✅ ADD BACK
+
   isRunning = true;
 
   try {
@@ -12,11 +13,8 @@ async function pollPositions() {
 
     const positions = await traccarAPI.getPositions();
 
-    if (!positions || positions.length === 0) {
-      return;
-    }
+    if (!positions || positions.length === 0) return;
 
-    // normalize for worker
     const normalized = positions.map(p => ({
       deviceId: p.deviceId,
       latitude: p.latitude,
@@ -47,8 +45,8 @@ async function startPollingLoop() {
   }
 }
 
-startPollingLoop();
+function startPolling() {
+  startPollingLoop();
+}
 
-
-
-module.exports = {};
+module.exports = { startPolling };
