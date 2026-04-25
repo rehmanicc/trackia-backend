@@ -171,9 +171,7 @@ app.use((err, req, res, next) => {
 
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-
-  // 🚀 START AUTO POLLING
-  require("./services/traccarPolling");
+  startPolling();
 });
 setInterval(() => {
   console.log("🔥 Server alive");

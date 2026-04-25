@@ -4,11 +4,7 @@ const { addToQueue } = require("./positionQueue");
 let isRunning = false;
 
 async function pollPositions() {
-  if (isRunning) {
-    console.log("⏳ Skipping (already running)");
-    return;
-  }
-
+  
   isRunning = true;
 
   try {
@@ -39,8 +35,20 @@ async function pollPositions() {
 
   isRunning = false;
 }
+async function startPollingLoop() {
+  while (true) {
+    try {
+      await pollPositions();
+    } catch (err) {
+      console.error("Polling loop error:", err);
+    }
 
-// run every 2 seconds
-setInterval(pollPositions, 1000);
+    await new Promise(resolve => setTimeout(resolve, 2000)); // 2 sec delay
+  }
+}
+
+startPollingLoop();
+
+
 
 module.exports = {};

@@ -113,25 +113,23 @@ const deviceSchema = new mongoose.Schema({
 
 deviceSchema.pre("save", async function () {
 
-    // ✅ Only validate when assignment changes
-    if (!this.isModified("assignedTo")) return;
+    if (!this.isModified("assignedUsers")) return;
 
-    if (!this.assignedTo) return;
-
-    const user = await mongoose.model("User").findById(this.assignedTo);
-
-    if (!user) {
-        throw new Error("Assigned user not found");
-    }
-
-    // ✅ Role restriction
-    if (user.role !== "user") {
-        throw new Error("Device can only be assigned to a user");
-    }
-
-    // ✅ Admin match check
-    if (String(user.adminId) !== String(this.adminId)) {
-        throw new Error("User and Device admin mismatch");
+    if (!this.assignedUsers || this.assignedUsers.length === 0) return;
+    const User = mongoose.model("User");
+    for (const userId of this.assignedUsers) {
+        const user = await User.findById(userId);
+        if (!user) {
+            throw new Error("Assigned user not found");
+        }
+       
+        if (user.role !== "user") {
+            throw new Error("Device can only be assigned to a user");
+        }
+        
+        if (String(user.adminId) !== String(this.adminId)) {
+            throw new Error("User and Device admin mismatch");
+        }
     }
 });
 

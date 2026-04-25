@@ -88,16 +88,7 @@ async function processBatch() {
             for (const pos of activePositions) {
                 const device = deviceMap[pos.deviceId];
                 if (!device) continue;
-
-                // 1. Primary assigned user
-                if (device.assignedTo) {
-                    const userId = String(device.assignedTo);
-
-                    if (!userMap[userId]) userMap[userId] = [];
-                    userMap[userId].push(pos);
-                }
-
-                // 2. Additional assigned users
+                               
                 if (device.assignedUsers && device.assignedUsers.length > 0) {
                     device.assignedUsers.forEach(u => {
                         const userId = String(u);
@@ -106,8 +97,7 @@ async function processBatch() {
                         userMap[userId].push(pos);
                     });
                 }
-
-                // 3. Admin (company)
+           
                 // emit to company (admin group)
                 if (device.adminId) {
                     const adminRoom = `company_${device.adminId}`;
