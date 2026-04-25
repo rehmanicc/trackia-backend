@@ -2,7 +2,7 @@ const Device = require("../models/Device");
 const traccarAPI = require("../services/traccarAPI");
 const Geofence = require("../models/Geofence");
 const User = require("../models/User");
-
+const mongoose = require("mongoose");
 // CREATE DEVICE
 
 
@@ -61,7 +61,10 @@ exports.createDevice = async (req, res, next) => {
       uniqueId,
       traccarId: traccarDevice.id,
       registrationNumber,
-      adminId: user.role === "admin" ? user._id : req.body.adminId,
+      adminId:
+        user.role === "admin"
+          ? user._id
+          : new mongoose.Types.ObjectId(req.body.adminId),
       createdBy: user._id,
       assignedUsers: [],
       speedLimit: speedLimit || 70,
