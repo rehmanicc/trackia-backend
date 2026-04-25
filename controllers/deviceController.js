@@ -63,7 +63,7 @@ exports.createDevice = async (req, res, next) => {
       registrationNumber,
       adminId: user.role === "admin" ? user._id : req.body.adminId,
       createdBy: user._id,
-      assignedTo: null,
+      assignedUsers: [],
       speedLimit: speedLimit || 70,
       fuelEfficiency: fuelEfficiency || 12,
       expiryDate: oneYearLater,
@@ -109,14 +109,15 @@ exports.getDevices = async (req, res) => {
     if (user.role === "owner") {
       // 👑 Owner → ALL devices
       devices = await Device.find()
-        .populate("assignedTo", "name");
+        .populate("assignedUsers", "name"); // ✅ FIXED
     }
     else if (user.role === "admin") {
+      // 🧑‍💼 Admin → own company devices
       devices = await Device.find({ adminId: user.id })
-        .populate("assignedTo", "name");
+        .populate("assignedUsers", "name"); // ✅ FIXED
     }
     else {
-
+      // 👤 User → only assigned devices
       devices = await Device.find({
         assignedUsers: user.id
       }).populate("assignedUsers", "name");
@@ -215,10 +216,6 @@ exports.assignDevice = async (req, res) => {
       return res.status(404).json({ error: "Not found" });
     }
 
-    if (device.assignedTo) {
-      console.log("♻️ Overwriting assignment for device:", device._id);
-    }
-
     if (String(device.adminId) !== String(user.adminId)) {
       return res.status(400).json({
         error: "User and device belong to different admins"
@@ -261,7 +258,7 @@ exports.assignDevice = async (req, res) => {
 
     res.json({
       message: "Device assigned successfully",
-      assignedTo: device.assignedTo
+      assignedUsers: device.assignedUsers
     });
 
   } catch (err) {
@@ -280,13 +277,19 @@ exports.unassignDevice = async (req, res) => {
       return res.status(404).json({ error: "Device not found" });
     }
 
-    if (!device.assignedTo) {
-      return res.json({ message: "Already unassigned" });
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ error: "userId required" });
+    }
+
+    if (!device.assignedUsers.includes(userId)) {
+      return res.json({ message: "User already unassigned" });
     }
 
     console.log("🔄 Unassigning device:", device._id);
 
-    const previousUser = device.assignedTo; // 🔥 capture before removing
+    const previousUser = userId; // 🔥 capture before removing
 
     device.assignedUsers = device.assignedUsers.filter(
       id => String(id) !== String(req.body.userId)
