@@ -116,8 +116,11 @@ exports.getDevices = async (req, res) => {
     }
     else if (user.role === "admin") {
       // 🧑‍💼 Admin → own company devices
-      devices = await Device.find({ adminId: user.id })
-        .populate("assignedUsers", "name"); // ✅ FIXED
+      const mongoose = require("mongoose");
+
+      devices = await Device.find({
+        adminId: new mongoose.Types.ObjectId(user.id)
+      }).populate("assignedUsers", "name");
     }
     else {
       // 👤 User → only assigned devices

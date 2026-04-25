@@ -1,29 +1,34 @@
 const jwt = require("jsonwebtoken");
-const SECRET = process.env.JWT_SECRET 
+const SECRET = process.env.JWT_SECRET
 
-function authMiddleware(req,res,next){
+function authMiddleware(req, res, next) {
 
-const header = req.headers.authorization;
+    const header = req.headers.authorization;
 
-if(!header){
-return res.status(401).json({error:"No token provided"});
-}
+    if (!header) {
+        return res.status(401).json({ error: "No token provided" });
+    }
 
-const token = header.split(" ")[1];
+    const token = header.split(" ")[1];
 
-try{
+    try {
 
-const decoded = jwt.verify(token,SECRET);
+        const decoded = jwt.verify(token, SECRET);
 
-req.user = decoded;
+        const mongoose = require("mongoose");
 
-next();
+        req.user = {
+            ...decoded,
+            id: new mongoose.Types.ObjectId(decoded.id)
+        };
 
-}catch(err){
+        next();
 
-return res.status(401).json({error:"Invalid token"});
+    } catch (err) {
 
-}
+        return res.status(401).json({ error: "Invalid token" });
+
+    }
 
 }
 
