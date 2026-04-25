@@ -11,7 +11,7 @@ if (!process.env.JWT_SECRET) {
 // REGISTER
 router.post("/register", authMiddleware, async (req, res) => {
 
-    const { name, phoneNumber, password, role } = req.body;
+  const { name, phoneNumber, password, role } = req.body;
 
   console.log("📥 BODY:", req.body);
   console.log("👤 USER:", req.user);
@@ -107,7 +107,16 @@ router.post("/login", async (req, res) => {
     { expiresIn: "24h" }
   );
 
-  res.json({ token });
+  res.json({
+    token,
+    user: {
+      _id: user._id,
+      name: user.name,
+      role: user.role,
+      adminId: user.adminId || user._id,
+      permissions: user.permissions || []
+    }
+  });
 
 });
 
