@@ -192,7 +192,7 @@ exports.sendCommand = async (req, res) => {
 
     if (
       req.user.role === "admin" &&
-      String(device.adminId) !== String(req.user._id)
+      String(device.adminId) !== String(req.user.id)
     ) {
       return res.status(403).json({ error: "Access denied" });
     }
@@ -241,7 +241,7 @@ exports.sendCommand = async (req, res) => {
       // 🔒 Admin turns OFF → lock engine
       if (type === "engineStop" && isOwnerOrAdmin) {
         device.engineLockedByAdmin = true;
-        device.engineLockedBy = req.user._id;
+        device.engineLockedBy = req.user.id;
         await device.save();
       }
 

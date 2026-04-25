@@ -63,9 +63,9 @@ exports.createDevice = async (req, res, next) => {
       registrationNumber,
       adminId:
         user.role === "admin"
-          ? user._id
+          ? user.id
           : new mongoose.Types.ObjectId(req.body.adminId),
-      createdBy: user._id,
+      createdBy: user.id,
       assignedUsers: [],
       speedLimit: speedLimit || 70,
       fuelEfficiency: fuelEfficiency || 12,
@@ -79,7 +79,7 @@ exports.createDevice = async (req, res, next) => {
     // 🔥 AUDIT LOG (ADD HERE)
     try {
       await logAudit({
-        userId: user._id,
+        userId: user.id,
         action: "CREATE_DEVICE",
         entity: "Device",
         entityId: device._id,
@@ -116,13 +116,13 @@ exports.getDevices = async (req, res) => {
     }
     else if (user.role === "admin") {
       // 🧑‍💼 Admin → own company devices
-      devices = await Device.find({ adminId: user._id })
+      devices = await Device.find({ adminId: user.id })
         .populate("assignedUsers", "name"); // ✅ FIXED
     }
     else {
       // 👤 User → only assigned devices
       devices = await Device.find({
-        assignedUsers: user._id
+        assignedUsers: user.id
       }).populate("assignedUsers", "name");
     }
 
@@ -175,7 +175,7 @@ exports.deleteDevice = async (req, res) => {
 
     try {
       await logAudit({
-        userId: req.user._id,
+        userId: req.user.id,
         action: "DELETE_DEVICE",
         entity: "Device",
         entityId: device._id,
@@ -227,7 +227,7 @@ exports.assignDevice = async (req, res) => {
 
     if (
       req.user.role === "admin" &&
-      String(device.adminId) !== String(req.user._id)
+      String(device.adminId) !== String(req.user.id)
     ) {
       return res.status(403).json({
         error: "Not allowed to assign this device"
@@ -247,7 +247,7 @@ exports.assignDevice = async (req, res) => {
     // 🔥 AUDIT LOG (ADD HERE)
     try {
       await logAudit({
-        userId: req.user._id,
+        userId: req.user.id,
         action: "ASSIGN_DEVICE",
         entity: "Device",
         entityId: device._id,
@@ -303,7 +303,7 @@ exports.unassignDevice = async (req, res) => {
     // 🔥 AUDIT LOG
     try {
       await logAudit({
-        userId: req.user._id,
+        userId: req.user.id,
         action: "UNASSIGN_DEVICE",
         entity: "Device",
         entityId: device._id,
