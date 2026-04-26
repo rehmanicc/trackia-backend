@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const AlertRule = require("../models/AlertRule");
+const auth = require("../middleware/authMiddleware");
+const Alert = require("../models/Alert");
 
 // ✅ GET all rules
 router.get("/", async (req, res) => {

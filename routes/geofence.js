@@ -148,7 +148,6 @@ router.post("/",
 // ======================
 // DELETE GEOFENCE
 // ======================
-const Device = require("../models/Device");
 
 router.delete("/:id",
   authMiddleware,
