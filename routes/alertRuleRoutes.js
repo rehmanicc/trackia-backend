@@ -45,5 +45,24 @@ router.delete("/:id", async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 });
+router.post("/test", auth, async (req, res) => {
+  try {
+    const alert = await Alert.create({
+      deviceId: "TEST_DEVICE",
+      type: "OVERSPEED",
+      message: "🚨 Test Alert Triggered",
+      priority: "high"
+    });
+
+    // 🔥 dispatch (IMPORTANT)
+    const { dispatch } = require("../services/notification/dispatcher");
+    await dispatch(alert, req.app.get("io"));
+
+    res.json({ message: "Test alert sent", alert });
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 module.exports = router;

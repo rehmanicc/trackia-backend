@@ -51,6 +51,17 @@ const deviceSchema = new mongoose.Schema({
         type: Date,
         required: true
     },
+    callUserId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        default: null
+    },
+
+    callGeofenceId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Geofence",
+        default: null
+    },
     isActive: {
         type: Boolean,
         default: true
@@ -98,7 +109,7 @@ const deviceSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     }
- 
+
 }, { timestamps: true });
 
 deviceSchema.pre("save", async function () {
@@ -112,11 +123,11 @@ deviceSchema.pre("save", async function () {
         if (!user) {
             throw new Error("Assigned user not found");
         }
-       
+
         if (user.role !== "user") {
             throw new Error("Device can only be assigned to a user");
         }
-        
+
         if (String(user.adminId) !== String(this.adminId)) {
             throw new Error("User and Device admin mismatch");
         }

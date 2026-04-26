@@ -75,5 +75,54 @@ router.put(
   auth,
   ctrl.updateDevicePermissions
 );
+router.put(
+  "/:id/call-user",
+  auth,
+  checkPermission(PERMISSIONS.EDIT_DEVICE),
+  async (req, res) => {
+    try {
+      const { userId } = req.body;
+
+      if (!userId) {
+        return res.status(400).json({ error: "userId is required" });
+      }
+
+      // 🔍 Validate device
+      const device = await Device.findById(req.params.id);
+      if (!device) {
+        return res.status(404).json({ error: "Device not found" });
+      }
+
+      // 🔍 Validate user exists
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // ✅ Assign call user
+      device.callUserId = userId;
+
+      // 🔥 IMPORTANT: reset geofence
+      device.callGeofenceId = null;
+
+      await device.save();
+
+      // 🧾 Audit log (keep consistency with your codebase)
+      await logAudit({
+        userId: req.user.id,
+        action: "ASSIGN_CALL_USER",
+        entity: "Device",
+        entityId: device._id,
+        metadata: { callUserId: userId }
+      });
+
+      res.json({ success: true, device });
+
+    } catch (err) {
+      console.error("❌ Assign call user error:", err);
+      res.status(500).json({ error: "Failed to assign call user" });
+    }
+  }
+);
 
 module.exports = router;

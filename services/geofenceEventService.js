@@ -52,7 +52,20 @@ async function saveGeofenceEvent(event, io) {
         return false;
     }
 }
+const Device = require("../models/Device");
 
+const device = await Device.findOne({
+    traccarId: event.deviceId
+});
+
+if (
+    event.type === "EXIT" &&
+    device?.callGeofenceId?.toString() === event.geofenceId.toString()
+) {
+    console.log("📞 CALL TRIGGERED for user:", device.callUserId);
+
+    // 👉 integrate your call service here
+}
 module.exports = {
     saveGeofenceEvent
 };

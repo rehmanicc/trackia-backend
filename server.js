@@ -27,7 +27,7 @@ require("./services/notification/firebase");
 require("./services/positionWorker");
 const socket = require("./socket");
 const io = socket.init(server);
-
+app.set("io", io);
 
 app.use(cors({
   origin: [
