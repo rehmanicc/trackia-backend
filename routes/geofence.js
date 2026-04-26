@@ -54,6 +54,55 @@ router.put("/:id",
 
     res.json({ success: true });
   });
+
+  const Device = require("../models/Device");
+
+router.put(
+  "/:id/set-call",
+  authMiddleware,
+  checkPermission(PERMISSIONS.GEOFENCE_EDIT),
+  async (req, res) => {
+    try {
+      const geofenceId = req.params.id;
+
+      // 🔍 Get geofence
+      const geofence = await Geofence.findById(geofenceId);
+      if (!geofence) {
+        return res.status(404).json({ error: "Geofence not found" });
+      }
+
+      // 🔍 Get device
+      const device = await Device.findOne({
+        traccarId: geofence.deviceId
+      });
+
+      if (!device) {
+        return res.status(404).json({ error: "Device not found" });
+      }
+
+      // 🔒 Only assigned call user can set
+      if (device.callUserId?.toString() !== req.user.id) {
+        return res.status(403).json({ error: "Not allowed" });
+      }
+
+      // 🔒 Ensure geofence belongs to this user
+      if (geofence.userId.toString() !== req.user.id) {
+        return res.status(403).json({ error: "Invalid geofence" });
+      }
+
+      // ✅ Set call geofence (ONLY ONE)
+      device.callGeofenceId = geofenceId;
+
+      await device.save();
+
+      res.json({ success: true });
+
+    } catch (err) {
+      console.error("❌ Set call geofence error:", err);
+      res.status(500).json({ error: "Failed to set call geofence" });
+    }
+  }
+);
 // ======================
 // CREATE GEOFENCE
 // ======================
@@ -99,15 +148,23 @@ router.post("/",
 // ======================
 // DELETE GEOFENCE
 // ======================
+const Device = require("../models/Device");
+
 router.delete("/:id",
   authMiddleware,
   checkPermission(PERMISSIONS.GEOFENCE_DELETE),
   async (req, res) => {
 
-    await Geofence.deleteOne({
+    const geofence = await Geofence.findOne({
       _id: req.params.id,
       userId: req.user.id
     });
+
+    if (!geofence) {
+      return res.status(404).json({ error: "Geofence not found" });
+    }
+
+    // 🔥 check device BEFORE delete
     const device = await Device.findOne({
       traccarId: geofence.deviceId
     });
@@ -118,7 +175,11 @@ router.delete("/:id",
       device.callGeofenceId = null;
       await device.save();
     }
+
+    await Geofence.deleteOne({ _id: req.params.id });
+
     res.json({ success: true });
-  });
+  }
+);
 
 module.exports = router;

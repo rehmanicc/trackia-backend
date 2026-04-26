@@ -85,10 +85,6 @@ const deviceSchema = new mongoose.Schema({
         default: true
     },
 
-    callGeofenceId: {
-        type: String, // store geofenceId from Traccar
-        default: null
-    },
     assignedUsers: [
         {
             type: mongoose.Schema.Types.ObjectId,
