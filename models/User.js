@@ -40,7 +40,6 @@ const userSchema = new mongoose.Schema({
       BATTERY_DISCONNECTED: true
     }
   },
-
   callEnabled: {
     type: Boolean,
     default: false

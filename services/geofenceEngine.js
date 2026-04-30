@@ -152,12 +152,30 @@ async function emitEvent(io, deviceId, geofenceId, type, position) {
     if (!saved) return;
 
 
-    io.emit("geofenceEvent", {
-        deviceId,
-        geofenceId,
-        type,
-        time: event.timestamp
+    const Device = require("../models/Device");
+    const User = require("../models/User");
+
+    // 🔍 find device
+    const device = await Device.findOne({
+        traccarId: deviceId
     });
+
+    if (!device) return;
+
+    // 🔍 get users (assigned + admin)
+    const users = await User.find({
+        _id: { $in: [device.assignedTo, device.adminId] }
+    });
+
+    // 🔥 send only to relevant users
+    for (const user of users) {
+        io.to(`user_${user._id}`).emit("geofenceEvent", {
+            deviceId,
+            geofenceId,
+            type,
+            time: event.timestamp
+        });
+    }
     console.log(`🚧 ${type.toUpperCase()} → Device ${deviceId} Geofence ${geofenceId}`);
 }
 

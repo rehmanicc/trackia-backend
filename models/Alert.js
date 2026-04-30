@@ -45,6 +45,11 @@ const alertSchema = new mongoose.Schema({
         type: String,
         enum: ["low", "medium", "high"],
         default: "medium"
+    },
+    read: {
+        type: Boolean,
+        default: false,
+        index: true
     }
 
 }, { timestamps: true });

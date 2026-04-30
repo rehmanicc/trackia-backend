@@ -2,11 +2,15 @@ const { messaging } = require("./firebase");
 const User = require("../../models/User");
 const Device = require("../../models/Device");
 
+function isAllowed(user, alertType) {
+  const prefs = user.alertPreferences || {};
+  return prefs[alertType] !== false;
+}
+
 async function sendPushFCM(alert) {
   try {
     console.log("🔥 FCM START:", alert);
 
-    // 🔍 Find device
     const device = await Device.findOne({
       traccarId: alert.deviceId
     });
@@ -16,37 +20,33 @@ async function sendPushFCM(alert) {
       return;
     }
 
-    console.log("📦 Device found:", device._id);
+    const userIds = [device.assignedTo, device.adminId].filter(Boolean);
 
-    if (!device.assignedTo) {
-      console.log("❌ Device not assigned");
+    if (userIds.length === 0) {
+      console.log("❌ No users linked to device");
       return;
     }
 
-    // 🔥 GET USERS (assigned user + admin)
     const users = await User.find({
-      _id: {
-        $in: [device.assignedTo, device.adminId]
-      }
+      _id: { $in: userIds }
     });
 
     let tokens = [];
 
     users.forEach(u => {
-      if (u.fcmTokens && u.fcmTokens.length > 0) {
+      if (!isAllowed(u, alert.type)) return;
+
+      if (u.fcmTokens?.length > 0) {
         tokens.push(...u.fcmTokens);
       }
     });
 
-    // 🔥 REMOVE DUPLICATES
     tokens = [...new Set(tokens)];
 
     if (tokens.length === 0) {
       console.log("❌ No FCM tokens");
       return;
     }
-
-    console.log("📲 Tokens:", tokens);
 
     const message = {
       notification: {
