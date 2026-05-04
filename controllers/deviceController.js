@@ -200,7 +200,7 @@ exports.assignDevice = async (req, res) => {
     const mongoose = require("mongoose");
     const { logAudit } = require("../services/auditService");
 
-    const { userId, callUserId } = req.body;
+    const { userId } = req.body;
     const deviceId = req.params.id;
 
     console.log("📥 Device ID:", deviceId);

@@ -10,10 +10,12 @@ function isAllowed(user, alertType) {
 
 async function dispatch(alert, io) {
   try {
-    // 🔍 Find device
-    const device = await Device.findOne({
-      traccarId: alert.deviceId
-    });
+
+    if (!state.device) {
+      state.device = await Device.findOne({ traccarId: deviceId });
+    }
+
+    const device = state.device;
 
     if (!device) return;
 
@@ -47,7 +49,7 @@ async function dispatch(alert, io) {
 
     if (
       alert.type === "GEOFENCE_EXIT" &&
-      alert.metadata?.geofenceId === device.callGeofenceId
+      String(alert.metadata?.geofenceId) === String(device.callGeofenceId)
     ) {
       return triggerCall({
         ...alert,

@@ -6,9 +6,6 @@ exports.getReport = async (req, res) => {
 
     try {
         const { deviceId, geofenceId, from, to } = req.query;
-
-        const Device = require("../models/Device");
-
         // 🔍 1. GET DEVICE
         const device = await Device.findOne({ traccarId: Number(deviceId) });
 
@@ -42,38 +39,90 @@ exports.getReport = async (req, res) => {
     }
 };
 exports.getDailyReport = async (req, res) => {
-    try {
-        const { deviceId, geofenceId, from, to } = req.query;
+  try {
+    const { deviceId, geofenceId, from, to } = req.query;
 
-        const data = await analyticsService.getDailyTime({
-            deviceId,
-            geofenceId,
-            from,
-            to
-        });
-
-        res.json(data);
-
-    } catch (err) {
-        res.status(500).json({ error: "Daily analytics failed" });
+    if (!deviceId) {
+      return res.status(400).json({ error: "deviceId required" });
     }
+
+    // 🔍 1. GET DEVICE
+    const device = await Device.findOne({
+      traccarId: Number(deviceId)
+    });
+
+    if (!device) {
+      return res.status(404).json({ error: "Device not found" });
+    }
+
+    // 🔐 2. OWNERSHIP CHECK
+    const isOwner = req.user.role === "owner";
+
+    const isAssigned = device.assignedUsers?.some(
+      u => String(u) === String(req.user.id)
+    );
+
+    if (!isOwner && !isAssigned) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    // ✅ 3. SAFE SERVICE CALL
+    const data = await analyticsService.getDailyTime({
+      deviceId,
+      geofenceId,
+      from,
+      to
+    });
+
+    res.json(data);
+
+  } catch (err) {
+    console.error("❌ Daily analytics error:", err);
+    res.status(500).json({ error: "Daily analytics failed" });
+  }
 };
 exports.getTopGeofences = async (req, res) => {
-    try {
-        const { deviceId, geofenceId, from, to } = req.query;
+  try {
+    const { deviceId, geofenceId, from, to } = req.query;
 
-        const data = await analyticsService.getTopGeofences({
-            deviceId,
-            geofenceId,
-            from,
-            to
-        });
-
-        res.json(data);
-
-    } catch (err) {
-        res.status(500).json({ error: "Top geofence analytics failed" });
+    if (!deviceId) {
+      return res.status(400).json({ error: "deviceId required" });
     }
+
+    // 🔍 1. GET DEVICE
+    const device = await Device.findOne({
+      traccarId: Number(deviceId)
+    });
+
+    if (!device) {
+      return res.status(404).json({ error: "Device not found" });
+    }
+
+    // 🔐 2. OWNERSHIP CHECK
+    const isOwner = req.user.role === "owner";
+
+    const isAssigned = device.assignedUsers?.some(
+      u => String(u) === String(req.user.id)
+    );
+
+    if (!isOwner && !isAssigned) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    // ✅ 3. SAFE SERVICE CALL
+    const data = await analyticsService.getTopGeofences({
+      deviceId,
+      geofenceId,
+      from,
+      to
+    });
+
+    res.json(data);
+
+  } catch (err) {
+    console.error("❌ Top geofence analytics error:", err);
+    res.status(500).json({ error: "Top geofence analytics failed" });
+  }
 };
 exports.getDeviceSummary = async (req, res) => {
   try {

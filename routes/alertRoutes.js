@@ -13,7 +13,14 @@ router.get("/", auth, async (req, res) => {
 
         const query = {};
 
-        if (deviceId) query.deviceId = deviceId;
+        if (deviceId) {
+            if (!deviceIds.includes(String(deviceId))) {
+                return res.json([]); // no access
+            }
+            query.deviceId = deviceId;
+        } else {
+            query.deviceId = { $in: deviceIds };
+        }
         if (type) query.type = type;
 
         if (from || to) {
@@ -83,59 +90,59 @@ router.put("/:id/read",
     });
 
 router.put("/read-all",
-  auth,
-  checkPermission(PERMISSIONS.MARK_ALERTS),
-  async (req, res) => {
-    try {
-        const Device = require("../models/Device");
+    auth,
+    checkPermission(PERMISSIONS.MARK_ALERTS),
+    async (req, res) => {
+        try {
+            const Device = require("../models/Device");
 
-        const devices = await Device.find({
-            $or: [
-                { assignedUsers: req.user.id },
-                { adminId: req.user.id }
-            ]
-        });
+            const devices = await Device.find({
+                $or: [
+                    { assignedUsers: req.user.id },
+                    { adminId: req.user.id }
+                ]
+            });
 
-        const deviceIds = devices.map(d => String(d.traccarId));
+            const deviceIds = devices.map(d => String(d.traccarId));
 
-        await Alert.updateMany(
-            {
-                deviceId: { $in: deviceIds },
-                read: false
-            },
-            { read: true }
-        );
+            await Alert.updateMany(
+                {
+                    deviceId: { $in: deviceIds },
+                    read: false
+                },
+                { read: true }
+            );
 
-        res.json({ message: "All alerts marked as read" });
+            res.json({ message: "All alerts marked as read" });
 
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
 router.delete("/clear",
-  auth,
-  checkPermission(PERMISSIONS.CLEAR_ALERTS),
-  async (req, res) => {
-    try {
-        const Device = require("../models/Device");
+    auth,
+    checkPermission(PERMISSIONS.CLEAR_ALERTS),
+    async (req, res) => {
+        try {
+            const Device = require("../models/Device");
 
-        const devices = await Device.find({
-            $or: [
-                { assignedUsers: req.user.id },
-                { adminId: req.user.id }
-            ]
-        });
+            const devices = await Device.find({
+                $or: [
+                    { assignedUsers: req.user.id },
+                    { adminId: req.user.id }
+                ]
+            });
 
-        const deviceIds = devices.map(d => String(d.traccarId));
+            const deviceIds = devices.map(d => String(d.traccarId));
 
-        await Alert.deleteMany({
-            deviceId: { $in: deviceIds }
-        });
+            await Alert.deleteMany({
+                deviceId: { $in: deviceIds }
+            });
 
-        res.json({ message: "All alerts cleared" });
+            res.json({ message: "All alerts cleared" });
 
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
 module.exports = router;
