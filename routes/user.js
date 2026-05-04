@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const authMiddleware = require("../middleware/authMiddleware");
 const User = require("../models/User");
-
+const checkPermission = require("../middleware/checkPermission");
 
 // ✅ GET USERS (ROLE BASED)
 router.get("/", authMiddleware, async (req, res) => {

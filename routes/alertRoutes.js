@@ -13,24 +13,9 @@ router.get("/", auth, async (req, res) => {
 
         const query = {};
 
-        if (deviceId) {
-            if (!deviceIds.includes(String(deviceId))) {
-                return res.json([]); // no access
-            }
-            query.deviceId = deviceId;
-        } else {
-            query.deviceId = { $in: deviceIds };
-        }
-        if (type) query.type = type;
-
-        if (from || to) {
-            query.timestamp = {};
-            if (from) query.timestamp.$gte = new Date(from);
-            if (to) query.timestamp.$lte = new Date(to);
-        }
-
         const Device = require("../models/Device");
 
+        // 🔍 1. GET USER DEVICES FIRST
         const devices = await Device.find({
             $or: [
                 { assignedUsers: req.user.id },
@@ -40,8 +25,26 @@ router.get("/", auth, async (req, res) => {
 
         const deviceIds = devices.map(d => String(d.traccarId));
 
-        query.deviceId = { $in: deviceIds };
+        // 🔐 2. APPLY DEVICE FILTER SAFELY
+        if (deviceId) {
+            if (!deviceIds.includes(String(deviceId))) {
+                return res.json([]); // no access
+            }
+            query.deviceId = deviceId;
+        } else {
+            query.deviceId = { $in: deviceIds };
+        }
 
+        // 🔍 3. OTHER FILTERS
+        if (type) query.type = type;
+
+        if (from || to) {
+            query.timestamp = {};
+            if (from) query.timestamp.$gte = new Date(from);
+            if (to) query.timestamp.$lte = new Date(to);
+        }
+
+        // ✅ 4. FETCH ALERTS
         const alerts = await Alert.find(query)
             .sort({ timestamp: -1 })
             .limit(100);

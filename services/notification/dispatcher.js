@@ -11,11 +11,9 @@ function isAllowed(user, alertType) {
 async function dispatch(alert, io) {
   try {
 
-    if (!state.device) {
-      state.device = await Device.findOne({ traccarId: deviceId });
-    }
-
-    const device = state.device;
+    const device = await Device.findOne({
+      traccarId: Number(alert.deviceId)
+    });
 
     if (!device) return;
 
