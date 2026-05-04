@@ -37,6 +37,48 @@ router.get("/me", authMiddleware, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+router.get("/alert-settings", authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+
+    res.json(user.alertPreferences || {});
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 🔔 UPDATE ALERT SETTINGS
+router.put("/alert-settings", authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+
+    const allowedKeys = [
+      "OVERSPEED",
+      "GEOFENCE_ENTER",
+      "GEOFENCE_EXIT",
+      "ENGINE_ON",
+      "ENGINE_OFF",
+      "BATTERY_DISCONNECTED"
+    ];
+
+    const updatedPrefs = { ...user.alertPreferences };
+
+    allowedKeys.forEach(key => {
+      if (req.body[key] !== undefined) {
+        updatedPrefs[key] = !!req.body[key];
+      }
+    });
+
+    user.alertPreferences = updatedPrefs;
+    await user.save();
+
+    res.json(user.alertPreferences);
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 router.get("/:id", authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select("-password");
@@ -222,5 +264,7 @@ router.post("/save-fcm-token", authMiddleware, async (req, res) => {
     res.status(500).json({ error: "Failed to save token" });
   }
 });
+
+
 
 module.exports = router;
