@@ -82,7 +82,10 @@ router.put("/:id/read",
         }
     });
 
-router.put("/read-all", auth, async (req, res) => {
+router.put("/read-all",
+  auth,
+  checkPermission(PERMISSIONS.MARK_ALERTS),
+  async (req, res) => {
     try {
         const Device = require("../models/Device");
 

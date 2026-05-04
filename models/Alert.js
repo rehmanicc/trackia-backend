@@ -60,7 +60,5 @@ alertSchema.index({
     type: 1,
     timestamp: 1
 });
-deviceSchema.index({ adminId: 1 });
-deviceSchema.index({ assignedUsers: 1 });
 
 module.exports = mongoose.model("Alert", alertSchema);

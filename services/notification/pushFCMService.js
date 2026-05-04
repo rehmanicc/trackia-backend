@@ -20,7 +20,10 @@ async function sendPushFCM(alert) {
       return;
     }
 
-    const userIds = [device.assignedTo, device.adminId].filter(Boolean);
+    const userIds = [
+      ...(device.assignedUsers || []),
+      device.adminId
+    ].filter(Boolean);
 
     if (userIds.length === 0) {
       console.log("❌ No users linked to device");

@@ -26,8 +26,7 @@ const deviceSchema = new mongoose.Schema({
     adminId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
-        required: true,
-        index: true
+        required: true
     },
 
     createdBy: {
@@ -107,7 +106,8 @@ const deviceSchema = new mongoose.Schema({
     }
 
 }, { timestamps: true });
-
+deviceSchema.index({ adminId: 1 });
+deviceSchema.index({ assignedUsers: 1 });
 deviceSchema.pre("save", async function () {
 
     if (!this.isModified("assignedUsers")) return;

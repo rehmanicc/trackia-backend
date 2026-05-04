@@ -30,8 +30,6 @@ router.get("/", authMiddleware, async (req, res) => {
 
     res.json(users);
 
-    res.json(users);
-
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -186,7 +184,7 @@ router.put("/transfer/:userId", authMiddleware, async (req, res) => {
 
     await Device.updateMany(
       { assignedUsers: user._id },
-      { assignedUsers: null }
+      { $pull: { assignedUsers: user._id } }
     );
 
     // 🔥 STEP 2: Change admin
@@ -235,7 +233,7 @@ router.delete("/:id", authMiddleware, async (req, res) => {
 
     await Device.updateMany(
       { assignedUsers: user._id },
-      { assignedUsers: null }
+      { $pull: { assignedUsers: user._id } }
     );
 
     await User.findByIdAndDelete(userId);

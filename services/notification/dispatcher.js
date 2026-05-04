@@ -17,9 +17,13 @@ async function dispatch(alert, io) {
 
     if (!device) return;
 
-    // 🔍 Get users (assigned + admin)
+    const userIds = [
+      ...(device.assignedUsers || []),
+      device.adminId
+    ].filter(Boolean);
+
     const users = await User.find({
-      _id: { $in: [device.assignedTo, device.adminId] }
+      _id: { $in: userIds }
     });
 
     // ✅ SOCKET (filtered per user)
@@ -32,8 +36,7 @@ async function dispatch(alert, io) {
     // ✅ FCM (already filtered internally)
     await sendPushFCM(alert);
 
-    // 📞 CALL LOGIC
-    if (!device.callEnabled || !device.callReceiverNumber) return;
+    if (!device.engineControlEnabled || !device.callReceiverNumber) return;
 
     if (alert.type === "BATTERY_DISCONNECTED") {
       return triggerCall({

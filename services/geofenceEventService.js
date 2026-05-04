@@ -1,6 +1,8 @@
 const GeofenceEvent = require("../models/GeofenceEvent");
 const { createAlert } = require("./alert/alertService");
 const Geofence = require("../models/Geofence");
+const { triggerCall } = require("./callService");
+
 async function saveGeofenceEvent(event, io) {
     try {
 
@@ -55,9 +57,34 @@ async function saveGeofenceEvent(event, io) {
             event.type === "EXIT" &&
             device?.callGeofenceId?.toString() === event.geofenceId.toString()
         ) {
-            console.log("📞 CALL TRIGGERED for user:", device.callUserId);
+            try {
+                // 🔐 Safety checks
+                if (!device.callReceiverNumber) {
+                    console.warn("⚠️ No callReceiverNumber set");
+                    return true;
+                }
 
-            // 👉 integrate your call service here
+                if (!device.engineControlEnabled) {
+                    console.warn("⚠️ Engine control disabled — skipping call");
+                    return true;
+                }
+
+                console.log("📞 CALL TRIGGERED:", {
+                    deviceId: event.deviceId,
+                    phone: device.callReceiverNumber
+                });
+
+                // 📞 CALL SERVICE
+                await triggerCall({
+                    phoneNumber: device.callReceiverNumber,
+                    deviceId: event.deviceId,
+                    type: "GEOFENCE_EXIT",
+                    geofenceId: event.geofenceId
+                });
+
+            } catch (err) {
+                console.error("❌ CALL ERROR:", err.message);
+            }
         }
         return true;
 

@@ -5,9 +5,28 @@ let isProcessing = false;
 async function triggerCall(alert) {
     try {
 
-        if (!alert.phoneNumber) {
-            console.log("❌ No call receiver number");
+        if (!alert.phoneNumber || typeof alert.phoneNumber !== "string") {
+            console.log("❌ Invalid phone number");
             return;
+        }
+
+        // 🔥 COOLDOWN CHECK
+        const Device = require("../models/Device");
+
+        const device = await Device.findOne({ traccarId: alert.deviceId });
+
+        if (device?.lastCallTime) {
+            const diff = Date.now() - new Date(device.lastCallTime).getTime();
+
+            if (diff < 60000) {
+                console.log("⏳ Call skipped (cooldown)");
+                return;
+            }
+        }
+
+        if (device) {
+            device.lastCallTime = new Date();
+            await device.save();
         }
 
         console.log("📞 CALL TO:", alert.phoneNumber);

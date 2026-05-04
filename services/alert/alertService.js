@@ -2,7 +2,7 @@ const Alert = require("../../models/Alert");
 // 🔥 Prevent duplicate spam
 const { dispatch } = require("../notification/dispatcher");
 const COOLDOWN = 15000; // 15 seconds
-const recent = null;
+
 async function createAlert(alertData, io) {
     try {
         console.log("📥 createAlert called:", alertData);

@@ -355,15 +355,19 @@ exports.updateDevicePermissions = async (req, res) => {
     }
 
     // 🔒 ONLY OWNER / ADMIN
-    if (req.user.role !== "owner" && req.user.role !== "admin") {
+    // 🔐 PERMISSION CHECK (REPLACE ROLE CHECK)
+    if (
+      req.user.role !== "owner" &&
+      !req.user.permissions?.includes("MANAGE_DEVICE_PERMISSIONS")
+    ) {
       return res.status(403).json({
-        error: "Not allowed to update device permissions"
+        error: "No permission to update device permissions"
       });
     }
 
-    // 🔒 Admin can only update own devices
+    // 🔒 OWNERSHIP CHECK
     if (
-      req.user.role === "admin" &&
+      req.user.role !== "owner" &&
       String(device.adminId) !== String(req.user.id)
     ) {
       return res.status(403).json({

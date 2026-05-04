@@ -11,14 +11,21 @@ async function handleAlerts(position, io) {
     });
 
     for (const alert of alerts) {
-      await createAlert({
-        deviceId: String(position.deviceId),
-        type: alert.type,
-        message: alert.message,
-        metadata: alert.metadata || {},
-        priority: alert.priority
-      }, io);
-    }
+  try {
+    await createAlert({
+      deviceId: String(position.deviceId),
+      type: alert.type,
+      message: alert.message,
+      metadata: alert.metadata || {},
+      priority: alert.priority
+    }, io);
+  } catch (err) {
+    console.error("❌ Single alert failed:", {
+      type: alert.type,
+      error: err.message
+    });
+  }
+}
 
   } catch (err) {
     console.error("❌ Alert processing error:", err.message);
