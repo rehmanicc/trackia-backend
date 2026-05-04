@@ -9,19 +9,26 @@ router.get("/", authMiddleware, async (req, res) => {
   try {
     let users;
 
+    // 🔐 PERMISSION CHECK
+    if (
+      req.user.role !== "owner" &&
+      !req.user.permissions?.includes("VIEW_USER")
+    ) {
+      return res.status(403).json({ error: "No permission to view users" });
+    }
+    // 👑 OWNER → ALL USERS
     if (req.user.role === "owner") {
-      // owner sees all
       users = await User.find().select("-password");
     }
-    else if (req.user.role === "admin") {
-      // admin sees company users
+
+    // 🧑‍💼 ADMIN → COMPANY USERS ONLY
+    else {
       users = await User.find({
         adminId: req.user.id
       }).select("-password");
     }
-    else {
-      return res.status(403).json({ error: "Access denied" });
-    }
+
+    res.json(users);
 
     res.json(users);
 
@@ -178,8 +185,8 @@ router.put("/transfer/:userId", authMiddleware, async (req, res) => {
     const Device = require("../models/Device");
 
     await Device.updateMany(
-      { assignedTo: user._id },
-      { assignedTo: null }
+      { assignedUsers: user._id },
+      { assignedUsers: null }
     );
 
     // 🔥 STEP 2: Change admin
@@ -227,8 +234,8 @@ router.delete("/:id", authMiddleware, async (req, res) => {
     const Device = require("../models/Device");
 
     await Device.updateMany(
-      { assignedTo: user._id },
-      { assignedTo: null }
+      { assignedUsers: user._id },
+      { assignedUsers: null }
     );
 
     await User.findByIdAndDelete(userId);

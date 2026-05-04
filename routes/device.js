@@ -12,25 +12,25 @@ router.get("/", auth, ctrl.getDevices);
 
 router.post("/:id/assign",
   auth,
-  checkPermission(PERMISSIONS.EDIT_DEVICE),
+  checkPermission(PERMISSIONS.ASSIGN_DEVICE),
   ctrl.assignDevice
 );
 
 router.post("/:id/unassign",
   auth,
-  checkPermission(PERMISSIONS.EDIT_DEVICE),
+  checkPermission(PERMISSIONS.ASSIGN_DEVICE),
   ctrl.unassignDevice
 );
 
 router.post("/",
   auth,
-  checkPermission(PERMISSIONS.EDIT_DEVICE),
+  checkPermission(PERMISSIONS.CREATE_DEVICE),
   ctrl.createDevice
 );
 
 router.delete("/:id",
   auth,
-  checkPermission(PERMISSIONS.EDIT_DEVICE),
+  checkPermission(PERMISSIONS.DELETE_DEVICE),
   ctrl.deleteDevice
 );
 
@@ -70,9 +70,9 @@ router.put("/:id/speed",
     }
   }
 );
-router.put(
-  "/:id/permissions",
+router.put("/:id/permissions",
   auth,
+  checkPermission(PERMISSIONS.MANAGE_DEVICE_PERMISSIONS),
   ctrl.updateDevicePermissions
 );
 router.put(

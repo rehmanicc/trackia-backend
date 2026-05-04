@@ -3,9 +3,14 @@ const router = express.Router();
 const AlertRule = require("../models/AlertRule");
 const auth = require("../middleware/authMiddleware");
 const Alert = require("../models/Alert");
+const checkPermission = require("../middleware/checkPermission");
+const PERMISSIONS = require("../config/permissions");
 
+router.use(auth);
 // ✅ GET all rules
-router.get("/", async (req, res) => {
+router.get("/", auth,
+  checkPermission(PERMISSIONS.MANAGE_DEVICE_PERMISSIONS),
+  async (req, res) => {
     try {
         const rules = await AlertRule.find().sort({ createdAt: -1 });
         res.json(rules);
@@ -15,14 +20,16 @@ router.get("/", async (req, res) => {
 });
 
 // ✅ CREATE rule
-router.post("/", async (req, res) => {
-    try {
-        const rule = await AlertRule.create(req.body);
-        res.json(rule);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
+router.post("/",
+    checkPermission(PERMISSIONS.MANAGE_DEVICE_PERMISSIONS),
+    async (req, res) => {
+        try {
+            const rule = await AlertRule.create(req.body);
+            res.json(rule);
+        } catch (err) {
+            res.status(500).json({ message: err.message });
+        }
+    });
 
 // ✅ UPDATE rule
 router.put("/:id", async (req, res) => {
@@ -48,23 +55,23 @@ router.delete("/:id", async (req, res) => {
     }
 });
 router.post("/test", auth, async (req, res) => {
-  try {
-    const alert = await Alert.create({
-      deviceId: "TEST_DEVICE",
-      type: "OVERSPEED",
-      message: "🚨 Test Alert Triggered",
-      priority: "high"
-    });
+    try {
+        const alert = await Alert.create({
+            deviceId: "TEST_DEVICE",
+            type: "OVERSPEED",
+            message: "🚨 Test Alert Triggered",
+            priority: "high"
+        });
 
-    // 🔥 dispatch (IMPORTANT)
-    const { dispatch } = require("../services/notification/dispatcher");
-    await dispatch(alert, req.app.get("io"));
+        // 🔥 dispatch (IMPORTANT)
+        const { dispatch } = require("../services/notification/dispatcher");
+        await dispatch(alert, req.app.get("io"));
 
-    res.json({ message: "Test alert sent", alert });
+        res.json({ message: "Test alert sent", alert });
 
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 module.exports = router;

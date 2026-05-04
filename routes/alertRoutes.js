@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 const Alert = require("../models/Alert");
 const auth = require("../middleware/authMiddleware");
+const checkPermission = require("../middleware/checkPermission");
+const PERMISSIONS = require("../config/permissions");
 
 // ✅ GET ALERTS (with filters)
 router.get("/", auth, async (req, res) => {
@@ -24,7 +26,7 @@ router.get("/", auth, async (req, res) => {
 
         const devices = await Device.find({
             $or: [
-                { assignedTo: req.user.id },
+                { assignedUsers: req.user.id },
                 { adminId: req.user.id }
             ]
         });
@@ -45,38 +47,40 @@ router.get("/", auth, async (req, res) => {
     }
 });
 
-router.put("/:id/read", auth, async (req, res) => {
-    try {
-        const Device = require("../models/Device");
+router.put("/:id/read",
+    auth,
+    checkPermission(PERMISSIONS.MARK_ALERTS), async (req, res) => {
+        try {
+            const Device = require("../models/Device");
 
-        const devices = await Device.find({
-            $or: [
-                { assignedTo: req.user.id },
-                { adminId: req.user.id }
-            ]
-        });
+            const devices = await Device.find({
+                $or: [
+                    { assignedUsers: req.user.id },
+                    { adminId: req.user.id }
+                ]
+            });
 
-        const deviceIds = devices.map(d => String(d.traccarId));
+            const deviceIds = devices.map(d => String(d.traccarId));
 
-        const alert = await Alert.findOneAndUpdate(
-            {
-                _id: req.params.id,
-                deviceId: { $in: deviceIds }
-            },
-            { read: true },
-            { new: true }
-        );
+            const alert = await Alert.findOneAndUpdate(
+                {
+                    _id: req.params.id,
+                    deviceId: { $in: deviceIds }
+                },
+                { read: true },
+                { new: true }
+            );
 
-        if (!alert) {
-            return res.status(404).json({ error: "Alert not found" });
+            if (!alert) {
+                return res.status(404).json({ error: "Alert not found" });
+            }
+
+            res.json(alert);
+
+        } catch (err) {
+            res.status(500).json({ error: err.message });
         }
-
-        res.json(alert);
-
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
+    });
 
 router.put("/read-all", auth, async (req, res) => {
     try {
@@ -84,7 +88,7 @@ router.put("/read-all", auth, async (req, res) => {
 
         const devices = await Device.find({
             $or: [
-                { assignedTo: req.user.id },
+                { assignedUsers: req.user.id },
                 { adminId: req.user.id }
             ]
         });
@@ -105,13 +109,16 @@ router.put("/read-all", auth, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-router.delete("/clear", auth, async (req, res) => {
+router.delete("/clear",
+  auth,
+  checkPermission(PERMISSIONS.CLEAR_ALERTS),
+  async (req, res) => {
     try {
         const Device = require("../models/Device");
 
         const devices = await Device.find({
             $or: [
-                { assignedTo: req.user.id },
+                { assignedUsers: req.user.id },
                 { adminId: req.user.id }
             ]
         });

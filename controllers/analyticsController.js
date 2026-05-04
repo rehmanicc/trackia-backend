@@ -7,6 +7,26 @@ exports.getReport = async (req, res) => {
     try {
         const { deviceId, geofenceId, from, to } = req.query;
 
+        const Device = require("../models/Device");
+
+        // 🔍 1. GET DEVICE
+        const device = await Device.findOne({ traccarId: Number(deviceId) });
+
+        if (!device) {
+            return res.status(404).json({ error: "Device not found" });
+        }
+
+        // 🔐 2. OWNERSHIP CHECK
+        const isOwner = req.user.role === "owner";
+        const isAssigned = device.assignedUsers.some(
+            u => String(u) === String(req.user.id)
+        );
+
+        if (!isOwner && !isAssigned) {
+            return res.status(403).json({ error: "Access denied" });
+        }
+
+        // ✅ 3. SAFE TO FETCH ANALYTICS
         const data = await analyticsService.getAnalyticsSummary({
             deviceId,
             geofenceId,
@@ -91,80 +111,103 @@ function getDistance(p1, p2) {
 }
 
 exports.getTripAnalytics = async (req, res) => {
-    try {
-        const { deviceId } = req.params;
-        const { start, end } = req.query;
+  try {
+    const { deviceId } = req.params;
+    const { start, end } = req.query;
 
-        if (!start || !end) {
-            return res.status(400).json({ message: "Start and End required" });
-        }
-
-        const positions = await Position.find({
-            deviceId: Number(deviceId),
-            deviceTime: {
-                $gte: new Date(start),
-                $lte: new Date(end)
-            }
-        }).sort({ deviceTime: 1 });
-
-        if (!positions.length) {
-            return res.json({ positions: [], stats: {} });
-        }
-        const device = await Device.findOne(
-            { traccarId: Number(deviceId) },
-            { fuelEfficiency: 1 }
-        );
-        let totalDistance = 0;
-        let maxSpeed = 0;
-        let stops = 0;
-        let stopStart = null;
-
-        for (let i = 1; i < positions.length; i++) {
-            const prev = positions[i - 1];
-            const curr = positions[i];
-
-            totalDistance += getDistance(prev, curr);
-
-            if (curr.speed > maxSpeed) maxSpeed = curr.speed;
-
-            // 🚗 STOP LOGIC
-            if (curr.speed < 5) {
-                if (!stopStart) stopStart = curr;
-            } else {
-                if (stopStart) {
-                    const duration =
-                        (new Date(curr.deviceTime) - new Date(stopStart.deviceTime)) / 60000;
-
-                    if (duration >= 2) stops++;
-                    stopStart = null;
-                }
-            }
-        }
-
-        const timeHours =
-            (new Date(end) - new Date(start)) / (1000 * 60 * 60);
-
-        const avgSpeed = totalDistance / (timeHours || 1);
-        const fuelEfficiency = device?.fuelEfficiency || 12;
-
-        const fuelUsed =
-            fuelEfficiency > 0
-                ? totalDistance / fuelEfficiency
-                : 0;
-        res.json({
-            positions,
-            stats: {
-                distance: totalDistance,
-                avgSpeed,
-                maxSpeed,
-                stops,
-                fuelUsed,
-                fuelEfficiency
-            }
-        });
-
-    } catch (err) {
-        console.error("❌ Trip Analytics error:", err);
-        res.status(500).json({ message: "Server error" });
+    if (!start || !end) {
+      return res.status(400).json({ message: "Start and End required" });
     }
+
+    const Device = require("../models/Device");
+
+    // 🔍 1. GET DEVICE FIRST (IMPORTANT)
+    const device = await Device.findOne({
+      traccarId: Number(deviceId)
+    });
+
+    if (!device) {
+      return res.status(404).json({ error: "Device not found" });
+    }
+
+    // 🔐 2. OWNERSHIP CHECK (CRITICAL)
+    const isOwner = req.user.role === "owner";
+
+    const isAssigned = device.assignedUsers?.some(
+      u => String(u) === String(req.user.id)
+    );
+
+    if (!isOwner && !isAssigned) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+
+    // ✅ 3. NOW FETCH DATA (SAFE)
+    const positions = await Position.find({
+      deviceId: Number(deviceId),
+      deviceTime: {
+        $gte: new Date(start),
+        $lte: new Date(end)
+      }
+    }).sort({ deviceTime: 1 });
+
+    if (!positions.length) {
+      return res.json({ positions: [], stats: {} });
+    }
+
+    // 🔍 Only fetch required field
+    const fuelEfficiency = device?.fuelEfficiency || 12;
+
+    let totalDistance = 0;
+    let maxSpeed = 0;
+    let stops = 0;
+    let stopStart = null;
+
+    for (let i = 1; i < positions.length; i++) {
+      const prev = positions[i - 1];
+      const curr = positions[i];
+
+      totalDistance += getDistance(prev, curr);
+
+      if (curr.speed > maxSpeed) maxSpeed = curr.speed;
+
+      // 🚗 STOP LOGIC
+      if (curr.speed < 5) {
+        if (!stopStart) stopStart = curr;
+      } else {
+        if (stopStart) {
+          const duration =
+            (new Date(curr.deviceTime) - new Date(stopStart.deviceTime)) / 60000;
+
+          if (duration >= 2) stops++;
+          stopStart = null;
+        }
+      }
+    }
+
+    const timeHours =
+      (new Date(end) - new Date(start)) / (1000 * 60 * 60);
+
+    const avgSpeed = totalDistance / (timeHours || 1);
+
+    const fuelUsed =
+      fuelEfficiency > 0
+        ? totalDistance / fuelEfficiency
+        : 0;
+
+    res.json({
+      positions,
+      stats: {
+        distance: totalDistance,
+        avgSpeed,
+        maxSpeed,
+        stops,
+        fuelUsed,
+        fuelEfficiency
+      }
+    });
+
+  } catch (err) {
+    console.error("❌ Trip Analytics error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
 };

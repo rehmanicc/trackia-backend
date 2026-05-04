@@ -164,7 +164,7 @@ async function emitEvent(io, deviceId, geofenceId, type, position) {
 
     // 🔍 get users (assigned + admin)
     const users = await User.find({
-        _id: { $in: [device.assignedTo, device.adminId] }
+        _id: { $in: [device.assignedUsers, device.adminId] }
     });
 
     // 🔥 send only to relevant users
