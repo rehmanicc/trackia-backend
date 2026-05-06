@@ -113,7 +113,7 @@ router.post("/command",
 router.get(
   "/history",
   authMiddleware,
-  traccarController.getHistory
+  controller.getHistory
 );
 
 const { addToQueue } = require("../services/positionQueue");
