@@ -33,7 +33,7 @@ router.get(
       }
 
       // 🔒 Access check
-      const isAdmin = req.user.role === "ADMIN";
+      const isAdmin = req.user.role?.toLowerCase() === "admin";
 
       const isAssigned = device.assignedUsers?.some(
         (u) => u.toString() === req.user.id
@@ -88,7 +88,7 @@ router.post(
       }
 
       // 🔒 Access check
-      const isAdmin = req.user.role === "ADMIN";
+      const isAdmin = req.user.role?.toLowerCase() === "admin";
 
       const isAssigned = device.assignedUsers?.some(
         (u) => u.toString() === userId
@@ -129,33 +129,63 @@ router.post(
 );
 
 // ======================
-// UPDATE GEOFENCE NAME
+// UPDATE GEOFENCE
 // ======================
+
 router.put(
   "/:id",
   authMiddleware,
   checkPermission(PERMISSIONS.GEOFENCE_EDIT),
   async (req, res) => {
     try {
-      const { name } = req.body;
 
-      if (!name) {
-        return res.status(400).json({ error: "Name is required" });
+      const geofence = await Geofence.findOne({
+        _id: req.params.id,
+        userId: req.user.id,
+      });
+
+      if (!geofence) {
+        return res.status(404).json({
+          error: "Geofence not found",
+        });
       }
 
-      const updated = await Geofence.updateOne(
-        { _id: req.params.id, userId: req.user.id },
-        { $set: { name } }
+      // ======================
+      // UPDATE DATA
+      // ======================
+
+      const updateData = {
+        name: req.body.name,
+        type: req.body.type,
+        geometry: req.body.geometry,
+      };
+
+      const updatedGeofence =
+        await Geofence.findByIdAndUpdate(
+          req.params.id,
+          {
+            $set: updateData,
+          },
+          {
+            new: true,
+          }
+        );
+
+      res.json({
+        success: true,
+        geofence: updatedGeofence,
+      });
+
+    } catch (err) {
+
+      console.error(
+        "❌ Update geofence error:",
+        err
       );
 
-      if (updated.matchedCount === 0) {
-        return res.status(404).json({ error: "Geofence not found" });
-      }
-
-      res.json({ success: true });
-    } catch (err) {
-      console.error("❌ Update geofence error:", err);
-      res.status(500).json({ error: "Failed to update geofence" });
+      res.status(500).json({
+        error: "Failed to update geofence",
+      });
     }
   }
 );

@@ -16,7 +16,7 @@ const lastPositionCache = new Map();
 // ======================
 const checkPermission = require("../middleware/checkPermission");
 const PERMISSIONS = require("../config/permissions");
-
+const controller = require("../controllers/traccarController");
 
 router.post("/assign-device", authMiddleware, async (req, res) => {
 
@@ -108,6 +108,12 @@ router.post("/command",
   authMiddleware,
   checkPermission(PERMISSIONS.SEND_COMMAND),
   sendCommand
+);
+
+router.get(
+  "/history",
+  authMiddleware,
+  traccarController.getHistory
 );
 
 const { addToQueue } = require("../services/positionQueue");

@@ -266,3 +266,38 @@ exports.sendCommand = async (req, res) => {
     });
   }
 };
+exports.getHistory = async (req, res) => {
+
+  try {
+
+    const { deviceId, from, to } = req.query;
+
+    if (!deviceId || !from || !to) {
+
+      return res.status(400).json({
+        error: "deviceId, from, to required"
+      });
+    }
+
+    const positions = await Position.find({
+      deviceId: Number(deviceId),
+      deviceTime: {
+        $gte: new Date(from),
+        $lte: new Date(to)
+      }
+    }).sort({ deviceTime: 1 });
+
+    res.json(positions);
+
+  } catch (err) {
+
+    console.log(
+      "❌ HISTORY ERROR:",
+      err.message
+    );
+
+    res.status(500).json({
+      error: err.message
+    });
+  }
+};
