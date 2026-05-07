@@ -19,7 +19,8 @@ function authMiddleware(req, res, next) {
 
         req.user = {
             ...decoded,
-            id: new mongoose.Types.ObjectId(decoded.id)
+            id: new mongoose.Types.ObjectId(decoded.id),
+             role: decoded.role?.toLowerCase()
         };
 
         next();

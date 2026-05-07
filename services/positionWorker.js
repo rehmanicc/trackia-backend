@@ -105,6 +105,19 @@ async function processBatch() {
 
                     // 🔥 ALSO emit to admin as user (CRITICAL FIX)
                     io.to(`user_${device.adminId}`).emit("positions", [pos]);
+                    // 🔥 EMIT TO OWNER USERS
+                    const User = require("../models/User");
+
+                    const owners = await User.find({
+                        role: "owner"
+                    }).select("_id");
+
+                    owners.forEach(owner => {
+                        io.to(`user_${owner._id}`).emit(
+                            "positions",
+                            [pos]
+                        );
+                    });
                 }
             }
 

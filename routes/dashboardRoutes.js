@@ -15,5 +15,10 @@ router.get(
   checkPermission(PERMISSIONS.VIEW_DASHBOARD),
   dashboardController.getDashboardStats
 );
+router.get(
+    "/alerts/critical",
+    authMiddleware,
+    dashboardController.getCriticalAlerts
+);
 
 module.exports = router;
