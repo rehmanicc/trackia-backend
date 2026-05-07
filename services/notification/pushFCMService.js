@@ -57,7 +57,9 @@ async function sendPushFCM(alert) {
         body: alert.message
       },
       data: {
+        screen: "AlertsScreen",
         type: alert.type,
+        alertId: String(alert._id),
         deviceId: String(alert.deviceId)
       },
       tokens

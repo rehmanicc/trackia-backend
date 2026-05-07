@@ -105,6 +105,7 @@ app.use("/api/alerts", alertRoutes);
 //console.log("userRoutes:", typeof userRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/audit", require("./routes/auditRoutes"));
+app.use("/api/fcm", require("./routes/fcmRoutes"));
 // ======================
 // DB CHECK ROUTE
 // ======================
