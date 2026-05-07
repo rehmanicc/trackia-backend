@@ -14,7 +14,7 @@ const GeofenceEvent = require("./models/GeofenceEvent");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const http = require("http");
-
+const dashboardRoutes = require("./routes/dashboardRoutes");
 const Alert = require("./models/Alert");
 const server = http.createServer(app);
 server.keepAliveTimeout = 120000;
@@ -106,6 +106,7 @@ app.use("/api/alerts", alertRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/audit", require("./routes/auditRoutes"));
 app.use("/api/fcm", require("./routes/fcmRoutes"));
+app.use("/api/dashboard", dashboardRoutes);
 // ======================
 // DB CHECK ROUTE
 // ======================
