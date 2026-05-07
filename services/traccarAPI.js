@@ -33,7 +33,7 @@ const loginTraccar = async () => {
 
       if (res.status === 200 && cookies.length > 0) {
         isLoggedIn = true;
-        console.log("✅ Traccar login success");
+        //console.log("✅ Traccar login success");
       } else {
         isLoggedIn = false;
         console.log("❌ Login failed (no cookies)");
@@ -64,7 +64,7 @@ const getPositions = async () => {
 
     // Retry on session expiry
     if (err.response?.status === 401) {
-      console.log("⚠️ Session expired. Re-logging...");
+      //console.log("⚠️ Session expired. Re-logging...");
 
       isLoggedIn = false;
       await loginTraccar();

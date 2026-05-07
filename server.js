@@ -187,7 +187,7 @@ const Geofence = require("./models/Geofence");
 
 const GeofenceEvent = require("./models/GeofenceEvent");
 
-app.delete("/api/reset", async (req, res) => {
+/* app.delete("/api/reset", async (req, res) => {
 
   try {
 
@@ -236,7 +236,7 @@ app.delete("/api/reset", async (req, res) => {
     });
   }
 });
-
+*/
 // ======================
 // GLOBAL ERROR HANDLER
 // ======================
@@ -249,9 +249,7 @@ app.use((err, req, res, next) => {
   );
 
   res.status(500).json({
-    error:
-      err.message ||
-      "Internal Server Error"
+    error: "Internal Server Error"
   });
 });
 

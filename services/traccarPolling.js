@@ -4,12 +4,12 @@ const { addToQueue } = require("./positionQueue");
 let isRunning = false;
 
 async function pollPositions() {
-  if (isRunning) return; // ✅ ADD BACK
+  if (isRunning) return; 
 
   isRunning = true;
 
   try {
-    console.log("🔄 Polling positions...");
+    //console.log("🔄 Polling positions...");
 
     const positions = await traccarAPI.getPositions();
 

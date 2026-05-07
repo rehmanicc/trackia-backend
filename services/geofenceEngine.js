@@ -6,7 +6,7 @@ const Device = require("../models/Device");
 
 // MAIN ENGINE
 async function processPosition(position, io) {
-    console.log("📍 Processing position:", position.deviceId, position.latitude, position.longitude);
+    //console.log("📍 Processing position:", position.deviceId, position.latitude, position.longitude);
     const device = await Device.findOne(
         { traccarId: position.deviceId },
         { speedLimit: 1 }
@@ -36,7 +36,7 @@ async function processPosition(position, io) {
     position.deviceConfig = {
         speedLimit: device?.speedLimit || 60
     };
-    console.log("🧱 Geofences found:", geofences.length, "for device:", deviceId);
+    //console.log("🧱 Geofences found:", geofences.length, "for device:", deviceId);
     for (const f of geofences) {
 
         const geofenceId = f._id.toString();
@@ -120,7 +120,7 @@ async function processPosition(position, io) {
         const previous = state.inside;
         // 🔥 HANDLE FIRST REAL STATE (NO EVENT)
 
-        console.log("📊 GEOFENCE CHECK:", {
+        /* console.log("📊 GEOFENCE CHECK:", {
             deviceId,
             geofenceId,
             inside,
@@ -128,7 +128,7 @@ async function processPosition(position, io) {
             lat: latitude,
             lng: longitude
         });
-
+*/
         if (inside && !previous) {
             state.inside = true;
 
@@ -191,7 +191,7 @@ async function emitEvent(io, deviceId, geofenceId, type, position) {
             time: event.timestamp
         });
     }
-    console.log(`🚧 ${type.toUpperCase()} → Device ${deviceId} Geofence ${geofenceId}`);
+    //console.log(`🚧 ${type.toUpperCase()} → Device ${deviceId} Geofence ${geofenceId}`);
 }
 
 

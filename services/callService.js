@@ -29,7 +29,7 @@ async function triggerCall(alert) {
             await device.save();
         }
 
-        console.log("📞 CALL TO:", alert.phoneNumber);
+       // console.log("📞 CALL TO:", alert.phoneNumber);
 
         await CallQueue.create({
             number: alert.phoneNumber,

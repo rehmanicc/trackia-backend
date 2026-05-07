@@ -9,7 +9,7 @@ let processedCount = 0;
 const lastEmitted = {};
 setInterval(() => {
     if (processedCount > 0) {
-        console.log("📊 Positions/sec:", processedCount);
+        //console.log("📊 Positions/sec:", processedCount);
         processedCount = 0;
     }
 }, 1000);
@@ -138,11 +138,11 @@ async function processBatch() {
             }
 
             if (Math.random() < 0.05) {
-                console.log("👥 USER MAP:", Object.keys(userMap).length);
+                //console.log("👥 USER MAP:", Object.keys(userMap).length);
             }
 
             if (Object.keys(userMap).length === 0) {
-                console.log("⚠️ No users mapped — forcing emit");
+                //console.log("⚠️ No users mapped — forcing emit");
 
                 io.emit("positions", activePositions); // TEMP DEBUG
             }
@@ -184,7 +184,7 @@ async function processBatch() {
 
                 if (filteredPositions.length > 0) {
                     try {
-                        console.log("🚀 EMIT:", JSON.stringify(filteredPositions));
+                        //console.log("🚀 EMIT:", JSON.stringify(filteredPositions));
                         io.to(`user_${userId}`).emit("positions", filteredPositions);
                     } catch (err) {
                         console.log("❌ Emit error:", err.message);
@@ -196,7 +196,7 @@ async function processBatch() {
 
         // 🔥 reduced logging
         if (Math.random() < 0.2) {
-            console.log("⚡ Processed:", activePositions.length);
+            //console.log("⚡ Processed:", activePositions.length);
         }
 
         processedCount += activePositions.length;
