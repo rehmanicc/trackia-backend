@@ -118,75 +118,121 @@ router.get(
 
 const { addToQueue } = require("../services/positionQueue");
 
-/* router.post("/webhook", (req, res) => {
+router.get(
+  "/positions/latest",
+  authMiddleware,
+  async (req, res) => {
 
-  // ✅ 1. Respond immediately
-  res.sendStatus(200);
-
-  // ✅ 2. Push to queue (NO processing here)
-  setImmediate(() => {
     try {
 
-      if (!req.body) return;
+      const Position =
+        require("../models/Position");
 
+      const user = req.user;
 
-      console.warn("⚠️ Non-JSON webhook ignored");
+      let devices = [];
 
-      console.log("RAW BODY:", JSON.stringify(req.body));
-      const raw = req.body;
+      // OWNER
+      if (user.role === "owner") {
 
-      let positions = [];
+        devices = await Device.find();
 
-      // Case 1: array
-      if (Array.isArray(raw)) {
-        positions = raw;
-      }
-      // Case 2: wrapped object
-      else if (raw.positions) {
-        positions = raw.positions;
-      }
-      // Case 3: single object
-      else if (raw.deviceId) {
-        positions = [raw];
       }
 
-      // 🔥 Normalize fields
-      positions = positions.map(p => ({
-        deviceId: p.deviceId,
-        latitude: p.latitude || p.lat,
-        longitude: p.longitude || p.lon,
-        deviceTime: p.deviceTime || p.fixTime,
-        speed: p.speed,
-        course: p.course,
-        attributes: p.attributes || {}
-      }));
+      // ADMIN
+      else if (user.role === "admin") {
 
-      // 🔥 Filter valid positions
-      positions = positions.filter(p =>
-        p.deviceId && p.latitude && p.longitude && p.deviceTime
-      );
+        devices = await Device.find({
+          adminId: user.id
+        });
 
-      if (positions.length === 0) {
-        console.log("⚠️ No valid positions after parsing");
-        return;
       }
 
-      // 🔥 Avoid log spam
-      if (Math.random() < 0.01) {
-        console.log("📥 Webhook active");
+      // USER
+      else {
+
+        devices = await Device.find({
+          assignedUsers: user.id
+        });
       }
 
-      // 🔥 Large batch warning
-      if (positions.length > 500) {
-        console.warn("⚠️ Large batch:", positions.length);
-      }
+      const deviceIds =
+        devices.map(d => d.traccarId);
 
-      addToQueue(positions);
+      const positions =
+        await Position.aggregate([
+
+          {
+            $match: {
+              deviceId: {
+                $in: deviceIds
+              }
+            }
+          },
+
+          {
+            $sort: {
+              deviceTime: -1
+            }
+          },
+
+          {
+            $group: {
+              _id: "$deviceId",
+              latest: {
+                $first: "$$ROOT"
+              }
+            }
+          }
+
+        ]);
+
+      const formatted =
+        positions.map((p) => {
+
+          const pos = p.latest;
+
+          const device =
+            devices.find(
+              d =>
+                d.traccarId === pos.deviceId
+            );
+
+          return {
+
+            deviceId: pos.deviceId,
+
+            latitude: pos.latitude,
+
+            longitude: pos.longitude,
+
+            speed: pos.speed,
+
+            deviceTime: pos.deviceTime,
+
+            name:
+              device?.name || "",
+
+            registrationNumber:
+              device?.registrationNumber || ""
+
+          };
+        });
+
+      res.json(formatted);
 
     } catch (err) {
-      console.error("❌ Webhook queue error:", err);
-    }
-  });
 
-}); */
+      console.error(
+        "❌ Latest positions error:",
+        err.message
+      );
+
+      res.status(500).json({
+        error:
+          "Failed to fetch positions"
+      });
+    }
+  }
+);
 module.exports = router;
