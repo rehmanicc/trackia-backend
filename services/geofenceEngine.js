@@ -56,7 +56,22 @@ async function processPosition(position, io) {
             latitude >= minLat && latitude <= maxLat
         ) {
             if (f.type === "Polygon") {
-                inside = turf.booleanPointInPolygon(point, f.geometry);
+                try {
+
+                    inside = turf.booleanPointInPolygon(
+                        point,
+                        f.geometry
+                    );
+
+                } catch (err) {
+
+                    console.log(
+                        "❌ Invalid polygon skipped:",
+                        geofenceId
+                    );
+
+                    continue;
+                }
             } else {
                 const [lng, lat] = f.geometry.coordinates;
                 const radius = f.geometry.radius || 100;

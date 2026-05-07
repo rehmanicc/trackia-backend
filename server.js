@@ -1,180 +1,286 @@
 require("dotenv").config();
+
 const express = require("express");
-const app = express();
-const path = require("path");
-app.use(express.json());
-app.use(express.static(path.join(__dirname, "public")));
-const Position = require("./models/Position");
-const PositionArchive = require("./models/PositionsArchive");
-const Trip = require("./models/Trip");
-const deviceRoutes = require("./routes/device");
-const { getPendingCalls, clearCalls } = require("./services/callService");
-const Geofence = require("./models/Geofence");
-const GeofenceEvent = require("./models/GeofenceEvent");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const http = require("http");
-const dashboardRoutes = require("./routes/dashboardRoutes");
-const Alert = require("./models/Alert");
+const path = require("path");
+
+const app = express();
+
 const server = http.createServer(app);
+
+const socket = require("./socket");
+
+const io = socket.init(server);
+
+app.set("io", io);
+
+// ======================
+// BASIC CONFIG
+// ======================
+
 server.keepAliveTimeout = 120000;
 server.headersTimeout = 120000;
-const jwt = require("jsonwebtoken");
-const Device = require("./models/Device");
-const { startPolling } = require("./services/traccarPolling");
 
-require("./services/notification/firebase");
-require("./services/positionWorker");
-const socket = require("./socket");
-const io = socket.init(server);
-app.set("io", io);
+// ======================
+// MIDDLEWARE
+// ======================
 
 app.use(cors({
   origin: [
     "http://127.0.0.1:8080",
     "http://localhost:8080"
   ],
-  methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
-app.get("/api/call/pending", (req, res) => {
-  res.json(getPendingCalls());
-});
-app.post("/api/call/clear", (req, res) => {
-  clearCalls();
-  res.json({ success: true });
-});
+
+app.use(express.json());
+
+app.use(express.urlencoded({
+  extended: true
+}));
+
+app.use(
+  express.static(
+    path.join(__dirname, "public")
+  )
+);
 
 // ======================
-// MONGODB CONNECTION
+// SERVICES
 // ======================
+
+require("./services/notification/firebase");
+
+require("./services/positionWorker");
+
+// ======================
+// DATABASE
+// ======================
+
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
-    console.log("MongoDB Connected");
-    console.log("Connected DB:", mongoose.connection.name);
+
+    console.log("✅ MongoDB Connected");
+
+    console.log(
+      "📦 Database:",
+      mongoose.connection.name
+    );
+
   })
-  .catch(err => console.log(err));
+  .catch((err) => {
+
+    console.log(
+      "❌ MongoDB Error:",
+      err.message
+    );
+  });
 
 // ======================
-// MIDDLEWARE
+// ROUTES IMPORT
 // ======================
-app.use((req, res, next) => {
-  console.log("🌐 Incoming:", req.method, req.url);
-  next();
-});
+
+const authRoutes = require("./routes/auth");
+
+const traccarRoutes = require("./routes/traccar");
+
+const geofenceRoutes = require("./routes/geofence");
+
+const tripRoutes = require("./routes/trips");
+
+const analyticsRoutes = require("./routes/analyticsRoutes");
+
+const alertRoutes = require("./routes/alertRoutes");
+
+const userRoutes = require("./routes/user");
+
+const dashboardRoutes = require("./routes/dashboardRoutes");
+
+const deviceRoutes = require("./routes/device");
+
+const auditRoutes = require("./routes/auditRoutes");
+
+const fcmRoutes = require("./routes/fcmRoutes");
+
 // ======================
-// TEST ROUTE
+// TEST ROUTES
 // ======================
+
 app.get("/", (req, res) => {
   res.send("Trackia Backend Running");
 });
+
 app.get("/api/test", (req, res) => {
-  res.json({ message: "API working" });
-});
-// ======================
-// ROUTES
-// ======================
-const authRoutes = require("./routes/auth");
-const traccarRoutes = require("./routes/traccar");
-const geofenceRoutes = require("./routes/geofence");
-const tripRoutes = require("./routes/trips");
-const analyticsRoutes = require("./routes/analyticsRoutes");
-const alertRoutes = require("./routes/alertRoutes");
-const userRoutes = require("./routes/user");
-const alertRuleRoutes = require("./routes/alertRuleRoutes");
-
-
-app.use(express.urlencoded({ extended: true }));
-//console.log("alertRuleRoutes:", typeof alertRuleRoutes);
-app.use("/api/alert-rules", alertRuleRoutes);
-//console.log("authRoutes:", typeof authRoutes);
-app.use("/api/auth", authRoutes);
-//console.log("geofenceRoutes:", typeof geofenceRoutes);
-app.use("/api/geofence", geofenceRoutes);
-//console.log("tripRoutes:", typeof tripRoutes);
-app.use("/api/trips", tripRoutes);
-//console.log("traccarRoutes:", typeof traccarRoutes);
-app.use("/api/traccar", traccarRoutes);
-//console.log("analyticsRoutes:", typeof analyticsRoutes);
-app.use("/api/analytics", analyticsRoutes);
-//console.log("deviceRoutes type:", typeof deviceRoutes);
-//console.log("deviceRoutes value:", deviceRoutes);
-app.use("/api/devices", deviceRoutes);
-//console.log("alertRoutes:", typeof alertRoutes);
-app.use("/api/alerts", alertRoutes);
-//console.log("userRoutes:", typeof userRoutes);
-app.use("/api/users", userRoutes);
-app.use("/api/audit", require("./routes/auditRoutes"));
-app.use("/api/fcm", require("./routes/fcmRoutes"));
-app.use("/api/dashboard", dashboardRoutes);
-// ======================
-// DB CHECK ROUTE
-// ======================
-app.get("/check-db", async (req, res) => {
-  try {
-    const collections = await mongoose.connection.db.listCollections().toArray();
-
-    const data = await mongoose.connection.db
-      .collection("positions")
-      .find()
-      .limit(5)
-      .toArray();
-
-    res.json({
-      db: mongoose.connection.name,
-      collections,
-      data
-    });
-
-  } catch (err) {
-    res.json({ error: err.message });
-  }
-});
-// ======================
-// SERVER START
-// ======================
-const PORT = process.env.PORT || 5000;
-const User = require("./models/User");
-app.delete("/api/reset", async (req, res) => {
-  try {
-    const secret = req.headers["x-reset-key"]?.trim();
-
-    console.log("HEADER:", secret);
-    console.log("ENV:", process.env.RESET_SECRET);
-
-    if (!secret || secret !== process.env.RESET_SECRET) {
-      return res.status(403).json({ message: "Unauthorized" });
-    }
-
-    await User.deleteMany({});
-    await Device.deleteMany({});
-    await Position.deleteMany({});
-    await PositionArchive.deleteMany({});
-    await Trip.deleteMany({});
-    await Alert.deleteMany({});
-    await Geofence.deleteMany({});
-    await GeofenceEvent.deleteMany({});
-
-
-    return res.json({ message: "Database reset successful" });
-
-  } catch (err) {
-    console.error("RESET ERROR:", err);
-    return res.status(500).json({ error: err.message });
-  }
-});
-app.use((err, req, res, next) => {
-  console.error("🔥 GLOBAL ERROR:", err);
-
-  res.status(500).json({
-    error: err.message || "Internal Server Error"
+  res.json({
+    success: true,
+    message: "API Working"
   });
 });
 
+// ======================
+// CALL ROUTES
+// ======================
+
+const {
+  getPendingCalls,
+  clearCalls
+} = require("./services/callService");
+
+app.get("/api/call/pending", (req, res) => {
+  res.json(getPendingCalls());
+});
+
+app.post("/api/call/clear", (req, res) => {
+
+  clearCalls();
+
+  res.json({
+    success: true
+  });
+});
+
+// ======================
+// API ROUTES
+// ======================
+
+app.use("/api/auth", authRoutes);
+
+app.use("/api/geofence", geofenceRoutes);
+
+app.use("/api/traccar", traccarRoutes);
+
+app.use("/api/trips", tripRoutes);
+
+app.use("/api/analytics", analyticsRoutes);
+
+app.use("/api/devices", deviceRoutes);
+
+app.use("/api/alerts", alertRoutes);
+
+app.use("/api/users", userRoutes);
+
+app.use("/api/dashboard", dashboardRoutes);
+
+app.use("/api/audit", auditRoutes);
+
+app.use("/api/fcm", fcmRoutes);
+
+// ======================
+// RESET ROUTE
+// ======================
+
+const User = require("./models/User");
+
+const Device = require("./models/Device");
+
+const Position = require("./models/Position");
+
+const PositionArchive = require("./models/PositionsArchive");
+
+const Trip = require("./models/Trip");
+
+const Alert = require("./models/Alert");
+
+const Geofence = require("./models/Geofence");
+
+const GeofenceEvent = require("./models/GeofenceEvent");
+
+app.delete("/api/reset", async (req, res) => {
+
+  try {
+
+    const secret =
+      req.headers["x-reset-key"]?.trim();
+
+    if (
+      !secret ||
+      secret !== process.env.RESET_SECRET
+    ) {
+      return res.status(403).json({
+        message: "Unauthorized"
+      });
+    }
+
+    await User.deleteMany({});
+
+    await Device.deleteMany({});
+
+    await Position.deleteMany({});
+
+    await PositionArchive.deleteMany({});
+
+    await Trip.deleteMany({});
+
+    await Alert.deleteMany({});
+
+    await Geofence.deleteMany({});
+
+    await GeofenceEvent.deleteMany({});
+
+    return res.json({
+      success: true,
+      message: "Database reset successful"
+    });
+
+  } catch (err) {
+
+    console.error(
+      "❌ RESET ERROR:",
+      err
+    );
+
+    return res.status(500).json({
+      error: err.message
+    });
+  }
+});
+
+// ======================
+// GLOBAL ERROR HANDLER
+// ======================
+
+app.use((err, req, res, next) => {
+
+  console.error(
+    "🔥 GLOBAL ERROR:",
+    err
+  );
+
+  res.status(500).json({
+    error:
+      err.message ||
+      "Internal Server Error"
+  });
+});
+
+// ======================
+// SERVER START
+// ======================
+
+const PORT =
+  process.env.PORT || 5000;
+
+const {
+  startPolling
+} = require("./services/traccarPolling");
+
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+
+  console.log(
+    `🚀 Server running on port ${PORT}`
+  );
+
   startPolling();
 });
+
+// ======================
+// KEEP ALIVE LOG
+// ======================
+
 setInterval(() => {
+
   console.log("🔥 Server alive");
+
 }, 1000 * 60 * 5);

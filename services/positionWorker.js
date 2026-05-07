@@ -2,6 +2,9 @@ const { getBatch } = require("./positionQueue");
 const Position = require("../models/Position");
 const Device = require("../models/Device");
 const socket = require("../socket");
+const { processPosition } = require("./geofenceEngine");
+const { handleAlerts } = require("./alert/alertProcessor");
+
 let processedCount = 0;
 const lastEmitted = {};
 setInterval(() => {
@@ -75,6 +78,19 @@ async function processBatch() {
                 name: device?.name || null,
                 registrationNumber: device?.registrationNumber || null,
             });
+            try {
+
+                await processPosition(p, io);
+
+                await handleAlerts(p, io);
+
+            } catch (err) {
+
+                console.error(
+                    "❌ Alert/geofence processing failed:",
+                    err.message
+                );
+            }
         }
 
         if (bulkOps.length > 0) {
