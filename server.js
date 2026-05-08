@@ -28,10 +28,7 @@ server.headersTimeout = 120000;
 // ======================
 
 app.use(cors({
-  origin: [
-    "http://127.0.0.1:8080",
-    "http://localhost:8080"
-  ],
+  origin: "*",
   credentials: true
 }));
 
@@ -40,12 +37,6 @@ app.use(express.json());
 app.use(express.urlencoded({
   extended: true
 }));
-
-app.use(
-  express.static(
-    path.join(__dirname, "public")
-  )
-);
 
 // ======================
 // SERVICES
