@@ -32,8 +32,10 @@ router.post("/register", authMiddleware, async (req, res) => {
     // 🔐 OWNER → ADMIN
     if (req.user.role === "owner") {
 
-      if (role !== "admin") {
-        return res.status(403).json({ error: "Owner can only create admin" });
+      if (!["admin", "user"].includes(role)) {
+        return res.status(403).json({
+          error: "Invalid role"
+        });
       }
 
       const hash = await bcrypt.hash(password, 10);
@@ -42,12 +44,19 @@ router.post("/register", authMiddleware, async (req, res) => {
         name,
         phoneNumber,
         password: hash,
-        role: "admin"
+        role,
+        adminId:
+          role === "user"
+            ? req.user.id
+            : null
       });
 
       await user.save();
 
-      return res.json({ message: "Admin created", user });
+      return res.json({
+        message: `${role} created`,
+        user
+      });
     }
 
     // 🔐 ADMIN → USER

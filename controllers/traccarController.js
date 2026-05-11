@@ -97,7 +97,7 @@ exports.getPositions = async (req, res) => {
       activePositions.push({
         ...p,
         engineOn: p.attributes?.ignition === true,
-       
+
         name: device?.name || null,
         registrationNumber: device?.registrationNumber || null,
       });
@@ -196,7 +196,16 @@ exports.sendCommand = async (req, res) => {
     ) {
       return res.status(403).json({ error: "Access denied" });
     }
-
+    if (
+      req.user.role === "user" &&
+      !device.assignedUsers.some(
+        (u) => String(u) === String(req.user.id)
+      )
+    ) {
+      return res.status(403).json({
+        error: "Device not assigned to user"
+      });
+    }
     // 🔐 ROLE CHECK
     const isOwnerOrAdmin =
       req.user.role === "owner" || req.user.role === "admin";

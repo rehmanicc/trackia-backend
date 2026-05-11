@@ -140,13 +140,7 @@ async function processBatch() {
             if (Math.random() < 0.05) {
                 //console.log("👥 USER MAP:", Object.keys(userMap).length);
             }
-
-            if (Object.keys(userMap).length === 0) {
-                //console.log("⚠️ No users mapped — forcing emit");
-
-                io.emit("positions", activePositions); // TEMP DEBUG
-            }
-
+            
             // emit per user
             for (const userId in userMap) {
 

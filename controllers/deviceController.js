@@ -159,7 +159,14 @@ exports.deleteDevice = async (req, res) => {
 
     if (!device) return res.status(404).json({ error: "Not found" });
 
-    // 🔥 Capture data BEFORE delete (important)
+    if (
+      req.user.role === "admin" &&
+      String(device.adminId) !== String(req.user.id)
+    ) {
+      return res.status(403).json({
+        error: "Access denied"
+      });
+    }
     const deviceData = {
       name: device.name,
       uniqueId: device.uniqueId,
@@ -222,9 +229,24 @@ exports.assignDevice = async (req, res) => {
       return res.status(404).json({ error: "Not found" });
     }
 
-    if (String(device.adminId) !== String(user.adminId)) {
+    if (
+      String(device.adminId) !==
+      String(user.adminId)
+    ) {
       return res.status(400).json({
-        error: "User and device belong to different admins"
+        error:
+          "User and device belong to different admins"
+      });
+    }
+
+    // 🔒 Admin ownership validation
+    if (
+      req.user.role === "admin" &&
+      String(device.adminId) !==
+      String(req.user.id)
+    ) {
+      return res.status(403).json({
+        error: "Access denied"
       });
     }
 
@@ -282,7 +304,15 @@ exports.unassignDevice = async (req, res) => {
     if (!device) {
       return res.status(404).json({ error: "Device not found" });
     }
-
+    if (
+      req.user.role === "admin" &&
+      String(device.adminId) !==
+      String(req.user.id)
+    ) {
+      return res.status(403).json({
+        error: "Access denied"
+      });
+    }
     const { userId } = req.body;
 
     if (!userId) {
@@ -367,7 +397,7 @@ exports.updateDevicePermissions = async (req, res) => {
 
     // 🔒 OWNERSHIP CHECK
     if (
-      req.user.role !== "owner" &&
+      req.user.role === "admin" &&
       String(device.adminId) !== String(req.user.id)
     ) {
       return res.status(403).json({

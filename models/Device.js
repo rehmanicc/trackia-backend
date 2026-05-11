@@ -92,12 +92,12 @@ const deviceSchema = new mongoose.Schema({
     ],
     deviceSimNumber: {
         type: String,
-        required: true,
+        required: false,
         unique: true
     },
     callReceiverNumber: {
         type: String,
-        required: true
+        required: false
     },
 
     allowUserToChangeCallReceiver: {
