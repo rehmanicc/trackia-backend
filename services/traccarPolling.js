@@ -41,7 +41,7 @@ async function startPollingLoop() {
       console.error("Polling loop error:", err);
     }
 
-    await new Promise(resolve => setTimeout(resolve, 2000)); // 2 sec delay
+    await new Promise(resolve => setTimeout(resolve, 800)); 
   }
 }
 

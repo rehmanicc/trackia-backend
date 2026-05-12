@@ -48,7 +48,13 @@ module.exports = {
         return;
       }
 
-      const adminId = String(user.adminId || user.id);
+      const adminId =
+        user.role === "owner"
+          ? "owners"
+          : String(user.adminId || user.id);
+      if (user.role === "owner") {
+        socket.join("company_owners");
+      }
 
       socket.join(`company_${adminId}`);
       socket.join(`user_${user.id}`);

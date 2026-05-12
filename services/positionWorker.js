@@ -116,31 +116,21 @@ async function processBatch() {
 
                 // emit to company (admin group)
                 if (device.adminId) {
-                    const adminRoom = `company_${device.adminId}`;
-                    io.to(adminRoom).emit("positions", [pos]);
 
-                    // 🔥 ALSO emit to admin as user (CRITICAL FIX)
-                    io.to(`user_${device.adminId}`).emit("positions", [pos]);
-                    // 🔥 EMIT TO OWNER USERS
-                    const User = require("../models/User");
+                    io.to(
+                        `company_${device.adminId}`
+                    ).emit("positions", [pos]);
 
-                    const owners = await User.find({
-                        role: "owner"
-                    }).select("_id");
-
-                    owners.forEach(owner => {
-                        io.to(`user_${owner._id}`).emit(
-                            "positions",
-                            [pos]
-                        );
-                    });
+                    io.to(
+                        "company_owners"
+                    ).emit("positions", [pos]);
                 }
             }
 
             if (Math.random() < 0.05) {
                 //console.log("👥 USER MAP:", Object.keys(userMap).length);
             }
-            
+
             // emit per user
             for (const userId in userMap) {
 
@@ -156,16 +146,39 @@ async function processBatch() {
                     const pos = latestPerDevice[deviceId];
 
                     if (lastEmitted[deviceId]) {
+
                         const last = lastEmitted[deviceId];
 
-                        const latDiff = Math.abs(last.latitude - pos.latitude);
-                        const lngDiff = Math.abs(last.longitude - pos.longitude);
+                        const latDiff =
+                            Math.abs(last.latitude - pos.latitude);
 
-                        const moved = latDiff > 0.000003 || lngDiff > 0.000003; // 🔥 smaller threshold (~30cm)
-                        const speedChanged = last.speed !== pos.speed;
-                        const engineChanged = last.engineOn !== pos.engineOn;
+                        const lngDiff =
+                            Math.abs(last.longitude - pos.longitude);
 
-                        if (!moved && !speedChanged && !engineChanged) {
+                        // 🔥 smoother movement detection
+                        const moved =
+                            latDiff > 0.0000005 ||
+                            lngDiff > 0.0000005;
+
+                        const speedChanged =
+                            last.speed !== pos.speed;
+
+                        const engineChanged =
+                            last.engineOn !== pos.engineOn;
+
+                        // 🔥 force periodic updates
+                        const timeDiff =
+                            new Date(pos.deviceTime) -
+                            new Date(last.deviceTime);
+
+                        const stale = timeDiff > 3000;
+
+                        if (
+                            !moved &&
+                            !speedChanged &&
+                            !engineChanged &&
+                            !stale
+                        ) {
                             continue;
                         }
                     }
@@ -208,6 +221,6 @@ async function loop() {
     isRunning = false;
 }
 
-setInterval(loop, 500);
+setInterval(loop, 200);
 
 module.exports = {};
