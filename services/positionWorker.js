@@ -7,6 +7,7 @@ const { handleAlerts } = require("./alert/alertProcessor");
 
 let processedCount = 0;
 const lastEmitted = {};
+const processedPositionIds = new Set();
 setInterval(() => {
     if (processedCount > 0) {
         //console.log("📊 Positions/sec:", processedCount);
@@ -25,7 +26,6 @@ async function processBatch() {
         const positions = batch.flat();
 
         const deviceIds = [...new Set(positions.map(p => p.deviceId))];
-
         const devices = await Device.find({
             traccarId: { $in: deviceIds }
         });
@@ -39,7 +39,13 @@ async function processBatch() {
         const activePositions = [];
 
         for (const p of positions) {
-            if (!p || !p.deviceId || !p.latitude || !p.longitude || !p.deviceTime) continue;
+            if (
+                !p ||
+                !p.deviceId ||
+                p.latitude == null ||
+                p.longitude == null ||
+                !p.deviceTime
+            ) continue;
 
             const device = deviceMap[p.deviceId];
             if (!device) continue;
@@ -47,19 +53,24 @@ async function processBatch() {
             if (!device.isActive || new Date() > new Date(device.expiryDate)) {
                 continue;
             }
+            if (processedPositionIds.has(p.positionId)) {
+                continue;
+            }
 
+            processedPositionIds.add(p.positionId);
             bulkOps.push({
                 updateOne: {
                     filter: {
-                        deviceId: p.deviceId,
-                        deviceTime: p.deviceTime
+                        positionId: p.positionId
                     },
                     update: {
                         $setOnInsert: {
+                            positionId: p.positionId,
                             deviceId: p.deviceId,
                             latitude: p.latitude,
                             longitude: p.longitude,
-                            speed: p.speed,
+                            speed: Number(p.speed) || 0,
+                            course: Number(p.course) || 0,
                             deviceTime: p.deviceTime
                         }
                     },
@@ -71,8 +82,8 @@ async function processBatch() {
                 deviceId: p.deviceId,
                 latitude: p.latitude,
                 longitude: p.longitude,
-                speed: p.speed,
-                course: p.course,
+                speed: Number(p.speed) || 0,
+                course: Number(p.course) || 0,
                 deviceTime: p.deviceTime,
                 engineOn: p.attributes?.ignition === true,
                 name: device?.name || null,
@@ -80,7 +91,13 @@ async function processBatch() {
             });
             try {
 
-                await processPosition(p, io);
+                await processPosition({
+                    ...p,
+                    latitude: Number(p.latitude),
+                    longitude: Number(p.longitude),
+                    speed: Number(p.speed) || 0,
+                    course: Number(p.course) || 0
+                }, io);
 
                 await handleAlerts(p, io);
 
@@ -157,8 +174,8 @@ async function processBatch() {
 
                         // 🔥 smoother movement detection
                         const moved =
-                            latDiff > 0.0000005 ||
-                            lngDiff > 0.0000005;
+                            latDiff > 0.00001 ||
+                            lngDiff > 0.00001;
 
                         const speedChanged =
                             last.speed !== pos.speed;
@@ -207,7 +224,9 @@ async function processBatch() {
         }
 
         processedCount += activePositions.length;
-
+        if (processedPositionIds.size > 50000) {
+            processedPositionIds.clear();
+        }
     } catch (err) {
         console.error("❌ Worker error:", err);
     }

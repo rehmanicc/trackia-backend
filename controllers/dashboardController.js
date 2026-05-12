@@ -1,6 +1,7 @@
 const Device = require("../models/Device");
 const Alert = require("../models/Alert");
 const Position = require("../models/Position");
+const traccarAPI = require("../services/traccarAPI");
 
 exports.getDashboardStats = async (req, res) => {
     try {
@@ -27,7 +28,7 @@ exports.getDashboardStats = async (req, res) => {
                 assignedUsers: user.id,
             });
         }
-        
+
         let movingVehicles = 0;
         let stoppedVehicles = 0;
 
@@ -58,20 +59,38 @@ exports.getDashboardStats = async (req, res) => {
                 }
             }
         ]);
+        const traccarDevices =
+            await traccarAPI.apiGet("/api/devices");
+        const positionMap = {};
+
+        latestPositions.forEach(p => {
+            positionMap[p._id] = p.latest;
+        });
+
+        const traccarMap = {};
+
+        traccarDevices.forEach(d => {
+            traccarMap[d.id] = d;
+        });
         devices.forEach((device) => {
 
             const position =
-                latestPositions.find(
-                    p => p._id === device.traccarId
-                )?.latest;
+                positionMap[device.traccarId];
 
             const speed = position?.speed || 0;
 
             const speedKmh = speed * 1.852;
 
-            if (speedKmh > 4) {
+            const liveDevice =
+                traccarMap[device.traccarId];
+
+            if (liveDevice?.status !== "online") {
+                stoppedVehicles++;
+            }
+            else if (speedKmh > 4) {
                 movingVehicles++;
-            } else {
+            }
+            else {
                 stoppedVehicles++;
             }
         });

@@ -1,8 +1,4 @@
-const axios = require("axios");
 const Position = require("../models/Position");
-const TRACCAR_URL = process.env.TRACCAR_URL;
-const EMAIL = process.env.TRACCAR_EMAIL;
-const PASSWORD = process.env.TRACCAR_PASSWORD;
 const Device = require("../models/Device");
 const { getPositions, apiGet, apiPost } = require("../services/traccarAPI");
 const { processPosition } = require("../services/geofenceEngine");
@@ -40,8 +36,7 @@ exports.getPositions = async (req, res) => {
         console.log(`⛔ Device ${device.traccarId} expired — skipped`);
         continue;
       }
-      console.log("💾 Saving:", p.deviceId, p.deviceTime);
-      // ✅ SAVE ONLY ACTIVE
+
       const lat = Number(p.latitude);
       const lng = Number(p.longitude);
 
@@ -64,46 +59,49 @@ exports.getPositions = async (req, res) => {
         continue; // 🔥 DO NOT SAVE BAD DATA
       }
 
-      await Position.updateOne(
+      const result = await Position.updateOne(
         {
-          deviceId: p.deviceId,
-          deviceTime: p.deviceTime
+          positionId: p.id
         },
         {
           $setOnInsert: {
+            positionId: p.id,
             deviceId: p.deviceId,
             latitude: lat,
             longitude: lng,
             speed: Number(p.speed) || 0,
+            course: Number(p.course) || 0,
             deviceTime: p.deviceTime
           }
         },
         { upsert: true }
       );
 
-      if (io) {
+      const isNew =
+        result.upsertedCount > 0;
+      if (io && isNew) {
         await processPosition({
           deviceId: p.deviceId,
-          latitude: p.latitude,
-          longitude: p.longitude,
-          speed: p.speed,
+          latitude: lat,
+          longitude: lng,
+          speed: Number(p.speed) || 0,
           attributes: p.attributes || {},
           deviceTime: p.deviceTime
         }, io);
 
         await handleAlerts(p, io);
+        activePositions.push({
+          ...p,
+          engineOn: p.attributes?.ignition === true,
+
+          name: device?.name || null,
+          registrationNumber: device?.registrationNumber || null,
+        });
       }
 
-      activePositions.push({
-        ...p,
-        engineOn: p.attributes?.ignition === true,
 
-        name: device?.name || null,
-        registrationNumber: device?.registrationNumber || null,
-      });
     }
-
-    if (io) {
+    if (io && activePositions.length > 0) {
       io.emit("positions", activePositions);
     }
 
