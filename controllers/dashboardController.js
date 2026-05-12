@@ -1,5 +1,6 @@
 const Device = require("../models/Device");
-const traccarAPI = require("../services/traccarAPI");
+const Alert = require("../models/Alert");
+const Position = require("../models/Position");
 
 exports.getDashboardStats = async (req, res) => {
     try {
@@ -21,32 +22,51 @@ exports.getDashboardStats = async (req, res) => {
             });
         }
 
-        // USER
         else {
             devices = await Device.find({
                 assignedUsers: user.id,
             });
         }
-
-        // LIVE STATUS FROM TRACCAR
-        const traccarDevices = await traccarAPI.apiGet("/api/devices");
-
+        
         let movingVehicles = 0;
         let stoppedVehicles = 0;
 
-        // 🔥 GET LIVE POSITIONS
-        const positions = await traccarAPI.apiGet("/api/positions");
+        const latestPositions = await Position.aggregate([
 
+            {
+                $match: {
+                    deviceId: {
+                        $in: devices.map(
+                            d => d.traccarId
+                        )
+                    }
+                }
+            },
+
+            {
+                $sort: {
+                    deviceTime: -1
+                }
+            },
+
+            {
+                $group: {
+                    _id: "$deviceId",
+                    latest: {
+                        $first: "$$ROOT"
+                    }
+                }
+            }
+        ]);
         devices.forEach((device) => {
 
-            const position = positions.find(
-                (p) => p.deviceId === device.traccarId
-            );
+            const position =
+                latestPositions.find(
+                    p => p._id === device.traccarId
+                )?.latest;
 
-            // 🔥 SPEED CHECK
             const speed = position?.speed || 0;
 
-            // Traccar speed is knots
             const speedKmh = speed * 1.852;
 
             if (speedKmh > 4) {
@@ -55,8 +75,6 @@ exports.getDashboardStats = async (req, res) => {
                 stoppedVehicles++;
             }
         });
-
-        // EXPIRED
         const expiredVehicles = devices.filter(
             (d) =>
                 d.expiryDate &&
@@ -78,7 +96,6 @@ exports.getDashboardStats = async (req, res) => {
         });
     }
 };
-const Alert = require("../models/Alert");
 
 exports.getCriticalAlerts = async (req, res) => {
     try {
@@ -121,8 +138,8 @@ exports.getCriticalAlerts = async (req, res) => {
                 ]
             }
         })
-        .sort({ timestamp: -1 })
-        .limit(5);
+            .sort({ timestamp: -1 })
+            .limit(5);
 
         // 🔥 attach device info
         const formatted = alerts.map(alert => {

@@ -261,7 +261,7 @@ server.listen(PORT, () => {
     `🚀 Server running on port ${PORT}`
   );
 
- // startPolling();
+ startPolling();
 });
 
 // ======================

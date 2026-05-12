@@ -3,8 +3,8 @@ const traccarAPI = require("../services/traccarAPI");
 const Geofence = require("../models/Geofence");
 const User = require("../models/User");
 const mongoose = require("mongoose");
-// CREATE DEVICE
-
+const Position =
+  require("../models/Position");
 
 exports.createDevice = async (req, res, next) => {
 
@@ -129,17 +129,69 @@ exports.getDevices = async (req, res) => {
       }).populate("assignedUsers", "name");
     }
 
-    // 🔥 GET LIVE DEVICES FROM TRACCAR
-    const traccarDevices = await traccarAPI.apiGet("/api/devices");
+    const latestPositions =
+      await Position.aggregate([
 
-    // 🔥 MERGE STATUS
+        {
+          $match: {
+            deviceId: {
+              $in: devices.map(
+                d => d.traccarId
+              )
+            }
+          }
+        },
+
+        {
+          $sort: {
+            deviceTime: -1
+          }
+        },
+
+        {
+          $group: {
+            _id: "$deviceId",
+            latest: {
+              $first: "$$ROOT"
+            }
+          }
+        }
+      ]);
+
     const merged = devices.map(d => {
-      const live = traccarDevices.find(t => t.id === d.traccarId);
+
+      const latest =
+        latestPositions.find(
+          p => p._id === d.traccarId
+        )?.latest;
+
+      const isOnline =
+        latest &&
+        (
+          Date.now() -
+          new Date(latest.deviceTime)
+        ) < 120000;
 
       return {
+
         ...d._doc,
-        status: live?.status || "offline",
-        lastUpdate: live?.lastUpdate || null
+
+        status:
+          isOnline
+            ? "online"
+            : "offline",
+
+        lastUpdate:
+          latest?.deviceTime || null,
+
+        speed:
+          latest?.speed || 0,
+
+        latitude:
+          latest?.latitude || null,
+
+        longitude:
+          latest?.longitude || null
       };
     });
 
