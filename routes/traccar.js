@@ -17,6 +17,8 @@ const lastPositionCache = new Map();
 const checkPermission = require("../middleware/checkPermission");
 const PERMISSIONS = require("../config/permissions");
 const controller = require("../controllers/traccarController");
+const webhookController =
+require("../controllers/traccarWebhookController");
 
 router.post("/assign-device", authMiddleware, async (req, res) => {
 
@@ -103,6 +105,10 @@ router.get("/route", authMiddleware, getRoute);
 
 router.get("/trips", authMiddleware, getTrips);
 
+router.post(
+    "/webhook",
+    webhookController.receiveWebhook
+);
 
 router.post("/command",
   authMiddleware,
