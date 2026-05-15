@@ -322,25 +322,32 @@ exports.getDevices = async (req, res) => {
 
       return {
 
-        ...d._doc,
+  ...d._doc,
 
-        status:
-          isOnline
-            ? "online"
-            : "offline",
+  online: isOnline,
 
-        lastUpdate:
-          latest?.deviceTime || null,
-
+  position: latest
+    ? {
         speed:
-          latest?.speed || 0,
+          latest.speed || 0,
 
         latitude:
-          latest?.latitude || null,
+          latest.latitude,
 
         longitude:
-          latest?.longitude || null
-      };
+          latest.longitude,
+
+        course:
+          latest.course || 0,
+
+        deviceTime:
+          latest.deviceTime,
+
+        attributes:
+          latest.attributes || {},
+      }
+    : null,
+};
     });
 
     res.json(merged);

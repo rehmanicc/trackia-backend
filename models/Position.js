@@ -1,55 +1,66 @@
-const mongoose = require("mongoose");
+const mongoose =
+  require("mongoose");
 
-const PositionSchema = new mongoose.Schema({
+const PositionSchema =
+  new mongoose.Schema({
 
-  deviceId: {
-    type: Number,
-    required: true,
-    index: true,
-  },
+    positionId: {
+      type: Number,
+      unique: true,
+      sparse: true,
+      index: true,
+    },
 
-  latitude: {
-    type: Number,
-    required: true,
-  },
+    deviceId: {
+      type: Number,
+      required: true,
+      index: true,
+    },
 
-  longitude: {
-    type: Number,
-    required: true,
-  },
+    latitude: {
+      type: Number,
+      required: true,
+    },
 
-  speed: {
-    type: Number,
-    default: 0,
-  },
+    longitude: {
+      type: Number,
+      required: true,
+    },
 
-  course: {
-    type: Number,
-    default: 0,
-  },
+    speed: {
+      type: Number,
+      default: 0,
+    },
 
-  attributes: {
-    type: Object,
-    default: {},
-  },
+    course: {
+      type: Number,
+      default: 0,
+    },
 
-  // ✅ Real GPS timestamp from Traccar
-  deviceTime: {
-    type: Date,
-    required: true,
-  },
+    attributes: {
+      type: Object,
+      default: {},
+    },
 
-}, {
-  timestamps: true,
+    // ✅ Real GPS timestamp
+    deviceTime: {
+      type: Date,
+      required: true,
+      index: true,
+    },
+
+  }, {
+    timestamps: true,
+  });
+
+// ✅ Fast latest position queries
+PositionSchema.index({
+  deviceId: 1,
+  deviceTime: -1,
 });
 
-// ✅ Prevent duplicate position inserts
-PositionSchema.index(
-  { deviceId: 1, deviceTime: 1 },
-  { unique: true }
-);
-
-module.exports = mongoose.model(
-  "Position",
-  PositionSchema
-);
+module.exports =
+  mongoose.model(
+    "Position",
+    PositionSchema
+  );

@@ -204,9 +204,17 @@ router.get(
                 d.traccarId === pos.deviceId
             );
 
+          const isOnline =
+            (
+              Date.now() -
+              new Date(pos.deviceTime)
+            ) < 120000;
+
           return {
 
             deviceId: pos.deviceId,
+
+            online: isOnline,
 
             latitude: pos.latitude,
 
