@@ -28,6 +28,15 @@ router.post("/",
   ctrl.createDevice
 );
 
+router.put(
+  "/:id",
+  auth,
+  checkPermission(
+    PERMISSIONS.EDIT_DEVICE
+  ),
+  ctrl.updateDevice
+);
+
 router.delete("/:id",
   auth,
   checkPermission(PERMISSIONS.DELETE_DEVICE),

@@ -103,6 +103,154 @@ exports.createDevice = async (req, res, next) => {
     });
   }
 };
+exports.updateDevice = async (
+  req,
+  res
+) => {
+
+  try {
+
+    const device =
+      await Device.findById(
+        req.params.id
+      );
+
+    if (!device) {
+      return res.status(404).json({
+        error: "Device not found"
+      });
+    }
+
+    // 🔒 ADMIN OWNERSHIP CHECK
+    if (
+      req.user.role === "admin" &&
+      String(device.adminId) !==
+      String(req.user.id)
+    ) {
+      return res.status(403).json({
+        error: "Access denied"
+      });
+    }
+
+    const {
+      name,
+      registrationNumber,
+      deviceSimNumber,
+      callReceiverNumber,
+      speedLimit,
+      fuelEfficiency,
+      oilChangeReading,
+      adminId,
+    } = req.body;
+
+    // 🔐 PERMISSIONS
+
+    const canEditTrackerSim =
+      req.user.role === "owner" ||
+      req.user.role === "admin";
+
+    const canEditSpeed =
+      req.user.permissions?.includes(
+        "EDIT_SPEED"
+      );
+
+    const canEditFuel =
+      req.user.permissions?.includes(
+        "EDIT_FUEL"
+      );
+
+    const canEditOil =
+      req.user.permissions?.includes(
+        "EDIT_OIL"
+      );
+
+    const canEditCall =
+      req.user.permissions?.includes(
+        "EDIT_CALL_NUMBER"
+      );
+
+    // ✅ FULL ACCESS
+    if (canEditTrackerSim) {
+
+      if (name !== undefined) {
+        device.name = name;
+      }
+
+      if (
+        registrationNumber !== undefined
+      ) {
+        device.registrationNumber =
+          registrationNumber;
+      }
+
+      if (
+        deviceSimNumber !== undefined
+      ) {
+        device.deviceSimNumber =
+          deviceSimNumber;
+      }
+
+      if (
+        callReceiverNumber !== undefined
+      ) {
+        device.callReceiverNumber =
+          callReceiverNumber;
+      }
+    }
+
+    // ✅ PERMISSION BASED
+    if (
+      canEditSpeed &&
+      speedLimit !== undefined
+    ) {
+      device.speedLimit =
+        speedLimit;
+    }
+
+    if (
+      canEditFuel &&
+      fuelEfficiency !== undefined
+    ) {
+      device.fuelEfficiency =
+        fuelEfficiency;
+    }
+
+    if (
+      canEditOil &&
+      oilChangeReading !== undefined
+    ) {
+      device.oilChangeReading =
+        oilChangeReading;
+    }
+
+    // 👑 OWNER ONLY
+    if (
+      req.user.role === "owner" &&
+      adminId
+    ) {
+      device.adminId = adminId;
+    }
+
+    await device.save();
+
+    res.json({
+      message:
+        "Device updated successfully",
+      device
+    });
+
+  } catch (err) {
+
+    console.error(
+      "❌ UPDATE DEVICE ERROR:",
+      err
+    );
+
+    res.status(500).json({
+      error: err.message
+    });
+  }
+};
 exports.getDevices = async (req, res) => {
   try {
     const user = req.user;

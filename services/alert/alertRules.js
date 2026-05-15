@@ -29,62 +29,72 @@ async function detectAlerts(position) {
     }
     const state = vehicleState[deviceId];
 
-    // ================= ENGINE ON =================
-    if (!state.engineOn) {
+    // ================= IGNITION =================
 
-        if (!state.engineOnCounter) state.engineOnCounter = 0;
+    const ignition =
+        attributes?.ignition === true ||
+        attributes?.ignition === 1 ||
+        attributes?.ignition === "1";
 
-        if (speed > 5) {
-            state.engineOnCounter++;
-        } else {
-            state.engineOnCounter = 0;
-        }
+    // ENGINE ON
+    if (ignition && !state.engineOn) {
 
-        if (state.engineOnCounter >= 3) {  // 🔥 CONFIRMATION
-            alerts.push({
-                type: "ENGINE_ON",
-                message: `Vehicle ${deviceId} Engine ON`
-            });
+        alerts.push({
+            type: "ENGINE_ON",
+            message: `Vehicle ${deviceId} Engine ON`
+        });
 
-            state.engineOn = true;
-            state.engineOnCounter = 0;
-        }
+        state.engineOn = true;
     }
 
-    // ================= ENGINE OFF =================
-    if (state.engineOn) {
+    // ENGINE OFF
+    if (!ignition && state.engineOn) {
 
-        if (!state.engineOffCounter) state.engineOffCounter = 0;
+        alerts.push({
+            type: "ENGINE_OFF",
+            message: `Vehicle ${deviceId} Engine OFF`
+        });
 
-        if (speed === 0) {
-            state.engineOffCounter++;
-        } else {
-            state.engineOffCounter = 0;
-        }
-
-        if (state.engineOffCounter >= 3) {
-            alerts.push({
-                type: "ENGINE_OFF",
-                message: `Vehicle ${deviceId} Engine OFF`
-            });
-
-            state.engineOn = false;
-            state.engineOffCounter = 0;
-        }
+        state.engineOn = false;
     }
 
-    // ================= BATTERY DISCONNECTED =================
-    if (attributes.batteryLevel === 0 && state.batteryConnected) {
+    
+        // ================= BATTERY DISCONNECTED =================
+
+    const batteryLevel =
+        Number(attributes?.batteryLevel);
+
+    const externalPower =
+        Number(attributes?.power);
+
+    const batteryDisconnected =
+        batteryLevel === 0 ||
+        externalPower === 0;
+
+    if (
+        batteryDisconnected &&
+        state.batteryConnected
+    ) {
 
         alerts.push({
             type: "BATTERY_DISCONNECTED",
             message: `Vehicle ${deviceId} Battery Disconnected`,
             metadata: {
-                batteryLevel: 0
+                batteryLevel,
+                externalPower,
             }
         });
 
         state.batteryConnected = false;
+    }
+
+    // ================= BATTERY RESTORE =================
+
+    if (
+        batteryLevel > 0 ||
+        externalPower > 0
+    ) {
+        state.batteryConnected = true;
     }
 
     // ================= BATTERY RESTORE =================

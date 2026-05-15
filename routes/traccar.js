@@ -18,7 +18,7 @@ const checkPermission = require("../middleware/checkPermission");
 const PERMISSIONS = require("../config/permissions");
 const controller = require("../controllers/traccarController");
 const webhookController =
-require("../controllers/traccarWebhookController");
+  require("../controllers/traccarWebhookController");
 
 router.post("/assign-device", authMiddleware, async (req, res) => {
 
@@ -106,8 +106,8 @@ router.get("/route", authMiddleware, getRoute);
 router.get("/trips", authMiddleware, getTrips);
 
 router.post(
-    "/webhook",
-    webhookController.receiveWebhook
+  "/webhook",
+  webhookController.receiveWebhook
 );
 
 router.post("/command",
@@ -214,7 +214,14 @@ router.get(
 
             speed: pos.speed,
 
-            deviceTime: pos.deviceTime,
+            attributes:
+              pos.attributes || {},
+
+            course:
+              pos.course || 0,
+
+            deviceTime:
+              pos.deviceTime,
 
             name:
               device?.name || "",

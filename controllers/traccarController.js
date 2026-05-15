@@ -65,14 +65,25 @@ exports.getPositions = async (req, res) => {
         },
         {
           $setOnInsert: {
-            positionId: p.id,
-            deviceId: p.deviceId,
-            latitude: lat,
-            longitude: lng,
-            speed: Number(p.speed) || 0,
-            course: Number(p.course) || 0,
-            deviceTime: p.deviceTime
-          }
+
+  deviceId: p.deviceId,
+
+  latitude: lat,
+
+  longitude: lng,
+
+  speed:
+    Number(p.speed) || 0,
+
+  course:
+    Number(p.course) || 0,
+
+  attributes:
+    p.attributes || {},
+
+  deviceTime:
+    p.deviceTime
+}
         },
         { upsert: true }
       );

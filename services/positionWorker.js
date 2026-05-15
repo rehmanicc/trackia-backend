@@ -7,7 +7,7 @@ const { handleAlerts } = require("./alert/alertProcessor");
 
 let processedCount = 0;
 const lastEmitted = {};
-const processedPositionIds = new Set();
+
 setInterval(() => {
     if (processedCount > 0) {
         //console.log("📊 Positions/sec:", processedCount);
@@ -41,6 +41,7 @@ async function processBatch() {
         for (const p of positions) {
             if (
                 !p ||
+                !p.positionId ||
                 !p.deviceId ||
                 p.latitude == null ||
                 p.longitude == null ||
@@ -53,11 +54,7 @@ async function processBatch() {
             if (!device.isActive || new Date() > new Date(device.expiryDate)) {
                 continue;
             }
-            if (processedPositionIds.has(p.positionId)) {
-                continue;
-            }
 
-            processedPositionIds.add(p.positionId);
             bulkOps.push({
                 updateOne: {
                     filter: {
@@ -71,7 +68,8 @@ async function processBatch() {
                             longitude: p.longitude,
                             speed: Number(p.speed) || 0,
                             course: Number(p.course) || 0,
-                            deviceTime: p.deviceTime
+                            deviceTime: p.deviceTime,
+                            attributes: p.attributes || {}
                         }
                     },
                     upsert: true
@@ -85,7 +83,10 @@ async function processBatch() {
                 speed: Number(p.speed) || 0,
                 course: Number(p.course) || 0,
                 deviceTime: p.deviceTime,
-                engineOn: p.attributes?.ignition === true,
+                engineOn:
+                    p.attributes?.ignition === true ||
+                    p.attributes?.ignition === 1 ||
+                    p.attributes?.ignition === "1",
                 name: device?.name || null,
                 registrationNumber: device?.registrationNumber || null,
             });
@@ -224,9 +225,7 @@ async function processBatch() {
         }
 
         processedCount += activePositions.length;
-        if (processedPositionIds.size > 50000) {
-            processedPositionIds.clear();
-        }
+
     } catch (err) {
         console.error("❌ Worker error:", err);
     }
