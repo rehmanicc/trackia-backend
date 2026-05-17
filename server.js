@@ -96,6 +96,8 @@ const auditRoutes = require("./routes/auditRoutes");
 const fcmRoutes = require("./routes/fcmRoutes");
 
 const settingsRoutes = require("./routes/settings");
+
+const alertPreferenceRoutes = require("./routes/alertPreferenceRoutes");
 // ======================
 // TEST ROUTES
 // ======================
@@ -160,6 +162,8 @@ app.use("/api/audit", auditRoutes);
 app.use("/api/fcm", fcmRoutes);
 
 app.use("/api/settings", settingsRoutes);
+
+app.use("/api/alert-preferences", alertPreferenceRoutes);
 
 // ======================
 // RESET ROUTE

@@ -50,7 +50,23 @@ const alertSchema = new mongoose.Schema({
         type: Boolean,
         default: false,
         index: true
-    }
+    },
+    acknowledged: {
+  type: Boolean,
+  default: false,
+  index: true
+},
+
+acknowledgedBy: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: "User",
+  default: null
+},
+
+acknowledgedAt: {
+  type: Date,
+  default: null
+},
 
 }, { timestamps: true });
 

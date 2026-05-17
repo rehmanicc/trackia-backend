@@ -4,8 +4,15 @@ const User = require("../../models/User");
 const { sendPushFCM } = require("./pushFCMService");
 
 function isAllowed(user, alertType) {
-  const prefs = user.alertPreferences || {};
-  return prefs[alertType] !== false;
+
+  const prefs =
+    user.alertPreferences || {};
+
+  if (!(alertType in prefs)) {
+    return true;
+  }
+
+  return prefs[alertType] === true;
 }
 
 async function dispatch(alert, io) {

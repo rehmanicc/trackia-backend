@@ -57,7 +57,39 @@ const userSchema = new mongoose.Schema({
   fcmTokens: {
     type: [String],
     default: []
-  }
+  },
+  alertPreferences: {
+
+  ENGINE_ON: {
+    type: Boolean,
+    default: true,
+  },
+
+  ENGINE_OFF: {
+    type: Boolean,
+    default: true,
+  },
+
+  BATTERY_DISCONNECTED: {
+    type: Boolean,
+    default: true,
+  },
+
+  GEOFENCE_ENTER: {
+    type: Boolean,
+    default: true,
+  },
+
+  GEOFENCE_EXIT: {
+    type: Boolean,
+    default: true,
+  },
+
+  OVERSPEED: {
+    type: Boolean,
+    default: true,
+  },
+},
 
 });
 userSchema.index({ role: 1 });

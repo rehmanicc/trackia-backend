@@ -8,7 +8,19 @@ async function createAlert(alertData, io) {
         console.log("📥 createAlert called:", alertData);
 
         const now = new Date();
-        const DUPLICATE_WINDOW = 15000; // 15 sec
+        const DUPLICATE_WINDOWS = {
+            ENGINE_ON: 30000,
+            ENGINE_OFF: 30000,
+            BATTERY_DISCONNECTED: 300000,
+            GEOFENCE_ENTER: 60000,
+            GEOFENCE_EXIT: 60000,
+            OVERSPEED: 15000,
+        };
+
+        const DUPLICATE_WINDOW =
+            DUPLICATE_WINDOWS[
+            alertData.type
+            ] || 15000;
 
         const existing = await Alert.findOne({
             deviceId: alertData.deviceId,

@@ -1,7 +1,9 @@
-function sendPush(io, alert) {
-    if (!io) return;
+function sendPush(io, alert, userId) {
 
-    io.emit("alert", alert); // same event tum already use kar rahe ho
+  if (!io || !userId) return;
+
+  io.to(`user_${userId}`)
+    .emit("alert", alert);
 }
 
 module.exports = { sendPush };

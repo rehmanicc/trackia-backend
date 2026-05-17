@@ -1,6 +1,8 @@
 // 🔥 In-memory state (per device)
 const vehicleState = {};
-
+const {
+  formatAlertMessage,
+} = require("./alertFormatter");
 const ALERT_PRIORITY = {
   OVERSPEED: "high",
   GEOFENCE_EXIT: "high",
@@ -42,10 +44,8 @@ async function detectAlerts(position) {
     traccarId: deviceId,
   });
 
-  const vehicleName =
-    device?.registrationNumber ||
-    device?.name ||
-    `Vehicle ${deviceId}`;
+  const vehicleLabel =
+    device;
 
   if (device?.speedLimit) {
     speedLimit = device.speedLimit;
@@ -63,7 +63,10 @@ async function detectAlerts(position) {
 
     alerts.push({
       type: "ENGINE_ON",
-      message: `${vehicleName} Engine ON`,
+      message: formatAlertMessage(
+        "ENGINE_ON",
+        vehicleLabel
+      ),
     });
 
     state.engineOn = true;
@@ -74,7 +77,10 @@ async function detectAlerts(position) {
 
     alerts.push({
       type: "ENGINE_OFF",
-      message: `${vehicleName} Engine OFF`,
+      message: formatAlertMessage(
+        "ENGINE_OFF",
+        vehicleLabel
+      ),
     });
 
     state.engineOn = false;
@@ -100,8 +106,10 @@ async function detectAlerts(position) {
 
     alerts.push({
       type: "BATTERY_DISCONNECTED",
-      message:
-        `${vehicleName} Battery Disconnected`,
+      message: formatAlertMessage(
+        "BATTERY_DISCONNECTED",
+        vehicleLabel
+      ),
       metadata: {
         batteryLevel,
         externalPower,
@@ -140,8 +148,13 @@ async function detectAlerts(position) {
 
       alerts.push({
         type: "OVERSPEED",
-        message:
-          `${vehicleName} Overspeed (${Math.round(speedKmh)} km/h)`,
+        message: formatAlertMessage(
+          "OVERSPEED",
+          vehicleLabel,
+          {
+            speed: Math.round(speedKmh),
+          }
+        ),
         metadata: {
           speed: Math.round(speedKmh),
           limit: speedLimit,

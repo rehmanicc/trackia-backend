@@ -3,8 +3,15 @@ const User = require("../../models/User");
 const Device = require("../../models/Device");
 
 function isAllowed(user, alertType) {
-  const prefs = user.alertPreferences || {};
-  return prefs[alertType] !== false;
+
+  const prefs =
+    user.alertPreferences || {};
+
+  if (!(alertType in prefs)) {
+    return true;
+  }
+
+  return prefs[alertType] === true;
 }
 
 async function sendPushFCM(alert) {
@@ -65,9 +72,52 @@ async function sendPushFCM(alert) {
       tokens
     };
 
-    const response = await messaging.sendEachForMulticast(message);
+    const response =
+      await messaging.sendEachForMulticast(
+        message
+      );
 
-    console.log("📲 FCM sent:", response.successCount);
+    console.log(
+      "📲 FCM sent:",
+      response.successCount
+    );
+
+    // REMOVE INVALID TOKENS
+    const invalidTokens = [];
+
+    response.responses.forEach(
+      (r, index) => {
+
+        if (
+          !r.success &&
+          r.error?.code ===
+          "messaging/registration-token-not-registered"
+        ) {
+          invalidTokens.push(
+            tokens[index]
+          );
+        }
+      }
+    );
+
+    if (invalidTokens.length) {
+
+      await User.updateMany(
+        {},
+        {
+          $pull: {
+            fcmTokens: {
+              $in: invalidTokens
+            }
+          }
+        }
+      );
+
+      console.log(
+        "🧹 Removed invalid FCM tokens:",
+        invalidTokens.length
+      );
+    }
 
   } catch (err) {
     console.error("❌ FCM error:", err.message);
