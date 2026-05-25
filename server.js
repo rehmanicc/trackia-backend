@@ -7,7 +7,7 @@ const http = require("http");
 const path = require("path");
 
 const app = express();
-
+app.set("trust proxy", true);
 const server = http.createServer(app);
 
 const socket = require("./socket");
@@ -104,6 +104,15 @@ const alertPreferenceRoutes = require("./routes/alertPreferenceRoutes");
 
 app.get("/", (req, res) => {
   res.send("Trackia Backend Running");
+});
+app.get("/health", (req, res) => {
+
+  res.json({
+    success: true,
+    uptime: process.uptime(),
+    timestamp: Date.now(),
+  });
+
 });
 
 app.get("/api/test", (req, res) => {
