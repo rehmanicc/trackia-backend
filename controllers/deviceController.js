@@ -8,8 +8,14 @@ const Position =
 
 exports.createDevice = async (req, res, next) => {
 
-  const { name, uniqueId, speedLimit, fuelEfficiency, registrationNumber } = req.body;
-  const user = req.user;
+  const {
+    name,
+    uniqueId,
+    speedLimit,
+    fuelEfficiency,
+    registrationNumber,
+    trackerModelId
+  } = req.body; const user = req.user;
 
   try {
 
@@ -35,7 +41,24 @@ exports.createDevice = async (req, res, next) => {
     }
 
     const existingMongo = await Device.findOne({ uniqueId });
+    if (trackerModelId) {
 
+      const TrackerModel =
+        require("../models/TrackerModel");
+
+      const trackerModel =
+        await TrackerModel.findById(
+          trackerModelId
+        );
+
+      if (!trackerModel) {
+
+        return res.status(400).json({
+          error:
+            "Invalid tracker model"
+        });
+      }
+    }
     if (existingMongo) {
       return res.status(400).json({
         error: "Device already exists in system"
@@ -61,6 +84,7 @@ exports.createDevice = async (req, res, next) => {
       uniqueId,
       traccarId: traccarDevice.id,
       registrationNumber,
+      trackerModelId,
       adminId:
         user.role === "admin"
           ? user.id

@@ -12,14 +12,34 @@ const resolveEngineCommand = (
 
     if (
         !trackerModel
-        .supportsEngineControl
+            .supportsEngineControl
     ) {
 
         throw new Error(
             "Engine control unsupported"
         );
     }
+    if (
+        action === "stop" &&
+        !trackerModel
+            .engineStopCommand
+    ) {
 
+        throw new Error(
+            "Engine stop command missing"
+        );
+    }
+
+    if (
+        action === "resume" &&
+        !trackerModel
+            .engineResumeCommand
+    ) {
+
+        throw new Error(
+            "Engine resume command missing"
+        );
+    }
     if (action === "stop") {
 
         return {
@@ -31,7 +51,7 @@ const resolveEngineCommand = (
 
                 data:
                     trackerModel
-                    .engineStopCommand
+                        .engineStopCommand
             }
         };
     }
@@ -45,7 +65,7 @@ const resolveEngineCommand = (
 
             data:
                 trackerModel
-                .engineResumeCommand
+                    .engineResumeCommand
         }
     };
 };

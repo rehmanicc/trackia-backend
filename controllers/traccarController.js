@@ -3,7 +3,8 @@ const Device = require("../models/Device");
 const { getPositions, apiGet, apiPost } = require("../services/traccarAPI");
 const { processPosition } = require("../services/geofenceEngine");
 const { handleAlerts } = require("../services/alert/alertProcessor");
-
+const TrackerModel = require("../models/TrackerModel");
+const { resolveEngineCommand } = require("../services/commandResolver");
 //Get positions API
 exports.getPositions = async (req, res) => {
   try {
@@ -66,24 +67,24 @@ exports.getPositions = async (req, res) => {
         {
           $setOnInsert: {
 
-  deviceId: p.deviceId,
+            deviceId: p.deviceId,
 
-  latitude: lat,
+            latitude: lat,
 
-  longitude: lng,
+            longitude: lng,
 
-  speed:
-    Number(p.speed) || 0,
+            speed:
+              Number(p.speed) || 0,
 
-  course:
-    Number(p.course) || 0,
+            course:
+              Number(p.course) || 0,
 
-  attributes:
-    p.attributes || {},
+            attributes:
+              p.attributes || {},
 
-  deviceTime:
-    p.deviceTime
-}
+            deviceTime:
+              p.deviceTime
+          }
         },
         { upsert: true }
       );
@@ -226,26 +227,29 @@ exports.sendCommand = async (req, res) => {
       });
     }
 
-    // 🔥 ENGINE CONTROL CHECK
+    let payload = {
+      deviceId,
+      type
+    };
     const ENGINE_COMMANDS = ["engineStop", "engineResume"];
 
     if (ENGINE_COMMANDS.includes(type)) {
 
-      // ❌ Users need permission
+
       if (!isOwnerOrAdmin && !req.user.permissions?.includes("ENGINE_CONTROL")) {
         return res.status(403).json({
           error: "No engine control permission"
         });
       }
 
-      // ❌ Block if feature disabled
+
       if (!device.engineControlEnabled) {
         return res.status(403).json({
           error: "Engine control disabled by admin/owner"
         });
       }
 
-      // ❌ Block user if admin locked engine
+
       if (
         type === "engineResume" &&
         !isOwnerOrAdmin &&
@@ -263,18 +267,44 @@ exports.sendCommand = async (req, res) => {
         await device.save();
       }
 
-      // 🔓 Admin turns ON → unlock engine
+
       if (type === "engineResume" && isOwnerOrAdmin) {
         device.engineLockedByAdmin = false;
         device.engineLockedBy = null;
         await device.save();
       }
+      const trackerModel =
+        await TrackerModel.findById(
+          device.trackerModelId
+        );
+
+      const resolved =
+        resolveEngineCommand(
+
+          trackerModel,
+
+          type === "engineStop"
+            ? "stop"
+            : "resume"
+        );
+
+      payload = {
+
+        deviceId,
+
+        type:
+          resolved.type,
+
+        attributes:
+          resolved.attributes
+      };
     }
 
-    const data = await apiPost("/api/commands/send", {
-      deviceId,
-      type
-    });
+    const data =
+      await apiPost(
+        "/api/commands/send",
+        payload
+      );
 
     res.json(data);
 
