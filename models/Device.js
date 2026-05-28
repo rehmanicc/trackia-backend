@@ -19,6 +19,11 @@ const deviceSchema = new mongoose.Schema({
         unique: true,
         index: true
     },
+    trackerModelId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "TrackerModel",
+        default: null
+    },
     registrationNumber: {
         type: String,
         default: ""

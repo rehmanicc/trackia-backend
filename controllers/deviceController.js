@@ -260,7 +260,8 @@ exports.getDevices = async (req, res) => {
     if (user.role === "owner") {
       // 👑 Owner → ALL devices
       devices = await Device.find()
-        .populate("assignedUsers", "name"); // ✅ FIXED
+        .populate("assignedUsers", "name")
+        .populate("trackerModelId");
     }
     else if (user.role === "admin") {
       // 🧑‍💼 Admin → own company devices
@@ -268,13 +269,17 @@ exports.getDevices = async (req, res) => {
 
       devices = await Device.find({
         adminId: new mongoose.Types.ObjectId(user.id)
-      }).populate("assignedUsers", "name");
+      })
+        .populate("assignedUsers", "name")
+        .populate("trackerModelId");
     }
     else {
       // 👤 User → only assigned devices
       devices = await Device.find({
         assignedUsers: user.id
-      }).populate("assignedUsers", "name");
+      })
+        .populate("assignedUsers", "name")
+        .populate("trackerModelId");
     }
 
     const latestPositions =
@@ -322,32 +327,32 @@ exports.getDevices = async (req, res) => {
 
       return {
 
-  ...d._doc,
+        ...d._doc,
 
-  online: isOnline,
+        online: isOnline,
 
-  position: latest
-    ? {
-        speed:
-          latest.speed || 0,
+        position: latest
+          ? {
+            speed:
+              latest.speed || 0,
 
-        latitude:
-          latest.latitude,
+            latitude:
+              latest.latitude,
 
-        longitude:
-          latest.longitude,
+            longitude:
+              latest.longitude,
 
-        course:
-          latest.course || 0,
+            course:
+              latest.course || 0,
 
-        deviceTime:
-          latest.deviceTime,
+            deviceTime:
+              latest.deviceTime,
 
-        attributes:
-          latest.attributes || {},
-      }
-    : null,
-};
+            attributes:
+              latest.attributes || {},
+          }
+          : null,
+      };
     });
 
     res.json(merged);
