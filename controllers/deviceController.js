@@ -13,9 +13,15 @@ exports.createDevice = async (req, res, next) => {
     uniqueId,
     speedLimit,
     fuelEfficiency,
+    oilChangeLimit,
+    oilChangeReading,
     registrationNumber,
-    trackerModelId
-  } = req.body; const user = req.user;
+    trackerModelId,
+    deviceSimNumber,
+    callReceiverNumber
+  } = req.body;
+
+  const user = req.user;
 
   try {
 
@@ -80,22 +86,41 @@ exports.createDevice = async (req, res, next) => {
     oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
 
     const device = await Device.create({
+
       name,
+
       uniqueId,
+
       traccarId: traccarDevice.id,
+
       registrationNumber,
+
       trackerModelId,
+
       adminId:
         user.role === "admin"
           ? user.id
-          : new mongoose.Types.ObjectId(req.body.adminId),
+          : new mongoose.Types.ObjectId(
+            req.body.adminId
+          ),
+
       createdBy: user.id,
+
       assignedUsers: [],
+
       speedLimit: speedLimit || 70,
+
       fuelEfficiency: fuelEfficiency || 12,
+
+      oilChangeLimit: oilChangeLimit || 3000,
+
+      oilChangeReading: oilChangeReading || 0,
+
       expiryDate: oneYearLater,
-      deviceSimNumber: req.body.deviceSimNumber,
-      callReceiverNumber: req.body.callReceiverNumber || null,
+
+      deviceSimNumber: deviceSimNumber || null,
+
+      callReceiverNumber: callReceiverNumber || null,
 
       isActive: true
     });
@@ -164,6 +189,8 @@ exports.updateDevice = async (
       speedLimit,
       fuelEfficiency,
       oilChangeReading,
+      oilChangeLimit,
+      trackerModelId,
       adminId,
     } = req.body;
 
@@ -220,9 +247,31 @@ exports.updateDevice = async (
         device.callReceiverNumber =
           callReceiverNumber;
       }
-    }
+    if (
+      trackerModelId !== undefined
+    ) {
 
-    // ✅ PERMISSION BASED
+      const TrackerModel =
+        require("../models/TrackerModel");
+
+      const trackerExists =
+        await TrackerModel.findById(
+          trackerModelId
+        );
+
+      if (!trackerExists) {
+
+        return res.status(400).json({
+          error:
+            "Invalid tracker model"
+        });
+      }
+
+      device.trackerModelId =
+        trackerModelId;
+    }
+    }
+    
     if (
       canEditSpeed &&
       speedLimit !== undefined
@@ -246,7 +295,14 @@ exports.updateDevice = async (
       device.oilChangeReading =
         oilChangeReading;
     }
+    if (
+      canEditOil &&
+      oilChangeLimit !== undefined
+    ) {
 
+      device.oilChangeLimit =
+        oilChangeLimit;
+    }
     // 👑 OWNER ONLY
     if (
       req.user.role === "owner" &&

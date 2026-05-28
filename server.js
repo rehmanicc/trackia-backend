@@ -98,6 +98,8 @@ const fcmRoutes = require("./routes/fcmRoutes");
 const settingsRoutes = require("./routes/settings");
 
 const alertPreferenceRoutes = require("./routes/alertPreferenceRoutes");
+
+const trackerModelRoutes = require("./routes/trackerModels");
 // ======================
 // TEST ROUTES
 // ======================
@@ -173,6 +175,8 @@ app.use("/api/fcm", fcmRoutes);
 app.use("/api/settings", settingsRoutes);
 
 app.use("/api/alert-preferences", alertPreferenceRoutes);
+
+app.use("/api/tracker-models", trackerModelRoutes);
 
 // ======================
 // RESET ROUTE

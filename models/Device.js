@@ -46,6 +46,14 @@ const deviceSchema = new mongoose.Schema({
         type: Number,
         default: 12
     },
+    oilChangeLimit: {
+        type: Number,
+        default: 3000
+    },
+    oilChangeReading: {
+        type: Number,
+        default: 0
+    },
     assignedTo: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
