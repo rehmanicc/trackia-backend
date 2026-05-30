@@ -1,146 +1,256 @@
 const mongoose = require("mongoose");
 
-const deviceSchema = new mongoose.Schema({
-
+const deviceSchema = new mongoose.Schema(
+  {
     name: {
-        type: String,
-        required: true
+      type: String,
+      required: true,
     },
+
     uniqueId: {
-        type: String,
-        unique: true,
-        required: true,
-        index: true
+      type: String,
+      unique: true,
+      required: true,
+      index: true,
     },
 
     traccarId: {
-        type: Number,
-        required: true,
-        unique: true,
-        index: true
+      type: Number,
+      required: true,
+      unique: true,
+      index: true,
     },
+
     trackerModelId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "TrackerModel",
-        default: null
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "TrackerModel",
+      default: null,
     },
+
     registrationNumber: {
-        type: String,
-        default: ""
+      type: String,
+      default: "",
     },
+
     adminId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
     },
 
     createdBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User"
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
     },
+
+    // =========================
+    // VEHICLE SETTINGS
+    // =========================
+
     speedLimit: {
-        type: Number,
-        default: 70
+      type: Number,
+      default: 70,
     },
+
     fuelEfficiency: {
-        type: Number,
-        default: 12
+      type: Number,
+      default: 12,
     },
+
     oilChangeLimit: {
-        type: Number,
-        default: 3000
+      type: Number,
+      default: 3000,
     },
+
     oilChangeReading: {
-        type: Number,
-        default: 0
+      type: Number,
+      default: 0,
     },
-    assignedTo: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        default: null
-    },
+
     expiryDate: {
-        type: Date,
-        required: true
+      type: Date,
+      required: true,
     },
-    callUserId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        default: null
+
+    isActive: {
+      type: Boolean,
+      default: true,
     },
+
+    // =========================
+    // VEHICLE OWNER
+    // =========================
+
+    ownerUserId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    // =========================
+    // GEOFENCE
+    // =========================
 
     callGeofenceId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Geofence",
-        default: null
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Geofence",
+      default: null,
     },
-    isActive: {
-        type: Boolean,
-        default: true
-    },
-    engineControlEnabled: {
-        type: Boolean,
-        default: false
-    },
-    engineLockedByAdmin: {
-        type: Boolean,
-        default: false,
-        index: true
-    },
-    engineLockedBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        default: null
-    },
-    callEnabled: {
-        type: Boolean,
-        default: true
-    },
+
+    // =========================
+    // ASSIGNED USERS
+    // =========================
 
     assignedUsers: [
-        {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User"
-        }
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
     ],
+
+    // =========================
+    // DEVICE LEVEL PERMISSIONS
+    // =========================
+
+    devicePermissions: [
+      {
+        userId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+
+        dashboard: {
+          type: Boolean,
+          default: true,
+        },
+
+        engineControl: {
+          type: Boolean,
+          default: false,
+        },
+        editSpeedLimit: {
+          type: Boolean,
+          default: false,
+        },
+        editCallNumber: {
+          type: Boolean,
+          default: false,
+        },
+        editFuelAverage: {
+          type: Boolean,
+          default: false,
+        },
+
+        editOilChangeReading: {
+          type: Boolean,
+          default: false,
+        },
+
+        editOilChangeLimit: {
+          type: Boolean,
+          default: false,
+        },
+      },
+    ],
+
+    // =========================
+    // ENGINE SECURITY
+    // =========================
+
+    engineLockedByAuthority: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+
+    engineLockedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    engineLastAction: {
+      type: String,
+      enum: ["stop", "resume", null],
+      default: null,
+    },
+
+    engineLastActionBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+
+    // =========================
+    // COMMUNICATION
+    // =========================
+
     deviceSimNumber: {
-        type: String,
-        required: false,
-        unique: true
+      type: String,
+      unique: true,
+      sparse: true,
     },
+
     callReceiverNumber: {
-        type: String,
-        required: false
+      type: String,
+      default: null,
     },
 
-    allowUserToChangeCallReceiver: {
-        type: Boolean,
-        default: false
-    }
+    callEnabled: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
 
-}, { timestamps: true });
+// =========================
+// INDEXES
+// =========================
+
 deviceSchema.index({ adminId: 1 });
 deviceSchema.index({ assignedUsers: 1 });
+deviceSchema.index({ ownerUserId: 1 });
+
+// =========================
+// VALIDATION
+// =========================
+
 deviceSchema.pre("save", async function () {
+  if (!this.isModified("assignedUsers")) return;
 
-    if (!this.isModified("assignedUsers")) return;
+  if (!this.assignedUsers?.length) return;
 
-    if (!this.assignedUsers || this.assignedUsers.length === 0) return;
-    const User = mongoose.model("User");
-    for (const userId of this.assignedUsers) {
-        const user = await User.findById(userId);
-        if (!user) {
-            throw new Error("Assigned user not found");
-        }
+  const User = mongoose.model("User");
 
-        if (user.role !== "user") {
-            throw new Error("Device can only be assigned to a user");
-        }
+  for (const userId of this.assignedUsers) {
+    const user = await User.findById(userId);
 
-        if (String(user.adminId) !== String(this.adminId)) {
-            throw new Error("User and Device admin mismatch");
-        }
+    if (!user) {
+      throw new Error("Assigned user not found");
     }
+
+    if (user.role !== "user") {
+      throw new Error(
+        "Device can only be assigned to users"
+      );
+    }
+
+    if (
+      String(user.adminId) !==
+      String(this.adminId)
+    ) {
+      throw new Error(
+        "User and Device admin mismatch"
+      );
+    }
+  }
 });
 
-module.exports = mongoose.model("Device", deviceSchema);
+module.exports = mongoose.model(
+  "Device",
+  deviceSchema
+);

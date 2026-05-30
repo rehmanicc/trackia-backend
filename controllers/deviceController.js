@@ -3,8 +3,23 @@ const traccarAPI = require("../services/traccarAPI");
 const Geofence = require("../models/Geofence");
 const User = require("../models/User");
 const mongoose = require("mongoose");
-const Position =
-  require("../models/Position");
+const Position = require("../models/Position");
+
+function hasDevicePermission(
+  device,
+  userId,
+  permission
+) {
+
+  const p =
+    device.devicePermissions?.find(
+      p =>
+        String(p.userId) ===
+        String(userId)
+    );
+
+  return p?.[permission] === true;
+}
 
 exports.createDevice = async (req, res, next) => {
 
@@ -185,11 +200,7 @@ exports.updateDevice = async (
       name,
       registrationNumber,
       deviceSimNumber,
-      callReceiverNumber,
       speedLimit,
-      fuelEfficiency,
-      oilChangeReading,
-      oilChangeLimit,
       trackerModelId,
       adminId,
     } = req.body;
@@ -201,24 +212,8 @@ exports.updateDevice = async (
       req.user.role === "admin";
 
     const canEditSpeed =
-      req.user.permissions?.includes(
-        "EDIT_SPEED"
-      );
-
-    const canEditFuel =
-      req.user.permissions?.includes(
-        "EDIT_FUEL"
-      );
-
-    const canEditOil =
-      req.user.permissions?.includes(
-        "EDIT_OIL"
-      );
-
-    const canEditCall =
-      req.user.permissions?.includes(
-        "EDIT_CALL_NUMBER"
-      );
+      req.user.role === "owner" ||
+      req.user.role === "admin";
 
     // ✅ FULL ACCESS
     if (canEditTrackerSim) {
@@ -242,36 +237,30 @@ exports.updateDevice = async (
       }
 
       if (
-        callReceiverNumber !== undefined
+        trackerModelId !== undefined
       ) {
-        device.callReceiverNumber =
-          callReceiverNumber;
+
+        const TrackerModel =
+          require("../models/TrackerModel");
+
+        const trackerExists =
+          await TrackerModel.findById(
+            trackerModelId
+          );
+
+        if (!trackerExists) {
+
+          return res.status(400).json({
+            error:
+              "Invalid tracker model"
+          });
+        }
+
+        device.trackerModelId =
+          trackerModelId;
       }
-    if (
-      trackerModelId !== undefined
-    ) {
-
-      const TrackerModel =
-        require("../models/TrackerModel");
-
-      const trackerExists =
-        await TrackerModel.findById(
-          trackerModelId
-        );
-
-      if (!trackerExists) {
-
-        return res.status(400).json({
-          error:
-            "Invalid tracker model"
-        });
-      }
-
-      device.trackerModelId =
-        trackerModelId;
     }
-    }
-    
+
     if (
       canEditSpeed &&
       speedLimit !== undefined
@@ -280,29 +269,7 @@ exports.updateDevice = async (
         speedLimit;
     }
 
-    if (
-      canEditFuel &&
-      fuelEfficiency !== undefined
-    ) {
-      device.fuelEfficiency =
-        fuelEfficiency;
-    }
 
-    if (
-      canEditOil &&
-      oilChangeReading !== undefined
-    ) {
-      device.oilChangeReading =
-        oilChangeReading;
-    }
-    if (
-      canEditOil &&
-      oilChangeLimit !== undefined
-    ) {
-
-      device.oilChangeLimit =
-        oilChangeLimit;
-    }
     // 👑 OWNER ONLY
     if (
       req.user.role === "owner" &&
@@ -338,28 +305,79 @@ exports.getDevices = async (req, res) => {
     let devices;
 
     if (user.role === "owner") {
-      // 👑 Owner → ALL devices
+
       devices = await Device.find()
-        .populate("assignedUsers", "name")
+
+        .populate(
+          "assignedUsers",
+          "name phoneNumber"
+        )
+
+        .populate(
+          "ownerUserId",
+          "name phoneNumber"
+        )
+
+        .populate(
+          "devicePermissions.userId",
+          "name phoneNumber"
+        )
+
         .populate("trackerModelId");
+
     }
     else if (user.role === "admin") {
-      // 🧑‍💼 Admin → own company devices
+
       const mongoose = require("mongoose");
 
       devices = await Device.find({
-        adminId: new mongoose.Types.ObjectId(user.id)
+        adminId:
+          new mongoose.Types.ObjectId(
+            user.id
+          )
       })
-        .populate("assignedUsers", "name")
+
+        .populate(
+          "assignedUsers",
+          "name phoneNumber"
+        )
+
+        .populate(
+          "ownerUserId",
+          "name phoneNumber"
+        )
+
+        .populate(
+          "devicePermissions.userId",
+          "name phoneNumber"
+        )
+
         .populate("trackerModelId");
+
     }
     else {
-      // 👤 User → only assigned devices
+
       devices = await Device.find({
         assignedUsers: user.id
       })
-        .populate("assignedUsers", "name")
+
+        .populate(
+          "assignedUsers",
+          "name phoneNumber"
+        )
+
+        .populate(
+          "ownerUserId",
+          "name phoneNumber"
+        )
+
+        .populate(
+          "devicePermissions.userId",
+          "name phoneNumber"
+        )
+
         .populate("trackerModelId");
+
     }
 
     const latestPositions =
@@ -543,16 +561,26 @@ exports.assignDevice = async (req, res) => {
     }
 
     if (
-      req.user.role === "admin" &&
-      String(device.adminId) !== String(req.user.id)
+      !device.assignedUsers.some(
+        id =>
+          String(id) === String(userId)
+      )
     ) {
-      return res.status(403).json({
-        error: "Not allowed to assign this device"
-      });
-    }
 
-    if (!device.assignedUsers.includes(userId)) {
       device.assignedUsers.push(userId);
+
+      device.devicePermissions.push({
+
+        userId,
+        dashboard: true,
+        engineControl: false,
+        editSpeedLimit: false,
+        editFuelAverage: false,
+        editOilChangeReading: false,
+        editOilChangeLimit: false,
+        editCallNumber: false,
+
+      });
     }
 
 
@@ -611,8 +639,15 @@ exports.unassignDevice = async (req, res) => {
       return res.status(400).json({ error: "userId required" });
     }
 
-    if (!device.assignedUsers.includes(userId)) {
-      return res.json({ message: "User already unassigned" });
+    if (
+      !device.assignedUsers.some(
+        id =>
+          String(id) === String(userId)
+      )
+    ) {
+      return res.json({
+        message: "User already unassigned"
+      });
     }
 
     console.log("🔄 Unassigning device:", device._id);
@@ -622,7 +657,19 @@ exports.unassignDevice = async (req, res) => {
     device.assignedUsers = device.assignedUsers.filter(
       id => String(id) !== String(req.body.userId)
     );
-
+    device.devicePermissions =
+      device.devicePermissions.filter(
+        p =>
+          String(p.userId) !==
+          String(userId)
+      );
+    if (
+      device.ownerUserId &&
+      String(device.ownerUserId) ===
+      String(userId)
+    ) {
+      device.ownerUserId = null;
+    }
     await device.save();
 
     // 🔥 AUDIT LOG
@@ -647,80 +694,176 @@ exports.unassignDevice = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-exports.toggleEngineAccess = async (req, res) => {
-  try {
-    const device = await Device.findById(req.params.id);
 
-    if (!device) {
-      return res.status(404).json({ error: "Device not found" });
-    }
-
-    device.engineControlEnabled = !device.engineControlEnabled;
-
-    await device.save();
-
-    res.json({
-      message: "Engine control updated",
-      engineControlEnabled: device.engineControlEnabled
-    });
-
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-};
 exports.updateDevicePermissions = async (req, res) => {
   try {
-    const device = await Device.findById(req.params.id);
+
+    const device = await Device.findById(
+      req.params.id
+    );
 
     if (!device) {
-      return res.status(404).json({ error: "Device not found" });
-    }
-
-    // 🔒 ONLY OWNER / ADMIN
-    // 🔐 PERMISSION CHECK (REPLACE ROLE CHECK)
-    if (
-      req.user.role !== "owner" &&
-      !req.user.permissions?.includes("MANAGE_DEVICE_PERMISSIONS")
-    ) {
-      return res.status(403).json({
-        error: "No permission to update device permissions"
+      return res.status(404).json({
+        error: "Device not found"
       });
     }
 
-    // 🔒 OWNERSHIP CHECK
+    // OWNER OR DEVICE ADMIN ONLY
+
     if (
       req.user.role === "admin" &&
-      String(device.adminId) !== String(req.user.id)
+      String(device.adminId) !==
+      String(req.user.id)
     ) {
       return res.status(403).json({
-        error: "Not allowed to modify this device"
+        error: "Access denied"
       });
     }
 
     const {
-      engineControlEnabled,
-      allowUserToChangeCallReceiver
+      ownerUserId,
+      permissions,
+
+      callReceiverNumber,
+      speedLimit,
+      fuelEfficiency,
+      oilChangeReading,
+      oilChangeLimit
     } = req.body;
 
-    // ✅ update only provided fields
-    if (typeof engineControlEnabled === "boolean") {
-      device.engineControlEnabled = engineControlEnabled;
+    // OWNER USER MUST BE ASSIGNED
+    if (
+      ownerUserId &&
+      !device.assignedUsers.some(
+        id =>
+          String(id) ===
+          String(ownerUserId)
+      )
+    ) {
+      return res.status(400).json({
+        error:
+          "Owner user must already be assigned to device"
+      });
     }
 
-    if (typeof allowUserToChangeCallReceiver === "boolean") {
-      device.allowUserToChangeCallReceiver =
-        allowUserToChangeCallReceiver;
+    if (
+      ownerUserId &&
+      permissions &&
+      !permissions.some(
+        p =>
+          String(p.userId) ===
+          String(ownerUserId)
+      )
+    ) {
+      return res.status(400).json({
+        error:
+          "Owner user must exist in permissions list"
+      });
+    }
+    device.ownerUserId =
+      ownerUserId || null;
+
+    if (permissions) {
+
+      const normalized =
+        permissions.map(p => {
+
+          if (
+            ownerUserId &&
+            String(p.userId) ===
+            String(ownerUserId)
+          ) {
+            return {
+              ...p,
+
+              dashboard:
+                p.dashboard ?? true,
+
+              engineControl:
+                p.engineControl ?? true,
+
+              editSpeedLimit:
+                p.editSpeedLimit ?? true,
+
+              editFuelAverage:
+                p.editFuelAverage ?? true,
+
+              editOilChangeReading:
+                p.editOilChangeReading ?? true,
+
+              editOilChangeLimit:
+                p.editOilChangeLimit ?? true,
+
+              editCallNumber:
+                p.editCallNumber ?? true,
+            };
+          }
+
+          return p;
+        });
+
+      const assignedIds =
+        device.assignedUsers.map(
+          id => String(id)
+        );
+
+      for (const p of normalized) {
+
+        if (
+          !assignedIds.includes(
+            String(p.userId)
+          )
+        ) {
+          return res.status(400).json({
+            error:
+              "Permission user must be assigned to device"
+          });
+        }
+      }
+      device.devicePermissions =
+        normalized;
+    }
+    if (callReceiverNumber !== undefined) {
+      device.callReceiverNumber =
+        callReceiverNumber;
     }
 
+    if (speedLimit !== undefined) {
+      device.speedLimit =
+        Number(speedLimit);
+    }
+
+    if (fuelEfficiency !== undefined) {
+      device.fuelEfficiency =
+        Number(fuelEfficiency);
+    }
+
+    if (oilChangeReading !== undefined) {
+      device.oilChangeReading =
+        Number(oilChangeReading);
+    }
+
+    if (oilChangeLimit !== undefined) {
+      device.oilChangeLimit =
+        Number(oilChangeLimit);
+    }
     await device.save();
 
     res.json({
-      message: "Device permissions updated",
+      message:
+        "Device permissions updated",
       device
     });
 
   } catch (err) {
-    console.error("❌ DEVICE PERMISSION ERROR:", err);
-    res.status(500).json({ error: err.message });
+
+    console.error(
+      "❌ DEVICE PERMISSION ERROR:",
+      err
+    );
+
+    res.status(500).json({
+      error: err.message
+    });
   }
 };

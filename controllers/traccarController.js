@@ -5,6 +5,21 @@ const { processPosition } = require("../services/geofenceEngine");
 const { handleAlerts } = require("../services/alert/alertProcessor");
 const TrackerModel = require("../models/TrackerModel");
 const { resolveEngineCommand } = require("../services/commandResolver");
+
+function hasDevicePermission(
+  device,
+  userId,
+  permission
+) {
+  const p =
+    device.devicePermissions?.find(
+      p =>
+        String(p.userId) ===
+        String(userId)
+    );
+
+  return p?.[permission] === true;
+}
 //Get positions API
 exports.getPositions = async (req, res) => {
   try {
@@ -186,6 +201,7 @@ exports.getTrips = async (req, res) => {
 // SEND COMMAND
 exports.sendCommand = async (req, res) => {
   try {
+
     const { deviceId, type } = req.body;
 
     if (!deviceId || !type) {
@@ -194,36 +210,60 @@ exports.sendCommand = async (req, res) => {
       });
     }
 
-    const device = await Device.findOne({ traccarId: deviceId });
+    const device =
+      await Device.findOne({
+        traccarId: deviceId
+      });
 
     if (!device) {
-      return res.status(404).json({ error: "Device not found" });
+      return res.status(404).json({
+        error: "Device not found"
+      });
     }
+
+    // Admin ownership validation
 
     if (
       req.user.role === "admin" &&
-      String(device.adminId) !== String(req.user.id)
+      String(device.adminId) !==
+      String(req.user.id)
     ) {
-      return res.status(403).json({ error: "Access denied" });
+      return res.status(403).json({
+        error: "Access denied"
+      });
     }
+
+    // User assignment validation
+
     if (
       req.user.role === "user" &&
       !device.assignedUsers.some(
-        (u) => String(u) === String(req.user.id)
+        u =>
+          String(u) ===
+          String(req.user.id)
       )
     ) {
       return res.status(403).json({
-        error: "Device not assigned to user"
+        error:
+          "Device not assigned to user"
       });
     }
-    // 🔐 ROLE CHECK
-    const isOwnerOrAdmin =
-      req.user.role === "owner" || req.user.role === "admin";
 
-    // 🔐 GENERAL COMMAND PERMISSION
-    if (!isOwnerOrAdmin && !req.user.permissions?.includes("SEND_COMMAND")) {
+    const isAuthority =
+      req.user.role === "owner" ||
+      req.user.role === "admin";
+
+    // General command permission
+
+    if (
+      !isAuthority &&
+      !req.user.permissions?.includes(
+        "SEND_COMMAND"
+      )
+    ) {
       return res.status(403).json({
-        error: "No command permission"
+        error:
+          "No command permission"
       });
     }
 
@@ -231,48 +271,120 @@ exports.sendCommand = async (req, res) => {
       deviceId,
       type
     };
-    const ENGINE_COMMANDS = ["engineStop", "engineResume"];
 
-    if (ENGINE_COMMANDS.includes(type)) {
+    const ENGINE_COMMANDS = [
+      "engineStop",
+      "engineResume"
+    ];
 
+    if (
+      ENGINE_COMMANDS.includes(type)
+    ) {
 
-      if (!isOwnerOrAdmin && !req.user.permissions?.includes("ENGINE_CONTROL")) {
+      const hasEngineAccess =
+        hasDevicePermission(
+          device,
+          req.user.id,
+          "engineControl"
+        );
+
+      if (
+        !isAuthority &&
+        !hasEngineAccess
+      ) {
         return res.status(403).json({
-          error: "No engine control permission"
+          error:
+            "No engine control permission"
         });
       }
 
-
-      if (!device.engineControlEnabled) {
-        return res.status(403).json({
-          error: "Engine control disabled by admin/owner"
-        });
-      }
-
+      // Authority lock protection
 
       if (
         type === "engineResume" &&
-        !isOwnerOrAdmin &&
-        device.engineLockedByAdmin
+        device.engineLockedByAuthority &&
+        !isAuthority
       ) {
         return res.status(403).json({
-          error: "Engine locked by admin"
+          error:
+            "Engine locked by admin"
         });
       }
 
-      // 🔒 Admin turns OFF → lock engine
-      if (type === "engineStop" && isOwnerOrAdmin) {
-        device.engineLockedByAdmin = true;
-        device.engineLockedBy = req.user.id;
+      // Admin / Platform Owner stop
+
+      if (
+        type === "engineStop" &&
+        isAuthority
+      ) {
+
+        device.engineLockedByAuthority =
+          true;
+
+        device.engineLockedBy =
+          req.user.id;
+
+        device.engineLastAction =
+          "stop";
+
+        device.engineLastActionBy =
+          req.user.id;
+
         await device.save();
       }
 
+      // Admin / Platform Owner resume
 
-      if (type === "engineResume" && isOwnerOrAdmin) {
-        device.engineLockedByAdmin = false;
-        device.engineLockedBy = null;
+      if (
+        type === "engineResume" &&
+        isAuthority
+      ) {
+
+        device.engineLockedByAuthority =
+          false;
+
+        device.engineLockedBy =
+          null;
+
+        device.engineLastAction =
+          "resume";
+
+        device.engineLastActionBy =
+          req.user.id;
+
         await device.save();
       }
+
+      // Vehicle owner / engine user audit
+
+      if (
+        type === "engineStop" &&
+        !isAuthority
+      ) {
+
+        device.engineLastAction =
+          "stop";
+
+        device.engineLastActionBy =
+          req.user.id;
+
+        await device.save();
+      }
+
+      if (
+        type === "engineResume" &&
+        !isAuthority
+      ) {
+
+        device.engineLastAction =
+          "resume";
+
+        device.engineLastActionBy =
+          req.user.id;
+
+        await device.save();
+      }
+
       const trackerModel =
         await TrackerModel.findById(
           device.trackerModelId
@@ -280,21 +392,15 @@ exports.sendCommand = async (req, res) => {
 
       const resolved =
         resolveEngineCommand(
-
           trackerModel,
-
           type === "engineStop"
             ? "stop"
             : "resume"
         );
 
       payload = {
-
         deviceId,
-
-        type:
-          resolved.type,
-
+        type: resolved.type,
         attributes:
           resolved.attributes
       };
@@ -309,9 +415,11 @@ exports.sendCommand = async (req, res) => {
     res.json(data);
 
   } catch (error) {
+
     res.status(500).json({
       error: error.message
     });
+
   }
 };
 exports.getHistory = async (req, res) => {
