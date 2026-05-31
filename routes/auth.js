@@ -140,7 +140,35 @@ router.put("/permissions/:userId", authMiddleware, async (req, res) => {
   const user = await User.findById(req.params.userId);
 
   if (!user) return res.status(404).json({ error: "User not found" });
+  // 🔒 TRACKER MODEL PERMISSION
+  if (
+    permissions.includes(
+      "MANAGE_TRACKER_MODELS"
+    )
+  ) {
 
+    if (
+      req.user.role !== "owner"
+    ) {
+
+      return res.status(403).json({
+        error:
+          "Only owner can grant tracker permissions"
+      });
+
+    }
+
+    if (
+      user.role !== "admin"
+    ) {
+
+      return res.status(403).json({
+        error:
+          "Tracker permission can only be assigned to admin"
+      });
+
+    }
+  }
   // 🔥 BUSINESS RULE
   if (permissions.includes("RENEW_DEVICE")) {
 

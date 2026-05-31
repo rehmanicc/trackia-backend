@@ -8,6 +8,9 @@ const TrackerModel =
 const auth =
   require("../middleware/authMiddleware");
 
+const PERMISSIONS =
+  require("../config/permissions");
+
 // GET ALL TRACKER MODELS
 router.get(
   "/",
@@ -48,12 +51,15 @@ router.post(
 
       // 🔒 ONLY OWNER
       if (
-        req.user.role !== "owner"
+        req.user.role !== "owner" &&
+        !req.user.permissions?.includes(
+          PERMISSIONS.MANAGE_TRACKER_MODELS
+        )
       ) {
 
         return res.status(403).json({
           error:
-            "Only owner can create tracker models"
+            "Not authorized to create tracker models"
         });
       }
 
@@ -88,15 +94,17 @@ router.put(
 
       // 🔒 ONLY OWNER
       if (
-        req.user.role !== "owner"
+        req.user.role !== "owner" &&
+        !req.user.permissions?.includes(
+          PERMISSIONS.MANAGE_TRACKER_MODELS
+        )
       ) {
 
         return res.status(403).json({
           error:
-            "Only owner can edit tracker models"
+            "Not authorized to edit tracker models"
         });
       }
-
       const tracker =
         await TrackerModel.findById(
           req.params.id

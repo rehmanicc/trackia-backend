@@ -20,6 +20,39 @@ function hasDevicePermission(
 
   return p?.[permission] === true;
 }
+function getDistanceMeters(
+  lat1,
+  lon1,
+  lat2,
+  lon2
+) {
+  const R = 6371000;
+
+  const dLat =
+    (lat2 - lat1) *
+    Math.PI / 180;
+
+  const dLon =
+    (lon2 - lon1) *
+    Math.PI / 180;
+
+  const a =
+    Math.sin(dLat / 2) *
+    Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) *
+    Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
+
+  return (
+    R *
+    2 *
+    Math.atan2(
+      Math.sqrt(a),
+      Math.sqrt(1 - a)
+    )
+  );
+}
 //Get positions API
 exports.getPositions = async (req, res) => {
   try {
@@ -443,7 +476,60 @@ exports.getHistory = async (req, res) => {
       }
     }).sort({ deviceTime: 1 });
 
-    res.json(positions);
+    const cleaned = [];
+
+    for (const p of positions) {
+
+      const previous =
+        cleaned[cleaned.length - 1];
+
+      if (!previous) {
+        cleaned.push(p);
+        continue;
+      }
+
+      // =====================
+      // REMOVE EXACT DUPLICATES
+      // =====================
+
+      const sameCoordinate =
+        Math.abs(
+          previous.latitude -
+          p.latitude
+        ) < 0.000001 &&
+        Math.abs(
+          previous.longitude -
+          p.longitude
+        ) < 0.000001;
+
+      if (sameCoordinate) {
+        continue;
+      }
+
+      // =====================
+      // REMOVE GPS JITTER
+      // =====================
+
+      const distance =
+        getDistanceMeters(
+          previous.latitude,
+          previous.longitude,
+          p.latitude,
+          p.longitude
+        );
+
+      if (distance < 5) {
+        continue;
+      }
+
+      cleaned.push(p);
+    }
+
+    console.log(
+      `📊 Playback Cleanup: ${positions.length} → ${cleaned.length}`
+    );
+
+    res.json(cleaned);
 
   } catch (err) {
 
