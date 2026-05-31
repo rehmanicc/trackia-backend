@@ -572,7 +572,6 @@ exports.assignDevice = async (req, res) => {
       device.devicePermissions.push({
 
         userId,
-        dashboard: true,
         engineControl: false,
         editSpeedLimit: false,
         editFuelAverage: false,
@@ -751,8 +750,9 @@ exports.updateDevicePermissions = async (req, res) => {
       permissions &&
       !permissions.some(
         p =>
-          String(p.userId) ===
-          String(ownerUserId)
+          String(
+            p.userId?._id || p.userId
+          ) === String(ownerUserId)
       )
     ) {
       return res.status(400).json({
@@ -770,14 +770,12 @@ exports.updateDevicePermissions = async (req, res) => {
 
           if (
             ownerUserId &&
-            String(p.userId) ===
-            String(ownerUserId)
+            String(
+              p.userId?._id || p.userId
+            ) === String(ownerUserId)
           ) {
             return {
               ...p,
-
-              dashboard:
-                p.dashboard ?? true,
 
               engineControl:
                 p.engineControl ?? true,
@@ -803,15 +801,20 @@ exports.updateDevicePermissions = async (req, res) => {
         });
 
       const assignedIds =
-        device.assignedUsers.map(
-          id => String(id)
+        device.assignedUsers.map(id =>
+          String(id?._id || id)
         );
 
       for (const p of normalized) {
 
+        const permissionUserId =
+          String(
+            p.userId?._id || p.userId
+          );
+
         if (
           !assignedIds.includes(
-            String(p.userId)
+            permissionUserId
           )
         ) {
           return res.status(400).json({

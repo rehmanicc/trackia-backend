@@ -120,11 +120,6 @@ const deviceSchema = new mongoose.Schema(
           required: true,
         },
 
-        dashboard: {
-          type: Boolean,
-          default: true,
-        },
-
         engineControl: {
           type: Boolean,
           default: false,
