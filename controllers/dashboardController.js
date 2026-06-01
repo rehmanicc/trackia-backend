@@ -153,7 +153,8 @@ exports.getCriticalAlerts = async (req, res) => {
             type: {
                 $in: [
                     "BATTERY_DISCONNECTED",
-                    "GEOFENCE_EXIT"
+                    "GEOFENCE_EXIT",
+                    "DEVICE_EXPIRY"
                 ]
             }
         })

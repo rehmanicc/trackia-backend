@@ -100,6 +100,8 @@ const settingsRoutes = require("./routes/settings");
 const alertPreferenceRoutes = require("./routes/alertPreferenceRoutes");
 
 const trackerModelRoutes = require("./routes/trackerModels");
+
+const {runDeviceExpiryCheck} = require("./jobs/deviceExpiryJob");
 // ======================
 // TEST ROUTES
 // ======================
@@ -281,7 +283,10 @@ server.listen(PORT, () => {
     `🚀 Server running on port ${PORT}`
   );
 
- startPolling();
+  startPolling();
+
+  // Device expiry check on startup
+  runDeviceExpiryCheck(io);
 });
 
 // ======================
@@ -293,3 +298,12 @@ setInterval(() => {
   console.log("🔥 Server alive");
 
 }, 1000 * 60 * 5);
+// ======================
+// DAILY JOBS
+// ======================
+
+setInterval(() => {
+
+  runDeviceExpiryCheck(io);
+
+}, 24 * 60 * 60 * 1000);

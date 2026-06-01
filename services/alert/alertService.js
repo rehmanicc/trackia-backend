@@ -11,10 +11,16 @@ async function createAlert(alertData, io) {
         const DUPLICATE_WINDOWS = {
             ENGINE_ON: 30000,
             ENGINE_OFF: 30000,
+
             BATTERY_DISCONNECTED: 300000,
+
             GEOFENCE_ENTER: 60000,
             GEOFENCE_EXIT: 60000,
+
             OVERSPEED: 15000,
+
+            DEVICE_EXPIRY: 24 * 60 * 60 * 1000,
+            OIL_CHANGE_REQUIRED: 24 * 60 * 60 * 1000,
         };
 
         const DUPLICATE_WINDOW =
