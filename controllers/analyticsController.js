@@ -2,41 +2,70 @@
 
 const analyticsService = require("../services/analyticsService");
 const Device = require("../models/Device");
+async function canAccessDevice(
+  user,
+  device
+) {
+
+  if (
+    user.role === "owner"
+  ) {
+    return true;
+  }
+
+  if (
+    user.role === "admin"
+  ) {
+    return (
+      String(device.adminId) ===
+      String(user.id)
+    );
+  }
+
+  return device.assignedUsers?.some(
+    u =>
+      String(u) ===
+      String(user.id)
+  );
+}
 exports.getReport = async (req, res) => {
 
-    try {
-        const { deviceId, geofenceId, from, to } = req.query;
-        // 🔍 1. GET DEVICE
-        const device = await Device.findOne({ traccarId: Number(deviceId) });
+  try {
+    const { deviceId, geofenceId, from, to } = req.query;
+    // 🔍 1. GET DEVICE
+    const device = await Device.findOne({ traccarId: Number(deviceId) });
 
-        if (!device) {
-            return res.status(404).json({ error: "Device not found" });
-        }
-
-        // 🔐 2. OWNERSHIP CHECK
-        const isOwner = req.user.role === "owner";
-        const isAssigned = device.assignedUsers.some(
-            u => String(u) === String(req.user.id)
-        );
-
-        if (!isOwner && !isAssigned) {
-            return res.status(403).json({ error: "Access denied" });
-        }
-
-        // ✅ 3. SAFE TO FETCH ANALYTICS
-        const data = await analyticsService.getAnalyticsSummary({
-            deviceId,
-            geofenceId,
-            from,
-            to
-        });
-
-        res.json(data);
-
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Analytics failed" });
+    if (!device) {
+      return res.status(404).json({ error: "Device not found" });
     }
+
+    // 🔐 2. OWNERSHIP CHECK
+    const hasAccess =
+      await canAccessDevice(
+        req.user,
+        device
+      );
+
+    if (!hasAccess) {
+      return res.status(403).json({
+        error: "Access denied"
+      });
+    }
+
+    // ✅ 3. SAFE TO FETCH ANALYTICS
+    const data = await analyticsService.getAnalyticsSummary({
+      deviceId,
+      geofenceId,
+      from,
+      to
+    });
+
+    res.json(data);
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Analytics failed" });
+  }
 };
 exports.getDailyReport = async (req, res) => {
   try {
@@ -56,14 +85,16 @@ exports.getDailyReport = async (req, res) => {
     }
 
     // 🔐 2. OWNERSHIP CHECK
-    const isOwner = req.user.role === "owner";
+    const hasAccess =
+      await canAccessDevice(
+        req.user,
+        device
+      );
 
-    const isAssigned = device.assignedUsers?.some(
-      u => String(u) === String(req.user.id)
-    );
-
-    if (!isOwner && !isAssigned) {
-      return res.status(403).json({ error: "Access denied" });
+    if (!hasAccess) {
+      return res.status(403).json({
+        error: "Access denied"
+      });
     }
 
     // ✅ 3. SAFE SERVICE CALL
@@ -81,6 +112,7 @@ exports.getDailyReport = async (req, res) => {
     res.status(500).json({ error: "Daily analytics failed" });
   }
 };
+
 exports.getTopGeofences = async (req, res) => {
   try {
     const { deviceId, geofenceId, from, to } = req.query;
@@ -99,14 +131,16 @@ exports.getTopGeofences = async (req, res) => {
     }
 
     // 🔐 2. OWNERSHIP CHECK
-    const isOwner = req.user.role === "owner";
+    const hasAccess =
+      await canAccessDevice(
+        req.user,
+        device
+      );
 
-    const isAssigned = device.assignedUsers?.some(
-      u => String(u) === String(req.user.id)
-    );
-
-    if (!isOwner && !isAssigned) {
-      return res.status(403).json({ error: "Access denied" });
+    if (!hasAccess) {
+      return res.status(403).json({
+        error: "Access denied"
+      });
     }
 
     // ✅ 3. SAFE SERVICE CALL
@@ -142,14 +176,16 @@ exports.getDeviceSummary = async (req, res) => {
     }
 
     // 🔐 2. OWNERSHIP CHECK
-    const isOwner = req.user.role === "owner";
+    const hasAccess =
+      await canAccessDevice(
+        req.user,
+        device
+      );
 
-    const isAssigned = device.assignedUsers?.some(
-      u => String(u) === String(req.user.id)
-    );
-
-    if (!isOwner && !isAssigned) {
-      return res.status(403).json({ error: "Access denied" });
+    if (!hasAccess) {
+      return res.status(403).json({
+        error: "Access denied"
+      });
     }
 
     // ✅ 3. SAFE SERVICE CALL
@@ -171,20 +207,20 @@ const Position = require("../models/Position");
 
 // 🔥 DISTANCE FUNCTION
 function getDistance(p1, p2) {
-    const R = 6371;
+  const R = 6371;
 
-    const dLat = (p2.latitude - p1.latitude) * Math.PI / 180;
-    const dLon = (p2.longitude - p1.longitude) * Math.PI / 180;
+  const dLat = (p2.latitude - p1.latitude) * Math.PI / 180;
+  const dLon = (p2.longitude - p1.longitude) * Math.PI / 180;
 
-    const a =
-        Math.sin(dLat / 2) ** 2 +
-        Math.cos(p1.latitude * Math.PI / 180) *
-        Math.cos(p2.latitude * Math.PI / 180) *
-        Math.sin(dLon / 2) ** 2;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(p1.latitude * Math.PI / 180) *
+    Math.cos(p2.latitude * Math.PI / 180) *
+    Math.sin(dLon / 2) ** 2;
 
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-    return R * c;
+  return R * c;
 }
 
 exports.getTripAnalytics = async (req, res) => {
@@ -208,14 +244,16 @@ exports.getTripAnalytics = async (req, res) => {
     }
 
     // 🔐 2. OWNERSHIP CHECK (CRITICAL)
-    const isOwner = req.user.role === "owner";
+    const hasAccess =
+      await canAccessDevice(
+        req.user,
+        device
+      );
 
-    const isAssigned = device.assignedUsers?.some(
-      u => String(u) === String(req.user.id)
-    );
-
-    if (!isOwner && !isAssigned) {
-      return res.status(403).json({ error: "Access denied" });
+    if (!hasAccess) {
+      return res.status(403).json({
+        error: "Access denied"
+      });
     }
 
     // ✅ 3. NOW FETCH DATA (SAFE)

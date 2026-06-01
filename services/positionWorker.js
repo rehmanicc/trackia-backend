@@ -131,7 +131,18 @@ async function processBatch() {
                         userMap[userId].push(pos);
                     });
                 }
+                // owner user visibility
+                if (device.ownerUserId) {
 
+                    const ownerId =
+                        String(device.ownerUserId);
+
+                    if (!userMap[ownerId]) {
+                        userMap[ownerId] = [];
+                    }
+
+                    userMap[ownerId].push(pos);
+                }
                 // emit to company (admin group)
                 if (device.adminId) {
 

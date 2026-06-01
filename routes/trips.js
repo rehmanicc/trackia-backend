@@ -9,12 +9,27 @@ router.get("/", authMiddleware, async (req, res) => {
   try {
 
     // 🔥 MOVE await INSIDE async function
-    const devices = await Device.find({
-      $or: [
-        { assignedUsers: req.user.id },
-        { adminId: req.user.id }
-      ]
-    });
+    let devices = [];
+
+    if (req.user.role === "owner") {
+
+      devices = await Device.find();
+
+    }
+    else if (req.user.role === "admin") {
+
+      devices = await Device.find({
+        adminId: req.user.id
+      });
+
+    }
+    else {
+
+      devices = await Device.find({
+        assignedUsers: req.user.id
+      });
+
+    }
 
     const deviceIds = devices.map(d => d.traccarId);
 

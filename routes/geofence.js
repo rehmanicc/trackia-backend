@@ -14,7 +14,7 @@ const PERMISSIONS = require("../config/permissions");
 router.get(
   "/",
   authMiddleware,
-  checkPermission(PERMISSIONS.GEOFENCE_VIEW),
+  checkPermission(PERMISSIONS.MANAGE_GEOFENCES),
   async (req, res) => {
     try {
       const { deviceId } = req.query;
@@ -33,13 +33,15 @@ router.get(
       }
 
       // 🔒 Access check
-      const isAdmin = req.user.role?.toLowerCase() === "admin";
+      const isAuthority =
+        req.user.role === "owner" ||
+        req.user.role === "admin";
 
       const isAssigned = device.assignedUsers?.some(
         (u) => u.toString() === req.user.id
       );
 
-      if (!isAdmin && !isAssigned) {
+      if (!isAuthority && !isAssigned) {
         return res.status(403).json({ error: "Permission denied" });
       }
 
@@ -50,7 +52,7 @@ router.get(
 
       res.json({
         geofences,
-        callUserId: device.callUserId,
+        ownerUserId: device.ownerUserId,
         callGeofenceId: device.callGeofenceId,
       });
     } catch (err) {
@@ -66,7 +68,7 @@ router.get(
 router.post(
   "/",
   authMiddleware,
-  checkPermission(PERMISSIONS.GEOFENCE_CREATE),
+  checkPermission(PERMISSIONS.MANAGE_GEOFENCES),
   async (req, res) => {
     try {
       const userId = req.user.id;
@@ -88,14 +90,18 @@ router.post(
       }
 
       // 🔒 Access check
-      const isAdmin = req.user.role?.toLowerCase() === "admin";
+      const isAuthority =
+        req.user.role === "owner" ||
+        req.user.role === "admin";
 
       const isAssigned = device.assignedUsers?.some(
         (u) => u.toString() === userId
       );
 
-      if (!isAdmin && !isAssigned) {
-        return res.status(403).json({ error: "Permission denied" });
+      if (!isAuthority && !isAssigned) {
+        return res.status(403).json({
+          error: "Permission denied"
+        });
       }
 
       // 🔥 LIMIT: 2 per user per device
@@ -116,6 +122,10 @@ router.post(
         ...req.body,
         userId,
         deviceId,
+        createdByRole:
+          req.user.role === "admin"
+            ? "admin"
+            : "user"
       });
 
       await geofence.save();
@@ -135,7 +145,7 @@ router.post(
 router.put(
   "/:id",
   authMiddleware,
-  checkPermission(PERMISSIONS.GEOFENCE_EDIT),
+  checkPermission(PERMISSIONS.MANAGE_GEOFENCES),
   async (req, res) => {
     try {
 
@@ -196,7 +206,9 @@ router.put(
 router.put(
   "/:id/set-call",
   authMiddleware,
-  checkPermission(PERMISSIONS.GEOFENCE_EDIT),
+  checkPermission(
+    PERMISSIONS.MANAGE_GEOFENCES
+  ),
   async (req, res) => {
     try {
       const geofenceId = req.params.id;
@@ -215,15 +227,69 @@ router.put(
       }
 
       // 🔒 Only assigned call user can set
-      if (device.callUserId?.toString() !== req.user.id) {
-        return res.status(403).json({ error: "Not allowed" });
+      const ownerPermission =
+        device.devicePermissions.find(
+          p =>
+            String(p.userId) ===
+            String(device.ownerUserId)
+        );
+
+      const ownerCanManageCall =
+        device.ownerUserId &&
+        ownerPermission?.editCallNumber;
+
+      // Owner controls call geofence
+      if (ownerCanManageCall) {
+
+        if (
+          String(device.ownerUserId) !==
+          String(req.user.id)
+        ) {
+          return res.status(403).json({
+            error:
+              "Only owner can set call geofence"
+          });
+        }
+
+      }
+      // Admin fallback
+      else {
+
+        const isAdmin =
+          req.user.role === "admin" ||
+          req.user.role === "owner";
+
+        if (!isAdmin) {
+          return res.status(403).json({
+            error:
+              "Only admin can set call geofence"
+          });
+        }
       }
 
-      // 🔒 Ensure geofence belongs to this user
-      if (geofence.userId.toString() !== req.user.id) {
-        return res.status(403).json({ error: "Invalid geofence" });
+      // Owner may only select his own geofence
+      if (
+        ownerCanManageCall &&
+        geofence.userId.toString() !==
+        req.user.id
+      ) {
+        return res.status(403).json({
+          error: "Invalid geofence"
+        });
       }
+      if (!ownerCanManageCall) {
 
+        if (
+          geofence.createdByRole !==
+          "admin"
+        ) {
+          return res.status(403).json({
+            error:
+              "Only admin geofences can be selected"
+          });
+        }
+
+      }
       device.callGeofenceId = geofenceId;
       await device.save();
 
@@ -241,7 +307,7 @@ router.put(
 router.delete(
   "/:id",
   authMiddleware,
-  checkPermission(PERMISSIONS.GEOFENCE_DELETE),
+  checkPermission(PERMISSIONS.MANAGE_GEOFENCES),
   async (req, res) => {
     try {
       const geofence = await Geofence.findOne({

@@ -215,31 +215,74 @@ deviceSchema.index({ ownerUserId: 1 });
 // =========================
 
 deviceSchema.pre("save", async function () {
-  if (!this.isModified("assignedUsers")) return;
-
-  if (!this.assignedUsers?.length) return;
 
   const User = mongoose.model("User");
 
-  for (const userId of this.assignedUsers) {
-    const user = await User.findById(userId);
+  if (this.assignedUsers?.length) {
 
-    if (!user) {
-      throw new Error("Assigned user not found");
+    for (const userId of this.assignedUsers) {
+
+      const user = await User.findById(userId);
+
+      if (!user) {
+        throw new Error("Assigned user not found");
+      }
+
+      if (user.role !== "user") {
+        throw new Error(
+          "Device can only be assigned to users"
+        );
+      }
+
+      if (
+        String(user.adminId) !==
+        String(this.adminId)
+      ) {
+        throw new Error(
+          "User and Device admin mismatch"
+        );
+      }
+    }
+  }
+  if (this.ownerUserId) {
+
+    const owner = await User.findById(
+      this.ownerUserId
+    );
+
+    if (!owner) {
+      throw new Error(
+        "Vehicle owner not found"
+      );
     }
 
-    if (user.role !== "user") {
+    if (owner.role !== "user") {
       throw new Error(
-        "Device can only be assigned to users"
+        "Vehicle owner must be a user"
       );
     }
 
     if (
-      String(user.adminId) !==
+      String(owner.adminId) !==
       String(this.adminId)
     ) {
       throw new Error(
-        "User and Device admin mismatch"
+        "Vehicle owner admin mismatch"
+      );
+    }
+  }
+  for (const permission of this.devicePermissions || []) {
+
+    const assigned =
+      (this.assignedUsers || []).some(
+        id =>
+          String(id) ===
+          String(permission.userId)
+      );
+
+    if (!assigned) {
+      throw new Error(
+        "Device permissions user must be assigned to device"
       );
     }
   }

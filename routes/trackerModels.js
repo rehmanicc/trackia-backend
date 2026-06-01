@@ -176,7 +176,20 @@ router.delete(
             "Tracker model not found"
         });
       }
+      const Device =
+        require("../models/Device");
 
+      const usageCount =
+        await Device.countDocuments({
+          trackerModelId: tracker._id
+        });
+
+      if (usageCount > 0) {
+        return res.status(400).json({
+          error:
+            "Tracker model is assigned to devices and cannot be deleted"
+        });
+      }
       await tracker.deleteOne();
 
       res.json({

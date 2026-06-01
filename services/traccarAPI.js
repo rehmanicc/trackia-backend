@@ -10,7 +10,7 @@ const client = wrapper(axios.create({
   withCredentials: true,
 }));
 let isLoggedIn = false;
-const qs = require("qs");
+
 const loginTraccar = async () => {
   if (loginPromise) return loginPromise;
 
@@ -113,6 +113,27 @@ const apiPost = async (url, data) => {
     throw err;
   }
 };
+const apiPut = async (url, data) => {
+  try {
+    if (!isLoggedIn) await loginTraccar();
+
+    const res = await client.put(url, data);
+    return res.data;
+
+  } catch (err) {
+
+    if (err.response?.status === 401) {
+
+      isLoggedIn = false;
+      await loginTraccar();
+
+      const retry = await client.put(url, data);
+      return retry.data;
+    }
+
+    throw err;
+  }
+};
 const apiDelete = async (url) => {
   try {
     if (!isLoggedIn) await loginTraccar();
@@ -136,5 +157,6 @@ module.exports = {
   getPositions,
   apiGet,
   apiPost,
+  apiPut,
   apiDelete
 };

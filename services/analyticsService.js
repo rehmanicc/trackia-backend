@@ -26,7 +26,8 @@ async function getGeofenceDurations({ deviceId, geofenceId, from, to }) {
 
     for (const event of events) {
 
-        if (event.type === "ENTER") {
+        // Ignore duplicate ENTER events
+        if (event.type === "ENTER" && !activeEnter) {
             activeEnter = event;
         }
 
@@ -145,8 +146,14 @@ async function getDailyTime({ deviceId, geofenceId, from, to }) {
 async function getTopGeofences({ deviceId, geofenceId, from, to }) {
 
     const match = { type: "ENTER" };
-    if (deviceId) match.deviceId = deviceId;
-    if (geofenceId) match.geofenceId = geofenceId;
+
+    if (deviceId && deviceId !== "null") {
+        match.deviceId = Number(deviceId);
+    }
+
+    if (geofenceId) {
+        match.geofenceId = geofenceId;
+    }
     if (from || to) {
         match.timestamp = {};
         if (from) match.timestamp.$gte = new Date(from);
@@ -170,8 +177,14 @@ async function getTopGeofences({ deviceId, geofenceId, from, to }) {
 async function getDeviceSummary({ deviceId, geofenceId, from, to }) {
 
     const match = {};
-    if (deviceId) match.deviceId = deviceId;
-    if (geofenceId) match.geofenceId = geofenceId;
+
+    if (deviceId && deviceId !== "null") {
+        match.deviceId = Number(deviceId);
+    }
+
+    if (geofenceId) {
+        match.geofenceId = geofenceId;
+    }
     if (from || to) {
         match.timestamp = {};
         if (from) match.timestamp.$gte = new Date(from);

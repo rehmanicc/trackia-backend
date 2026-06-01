@@ -257,6 +257,7 @@ exports.sendCommand = async (req, res) => {
     // Admin ownership validation
 
     if (
+      req.user.role !== "owner" &&
       req.user.role === "admin" &&
       String(device.adminId) !==
       String(req.user.id)
@@ -288,17 +289,7 @@ exports.sendCommand = async (req, res) => {
 
     // General command permission
 
-    if (
-      !isAuthority &&
-      !req.user.permissions?.includes(
-        "SEND_COMMAND"
-      )
-    ) {
-      return res.status(403).json({
-        error:
-          "No command permission"
-      });
-    }
+
 
     let payload = {
       deviceId,
@@ -310,6 +301,20 @@ exports.sendCommand = async (req, res) => {
       "engineResume"
     ];
 
+    if (
+      !ENGINE_COMMANDS.includes(type)
+    ) {
+      if (
+        !isAuthority &&
+        !req.user.permissions?.includes(
+          "SEND_COMMANDS"
+        )
+      ) {
+        return res.status(403).json({
+          error: "No command permission"
+        });
+      }
+    }
     if (
       ENGINE_COMMANDS.includes(type)
     ) {
@@ -423,6 +428,11 @@ exports.sendCommand = async (req, res) => {
           device.trackerModelId
         );
 
+      if (!trackerModel) {
+        return res.status(400).json({
+          error: "Tracker model not configured"
+        });
+      }
       const resolved =
         resolveEngineCommand(
           trackerModel,

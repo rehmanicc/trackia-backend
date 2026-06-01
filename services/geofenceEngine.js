@@ -18,25 +18,11 @@ async function processPosition(position, io) {
     // 🔥 LOAD LAST EVENTS ONCE (PER DEVICE)
     const GeofenceEvent = require("../models/GeofenceEvent");
 
-    const lastEvents = await GeofenceEvent.aggregate([
-        { $match: { deviceId: String(position.deviceId) } },
-        { $sort: { timestamp: -1 } },
-        {
-            $group: {
-                _id: "$geofenceId",
-                lastEvent: { $first: "$type" }
-            }
-        }
-    ]);
 
-    const lastEventMap = {};
-    lastEvents.forEach(e => {
-        lastEventMap[e._id.toString()] = e.lastEvent;
-    });
     position.deviceConfig = {
         speedLimit: device?.speedLimit || 60
     };
-    //console.log("🧱 Geofences found:", geofences.length, "for device:", deviceId);
+
     for (const f of geofences) {
 
         const geofenceId = f._id.toString();
@@ -87,12 +73,35 @@ async function processPosition(position, io) {
         }
         // ================= STATE INIT =================
         if (!vehicleStates[deviceId]) {
+
             vehicleStates[deviceId] = {};
+
+            const lastEvents = await GeofenceEvent.aggregate([
+                { $match: { deviceId: String(position.deviceId) } },
+                { $sort: { timestamp: -1 } },
+                {
+                    $group: {
+                        _id: "$geofenceId",
+                        lastEvent: { $first: "$type" }
+                    }
+                }
+            ]);
+
+            const lastEventMap = {};
+
+            lastEvents.forEach(e => {
+                lastEventMap[e._id.toString()] = e.lastEvent;
+            });
+
+            vehicleStates[deviceId]._lastEventMap =
+                lastEventMap;
         }
 
         if (!vehicleStates[deviceId][geofenceId]) {
 
-            const lastEventType = lastEventMap[geofenceId];
+            const lastEventType =
+                vehicleStates[deviceId]
+                    ._lastEventMap?.[geofenceId];
 
             let lastInside = inside;
 
@@ -179,7 +188,12 @@ async function emitEvent(io, deviceId, geofenceId, type, position) {
 
     // 🔍 get users (assigned + admin)
     const users = await User.find({
-        _id: { $in: [device.assignedUsers, device.adminId] }
+        _id: {
+            $in: [
+                ...(device.assignedUsers || []),
+                device.adminId
+            ]
+        }
     });
 
     // 🔥 send only to relevant users

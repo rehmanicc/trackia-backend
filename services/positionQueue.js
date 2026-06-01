@@ -3,10 +3,9 @@ const queue = [];
 // ✅ Add incoming data
 function addToQueue(data) {
     // 🔥 Prevent memory overflow
-    if (queue.length > 10000) {
-        console.warn("⚠️ Queue overflow, dropping old data");
-        queue.splice(0, 5000);
-    }
+    console.warn(
+    `⚠️ Queue overflow (${queue.length}), dropping 5000 oldest items`
+);
 
     queue.push(data);
 }

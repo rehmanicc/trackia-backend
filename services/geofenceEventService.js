@@ -70,7 +70,14 @@ async function saveGeofenceEvent(event, io) {
         const device = await Device.findOne({
             traccarId: event.deviceId
         });
+        if (!device) {
 
+            console.warn(
+                "⚠️ Device not found for geofence event"
+            );
+
+            return true;
+        }
         // ======================
         // CRITICAL EXIT CHECK
         // ======================
@@ -136,10 +143,10 @@ async function saveGeofenceEvent(event, io) {
                     return true;
                 }
 
-                if (!device.engineControlEnabled) {
+                if (!device.callEnabled) {
 
                     console.warn(
-                        "⚠️ Engine control disabled"
+                        "⚠️ Call alerts disabled"
                     );
 
                     return true;

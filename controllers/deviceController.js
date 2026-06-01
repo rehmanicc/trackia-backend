@@ -5,22 +5,6 @@ const User = require("../models/User");
 const mongoose = require("mongoose");
 const Position = require("../models/Position");
 
-function hasDevicePermission(
-  device,
-  userId,
-  permission
-) {
-
-  const p =
-    device.devicePermissions?.find(
-      p =>
-        String(p.userId) ===
-        String(userId)
-    );
-
-  return p?.[permission] === true;
-}
-
 exports.createDevice = async (req, res, next) => {
 
   const {
@@ -167,17 +151,9 @@ exports.createDevice = async (req, res, next) => {
     });
   }
 };
-exports.updateDevice = async (
-  req,
-  res
-) => {
-
+exports.updateDevice = async (req, res) => {
   try {
-
-    const device =
-      await Device.findById(
-        req.params.id
-      );
+    const device = await Device.findById(req.params.id);
 
     if (!device) {
       return res.status(404).json({
@@ -185,12 +161,35 @@ exports.updateDevice = async (
       });
     }
 
-    // 🔒 ADMIN OWNERSHIP CHECK
-    if (
+    const isOwner = req.user.role === "owner";
+
+    const isAdmin =
       req.user.role === "admin" &&
-      String(device.adminId) !==
-      String(req.user.id)
-    ) {
+      String(device.adminId) === String(req.user.id);
+
+    const isUser = req.user.role === "user";
+
+    // ==================================================
+    // USER MUST BE ASSIGNED
+    // ==================================================
+
+    if (isUser) {
+      const assigned = device.assignedUsers.some(
+        id => String(id) === String(req.user.id)
+      );
+
+      if (!assigned) {
+        return res.status(403).json({
+          error: "Device not assigned"
+        });
+      }
+    }
+
+    // ==================================================
+    // NO ACCESS
+    // ==================================================
+
+    if (!isOwner && !isAdmin && !isUser) {
       return res.status(403).json({
         error: "Access denied"
       });
@@ -200,98 +199,165 @@ exports.updateDevice = async (
       name,
       registrationNumber,
       deviceSimNumber,
-      speedLimit,
       trackerModelId,
       adminId,
+
+      speedLimit,
+      fuelEfficiency,
+      oilChangeReading,
+      oilChangeLimit,
+      callReceiverNumber
     } = req.body;
 
-    // 🔐 PERMISSIONS
+    // ==================================================
+    // OWNER / ADMIN FULL ACCESS
+    // ==================================================
 
-    const canEditTrackerSim =
-      req.user.role === "owner" ||
-      req.user.role === "admin";
-
-    const canEditSpeed =
-      req.user.role === "owner" ||
-      req.user.role === "admin";
-
-    // ✅ FULL ACCESS
-    if (canEditTrackerSim) {
+    if (isOwner || isAdmin) {
 
       if (name !== undefined) {
         device.name = name;
       }
 
-      if (
-        registrationNumber !== undefined
-      ) {
-        device.registrationNumber =
-          registrationNumber;
+      if (registrationNumber !== undefined) {
+        device.registrationNumber = registrationNumber;
       }
 
-      if (
-        deviceSimNumber !== undefined
-      ) {
-        device.deviceSimNumber =
-          deviceSimNumber;
+      if (deviceSimNumber !== undefined) {
+        device.deviceSimNumber = deviceSimNumber;
       }
 
-      if (
-        trackerModelId !== undefined
-      ) {
+      if (speedLimit !== undefined) {
+        device.speedLimit = Number(speedLimit);
+      }
 
-        const TrackerModel =
-          require("../models/TrackerModel");
+      if (fuelEfficiency !== undefined) {
+        device.fuelEfficiency = Number(fuelEfficiency);
+      }
+
+      if (oilChangeReading !== undefined) {
+        device.oilChangeReading = Number(oilChangeReading);
+      }
+
+      if (oilChangeLimit !== undefined) {
+        device.oilChangeLimit = Number(oilChangeLimit);
+      }
+
+      if (callReceiverNumber !== undefined) {
+        device.callReceiverNumber = callReceiverNumber;
+      }
+
+      if (trackerModelId !== undefined) {
+        const TrackerModel = require("../models/TrackerModel");
 
         const trackerExists =
-          await TrackerModel.findById(
-            trackerModelId
-          );
+          await TrackerModel.findById(trackerModelId);
 
         if (!trackerExists) {
-
           return res.status(400).json({
-            error:
-              "Invalid tracker model"
+            error: "Invalid tracker model"
           });
         }
 
-        device.trackerModelId =
-          trackerModelId;
+        device.trackerModelId = trackerModelId;
       }
+
+      if (isOwner && adminId) {
+
+        const admin = await User.findOne({
+          _id: adminId,
+          role: "admin"
+        });
+
+        if (!admin) {
+          return res.status(400).json({
+            error: "Invalid adminId"
+          });
+        }
+
+        device.adminId = adminId;
+      }
+
+      await device.save();
+
+      return res.json({
+        message: "Device updated successfully",
+        device
+      });
+    }
+
+    // ==================================================
+    // USER DEVICE PERMISSIONS
+    // ==================================================
+
+    const permission =
+      device.devicePermissions?.find(
+        p => String(p.userId) === String(req.user.id)
+      );
+
+    if (!permission) {
+      return res.status(403).json({
+        error: "No device permissions found"
+      });
+    }
+
+    let updated = false;
+
+    if (
+      speedLimit !== undefined &&
+      permission.editSpeedLimit
+    ) {
+      device.speedLimit = Number(speedLimit);
+      updated = true;
     }
 
     if (
-      canEditSpeed &&
-      speedLimit !== undefined
+      fuelEfficiency !== undefined &&
+      permission.editFuelAverage
     ) {
-      device.speedLimit =
-        speedLimit;
+      device.fuelEfficiency = Number(fuelEfficiency);
+      updated = true;
     }
 
-
-    // 👑 OWNER ONLY
     if (
-      req.user.role === "owner" &&
-      adminId
+      oilChangeReading !== undefined &&
+      permission.editOilChangeReading
     ) {
-      device.adminId = adminId;
+      device.oilChangeReading = Number(oilChangeReading);
+      updated = true;
+    }
+
+    if (
+      oilChangeLimit !== undefined &&
+      permission.editOilChangeLimit
+    ) {
+      device.oilChangeLimit = Number(oilChangeLimit);
+      updated = true;
+    }
+
+    if (
+      callReceiverNumber !== undefined &&
+      permission.editCallNumber
+    ) {
+      device.callReceiverNumber = callReceiverNumber;
+      updated = true;
+    }
+
+    if (!updated) {
+      return res.status(403).json({
+        error: "No permission to edit requested fields"
+      });
     }
 
     await device.save();
 
     res.json({
-      message:
-        "Device updated successfully",
+      message: "Device updated successfully",
       device
     });
 
   } catch (err) {
-
-    console.error(
-      "❌ UPDATE DEVICE ERROR:",
-      err
-    );
+    console.error("UPDATE DEVICE ERROR:", err);
 
     res.status(500).json({
       error: err.message
@@ -470,8 +536,11 @@ exports.deleteDevice = async (req, res) => {
     if (!device) return res.status(404).json({ error: "Not found" });
 
     if (
-      req.user.role === "admin" &&
-      String(device.adminId) !== String(req.user.id)
+      req.user.role !== "owner" &&
+      (
+        req.user.role !== "admin" ||
+        String(device.adminId) !== String(req.user.id)
+      )
     ) {
       return res.status(403).json({
         error: "Access denied"
@@ -551,9 +620,11 @@ exports.assignDevice = async (req, res) => {
 
     // 🔒 Admin ownership validation
     if (
-      req.user.role === "admin" &&
-      String(device.adminId) !==
-      String(req.user.id)
+      req.user.role !== "owner" &&
+      (
+        req.user.role !== "admin" ||
+        String(device.adminId) !== String(req.user.id)
+      )
     ) {
       return res.status(403).json({
         error: "Access denied"
@@ -582,10 +653,6 @@ exports.assignDevice = async (req, res) => {
       });
     }
 
-
-    if (!device.callReceiverNumber) {
-      device.callReceiverNumber = user.phoneNumber;
-    }
     await device.save();
 
     // 🔥 AUDIT LOG (ADD HERE)
@@ -624,9 +691,11 @@ exports.unassignDevice = async (req, res) => {
       return res.status(404).json({ error: "Device not found" });
     }
     if (
-      req.user.role === "admin" &&
-      String(device.adminId) !==
-      String(req.user.id)
+      req.user.role !== "owner" &&
+      (
+        req.user.role !== "admin" ||
+        String(device.adminId) !== String(req.user.id)
+      )
     ) {
       return res.status(403).json({
         error: "Access denied"
@@ -710,9 +779,11 @@ exports.updateDevicePermissions = async (req, res) => {
     // OWNER OR DEVICE ADMIN ONLY
 
     if (
-      req.user.role === "admin" &&
-      String(device.adminId) !==
-      String(req.user.id)
+      req.user.role !== "owner" &&
+      (
+        req.user.role !== "admin" ||
+        String(device.adminId) !== String(req.user.id)
+      )
     ) {
       return res.status(403).json({
         error: "Access denied"
@@ -721,85 +792,43 @@ exports.updateDevicePermissions = async (req, res) => {
 
     const {
       ownerUserId,
-      permissions,
-
-      callReceiverNumber,
-      speedLimit,
-      fuelEfficiency,
-      oilChangeReading,
-      oilChangeLimit
+      permissions
     } = req.body;
 
     // OWNER USER MUST BE ASSIGNED
-    if (
-      ownerUserId &&
-      !device.assignedUsers.some(
-        id =>
-          String(id) ===
-          String(ownerUserId)
-      )
-    ) {
-      return res.status(400).json({
-        error:
-          "Owner user must already be assigned to device"
-      });
-    }
+    if (ownerUserId) {
 
-    if (
-      ownerUserId &&
-      permissions &&
-      !permissions.some(
-        p =>
-          String(
-            p.userId?._id || p.userId
-          ) === String(ownerUserId)
-      )
-    ) {
-      return res.status(400).json({
-        error:
-          "Owner user must exist in permissions list"
-      });
+      const ownerUser = await User.findById(
+        ownerUserId
+      );
+
+      if (!ownerUser) {
+        return res.status(400).json({
+          error: "Vehicle owner not found"
+        });
+      }
+
+      if (ownerUser.role !== "user") {
+        return res.status(400).json({
+          error: "Vehicle owner must be a user"
+        });
+      }
+
+      if (
+        String(ownerUser.adminId) !==
+        String(device.adminId)
+      ) {
+        return res.status(400).json({
+          error: "Vehicle owner admin mismatch"
+        });
+      }
     }
     device.ownerUserId =
       ownerUserId || null;
 
     if (permissions) {
 
-      const normalized =
-        permissions.map(p => {
-
-          if (
-            ownerUserId &&
-            String(
-              p.userId?._id || p.userId
-            ) === String(ownerUserId)
-          ) {
-            return {
-              ...p,
-
-              engineControl:
-                p.engineControl ?? true,
-
-              editSpeedLimit:
-                p.editSpeedLimit ?? true,
-
-              editFuelAverage:
-                p.editFuelAverage ?? true,
-
-              editOilChangeReading:
-                p.editOilChangeReading ?? true,
-
-              editOilChangeLimit:
-                p.editOilChangeLimit ?? true,
-
-              editCallNumber:
-                p.editCallNumber ?? true,
-            };
-          }
-
-          return p;
-        });
-
+      const normalized = permissions || [];
       const assignedIds =
         device.assignedUsers.map(id =>
           String(id?._id || id)
@@ -826,30 +855,7 @@ exports.updateDevicePermissions = async (req, res) => {
       device.devicePermissions =
         normalized;
     }
-    if (callReceiverNumber !== undefined) {
-      device.callReceiverNumber =
-        callReceiverNumber;
-    }
 
-    if (speedLimit !== undefined) {
-      device.speedLimit =
-        Number(speedLimit);
-    }
-
-    if (fuelEfficiency !== undefined) {
-      device.fuelEfficiency =
-        Number(fuelEfficiency);
-    }
-
-    if (oilChangeReading !== undefined) {
-      device.oilChangeReading =
-        Number(oilChangeReading);
-    }
-
-    if (oilChangeLimit !== undefined) {
-      device.oilChangeLimit =
-        Number(oilChangeLimit);
-    }
     await device.save();
 
     res.json({

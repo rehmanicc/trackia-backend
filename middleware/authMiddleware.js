@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const mongoose = require("mongoose");
 const SECRET = process.env.JWT_SECRET
 
 function authMiddleware(req, res, next) {
@@ -15,7 +16,7 @@ function authMiddleware(req, res, next) {
 
         const decoded = jwt.verify(token, SECRET);
 
-        const mongoose = require("mongoose");
+        
 
         req.user = {
             ...decoded,

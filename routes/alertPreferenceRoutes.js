@@ -8,7 +8,24 @@ const auth =
 const User =
   require("../models/User");
 
+// ============================================
+// ALERT PREFERENCES
+// ============================================
+
+const ALLOWED_ALERT_TYPES = [
+  "ENGINE_ON",
+  "ENGINE_OFF",
+  "BATTERY_DISCONNECTED",
+  "GEOFENCE_ENTER",
+  "GEOFENCE_EXIT",
+  "OVERSPEED",
+  "OIL_CHANGE_REQUIRED"
+];
+
+// ============================================
 // GET PREFERENCES
+// ============================================
+
 router.get(
   "/",
   auth,
@@ -24,19 +41,22 @@ router.get(
         );
 
       res.json(
-        user.alertPreferences || {}
+        user?.alertPreferences || {}
       );
 
     } catch (err) {
 
       res.status(500).json({
-        error: err.message,
+        error: err.message
       });
     }
   }
 );
 
+// ============================================
 // UPDATE SINGLE PREFERENCE
+// ============================================
+
 router.put(
   "/",
   auth,
@@ -46,26 +66,19 @@ router.put(
 
       const {
         type,
-        enabled,
+        enabled
       } = req.body;
 
-      const allowedTypes = [
-        "ENGINE_ON",
-        "ENGINE_OFF",
-        "BATTERY_DISCONNECTED",
-        "GEOFENCE_ENTER",
-        "GEOFENCE_EXIT",
-        "OVERSPEED",
-      ];
-
       if (
-        !allowedTypes.includes(type)
+        !ALLOWED_ALERT_TYPES.includes(
+          type
+        )
       ) {
-        return res.status(400)
-          .json({
-            error:
-              "Invalid alert type",
-          });
+
+        return res.status(400).json({
+          error:
+            "Invalid alert type"
+        });
       }
 
       await User.findByIdAndUpdate(
@@ -73,19 +86,19 @@ router.put(
         {
           $set: {
             [`alertPreferences.${type}`]:
-              enabled,
-          },
+              !!enabled
+          }
         }
       );
 
       res.json({
-        success: true,
+        success: true
       });
 
     } catch (err) {
 
       res.status(500).json({
-        error: err.message,
+        error: err.message
       });
     }
   }

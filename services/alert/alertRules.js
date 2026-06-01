@@ -1,14 +1,22 @@
-// 🔥 In-memory state (per device)
+
+const Device = require("../../models/Device");
 const vehicleState = {};
+const deviceCache = {};
 const {
   formatAlertMessage,
 } = require("./alertFormatter");
+
 const ALERT_PRIORITY = {
-  OVERSPEED: "high",
+
+  // Critical Alerts
   GEOFENCE_EXIT: "high",
   BATTERY_DISCONNECTED: "high",
+  DEVICE_EXPIRY: "high",
 
+  // Normal Alerts
   GEOFENCE_ENTER: "medium",
+  OVERSPEED: "medium",
+  OIL_CHANGE_REQUIRED: "medium",
 
   ENGINE_ON: "low",
   ENGINE_OFF: "low",
@@ -36,13 +44,21 @@ async function detectAlerts(position) {
 
   // ================= DEVICE =================
 
-  const Device = require("../../models/Device");
 
   let speedLimit = 70;
 
-  const device = await Device.findOne({
-    traccarId: deviceId,
-  });
+  let device = deviceCache[deviceId];
+
+  if (!device) {
+
+    device = await Device.findOne({
+      traccarId: deviceId,
+    }).lean();
+
+    if (device) {
+      deviceCache[deviceId] = device;
+    }
+  }
 
   const vehicleLabel =
     device;
