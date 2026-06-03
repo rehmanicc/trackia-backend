@@ -2,6 +2,9 @@ const { triggerCall } = require("../callService");
 const Device = require("../../models/Device");
 const User = require("../../models/User");
 const { sendPushFCM } = require("./pushFCMService");
+const {
+  canReceiveAlert,
+} = require("../../config/alertVisibility");
 
 function isAllowed(user, alertType) {
 
@@ -35,15 +38,40 @@ async function dispatch(alert, io) {
 
     // ✅ SOCKET (filtered per user)
     for (const user of users) {
-      if (!isAllowed(user, alert.type)) continue;
 
-      io.to(`user_${user._id}`).emit("alert", alert);
+      // Role Visibility
+
+      if (
+        !canReceiveAlert(
+          user,
+          alert.type
+        )
+      ) {
+        continue;
+      }
+
+      // User Preference
+
+      if (
+        !isAllowed(
+          user,
+          alert.type
+        )
+      ) {
+        continue;
+      }
+
+      io.to(`user_${user._id}`)
+        .emit("alert", alert);
     }
 
     // ✅ FCM (already filtered internally)
     await sendPushFCM(alert);
 
-    if (!device.engineControlEnabled || !device.callReceiverNumber) return;
+    if (
+      !device.callEnabled ||
+      !device.callReceiverNumber
+    ) return;
 
     if (alert.type === "BATTERY_DISCONNECTED") {
       return triggerCall({

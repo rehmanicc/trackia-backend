@@ -101,7 +101,9 @@ const alertPreferenceRoutes = require("./routes/alertPreferenceRoutes");
 
 const trackerModelRoutes = require("./routes/trackerModels");
 
-const {runDeviceExpiryCheck} = require("./jobs/deviceExpiryJob");
+const { runDeviceExpiryCheck } = require("./jobs/deviceExpiryJob");
+
+const { runOilChangeCheck } = require("./jobs/oilChangeJob");
 // ======================
 // TEST ROUTES
 // ======================
@@ -287,6 +289,7 @@ server.listen(PORT, () => {
 
   // Device expiry check on startup
   runDeviceExpiryCheck(io);
+  runOilChangeCheck(io);
 });
 
 // ======================
@@ -305,5 +308,5 @@ setInterval(() => {
 setInterval(() => {
 
   runDeviceExpiryCheck(io);
-
+  runOilChangeCheck(io);
 }, 24 * 60 * 60 * 1000);

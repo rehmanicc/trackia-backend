@@ -1,6 +1,9 @@
 const { messaging } = require("./firebase");
 const User = require("../../models/User");
 const Device = require("../../models/Device");
+const {
+  canReceiveAlert,
+} = require("../../config/alertVisibility");
 
 function isAllowed(user, alertType) {
 
@@ -44,7 +47,28 @@ async function sendPushFCM(alert) {
     let tokens = [];
 
     users.forEach(u => {
-      if (!isAllowed(u, alert.type)) return;
+
+      // Role Visibility
+
+      if (
+        !canReceiveAlert(
+          u,
+          alert.type
+        )
+      ) {
+        return;
+      }
+
+      // User Preference
+
+      if (
+        !isAllowed(
+          u,
+          alert.type
+        )
+      ) {
+        return;
+      }
 
       if (u.fcmTokens?.length > 0) {
         tokens.push(...u.fcmTokens);
