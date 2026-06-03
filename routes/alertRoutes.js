@@ -100,7 +100,7 @@ router.get("/", auth, async (req, res) => {
         .sort({
           timestamp: -1
         })
-        .limit(100);
+        .limit(50);
 
     res.json(alerts);
 

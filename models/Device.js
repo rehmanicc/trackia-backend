@@ -192,6 +192,11 @@ const deviceSchema = new mongoose.Schema(
       default: null,
     },
 
+    callUserId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
     callEnabled: {
       type: Boolean,
       default: true,

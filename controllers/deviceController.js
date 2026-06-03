@@ -385,6 +385,11 @@ exports.getDevices = async (req, res) => {
         )
 
         .populate(
+          "callUserId",
+          "name phoneNumber"
+        )
+
+        .populate(
           "devicePermissions.userId",
           "name phoneNumber"
         )
@@ -397,10 +402,9 @@ exports.getDevices = async (req, res) => {
       const mongoose = require("mongoose");
 
       devices = await Device.find({
-        adminId:
-          new mongoose.Types.ObjectId(
-            user.id
-          )
+        adminId: new mongoose.Types.ObjectId(
+          user.id
+        )
       })
 
         .populate(
@@ -410,6 +414,11 @@ exports.getDevices = async (req, res) => {
 
         .populate(
           "ownerUserId",
+          "name phoneNumber"
+        )
+
+        .populate(
+          "callUserId",
           "name phoneNumber"
         )
 
@@ -434,6 +443,11 @@ exports.getDevices = async (req, res) => {
 
         .populate(
           "ownerUserId",
+          "name phoneNumber"
+        )
+
+        .populate(
+          "callUserId",
           "name phoneNumber"
         )
 
@@ -738,6 +752,13 @@ exports.unassignDevice = async (req, res) => {
     ) {
       device.ownerUserId = null;
     }
+    if (
+      device.callUserId &&
+      String(device.callUserId) ===
+      String(userId)
+    ) {
+      device.callUserId = null;
+    }
     await device.save();
 
     // 🔥 AUDIT LOG
@@ -792,6 +813,7 @@ exports.updateDevicePermissions = async (req, res) => {
 
     const {
       ownerUserId,
+      callUserId,
       permissions
     } = req.body;
 
@@ -823,9 +845,53 @@ exports.updateDevicePermissions = async (req, res) => {
         });
       }
     }
+
+    if (callUserId) {
+
+      const callUser = await User.findById(
+        callUserId
+      );
+
+      if (!callUser) {
+        return res.status(400).json({
+          error: "Call user not found"
+        });
+      }
+
+      if (callUser.role !== "user") {
+        return res.status(400).json({
+          error: "Call user must be a user"
+        });
+      }
+
+      if (
+        String(callUser.adminId) !==
+        String(device.adminId)
+      ) {
+        return res.status(400).json({
+          error: "Call user admin mismatch"
+        });
+      }
+
+      const assigned =
+        device.assignedUsers.some(
+          id =>
+            String(id) ===
+            String(callUserId)
+        );
+
+      if (!assigned) {
+        return res.status(400).json({
+          error:
+            "Call user must be assigned to device"
+        });
+      }
+    }
     device.ownerUserId =
       ownerUserId || null;
 
+    device.callUserId =
+      callUserId || null;
     if (permissions) {
 
       const normalized = permissions || [];
