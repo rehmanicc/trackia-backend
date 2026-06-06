@@ -16,7 +16,13 @@ if (!process.env.JWT_SECRET) {
 // =====================================================
 
 router.post("/register", authMiddleware, async (req, res) => {
-  const { name, phoneNumber, password, role } = req.body;
+  const {
+    name,
+    phoneNumber,
+    password,
+    role,
+    adminId
+  } = req.body;
 
   try {
     if (!name || !phoneNumber || !password) {
@@ -40,28 +46,68 @@ router.post("/register", authMiddleware, async (req, res) => {
     // ==========================================
 
     if (req.user.role === "owner") {
-      if (role !== "admin") {
-        return res.status(400).json({
-          error: "Owner can only create admins"
-        });
-      }
 
       const hash = await bcrypt.hash(password, 10);
 
-      const user = new User({
-        name,
-        phoneNumber,
-        password: hash,
-        role: "admin",
-        adminId: null,
-        permissions: []
-      });
+      // CREATE ADMIN
+      if (role === "admin") {
 
-      await user.save();
+        const user = new User({
+          name,
+          phoneNumber,
+          password: hash,
+          role: "admin",
+          adminId: null,
+          permissions: []
+        });
 
-      return res.json({
-        message: `${role} created`,
-        user
+        await user.save();
+
+        return res.json({
+          message: "Admin created",
+          user
+        });
+      }
+
+      // CREATE USER
+      if (role === "user") {
+
+        if (!adminId) {
+          return res.status(400).json({
+            error: "Admin is required"
+          });
+        }
+
+        const admin = await User.findOne({
+          _id: adminId,
+          role: "admin"
+        });
+
+        if (!admin) {
+          return res.status(400).json({
+            error: "Invalid admin"
+          });
+        }
+
+        const user = new User({
+          name,
+          phoneNumber,
+          password: hash,
+          role: "user",
+          adminId,
+          permissions: []
+        });
+
+        await user.save();
+
+        return res.json({
+          message: "User created",
+          user
+        });
+      }
+
+      return res.status(400).json({
+        error: "Invalid role"
       });
     }
 
